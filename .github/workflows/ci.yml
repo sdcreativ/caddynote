@@ -81,25 +81,42 @@ jobs:
   docker_push:
     name: Build & Push Docker (main only)
     needs: [build_and_test, server_tests]
-    # Sans DOCKER_USERNAME / DOCKER_PASSWORD, login-action échoue (« Username and password required »).
-    if: >
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      secrets.DOCKER_USERNAME != '' &&
-      secrets.DOCKER_PASSWORD != ''
+    # Note: le contexte `secrets` est interdit dans `jobs.*.if` (erreur
+    # « Unrecognized named-value: secrets »). Les credentials Docker Hub
+    # sont lus uniquement dans les steps (login / tags).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      pushed: ${{ steps.docker_creds.outputs.ok }}
     steps:
+      - name: Vérifier credentials Docker Hub
+        id: docker_creds
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DOCKER_USERNAME / DOCKER_PASSWORD absents — push Docker ignoré"
+          fi
       - uses: actions/checkout@v4
+        if: steps.docker_creds.outputs.ok == 'true'
       - uses: actions/download-artifact@v4
+        if: steps.docker_creds.outputs.ok == 'true'
         with:
           name: react-build
           path: dist/
       - uses: docker/login-action@v3
+        if: steps.docker_creds.outputs.ok == 'true'
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: docker/setup-buildx-action@v3
+        if: steps.docker_creds.outputs.ok == 'true'
       - name: Build & push web
+        if: steps.docker_creds.outputs.ok == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -111,6 +128,7 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/caddynote:latest
             ${{ secrets.DOCKER_USERNAME }}/caddynote:staging
       - name: Build & push API
+        if: steps.docker_creds.outputs.ok == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./server
@@ -125,19 +143,32 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      secrets.DOCKER_USERNAME != '' &&
-      secrets.STAGING_HOST != ''
+      needs.docker_push.outputs.pushed == 'true'
     runs-on: ubuntu-latest
     # Secrets STAGING_* = repository secrets (pas d’Environment GitHub « staging »
     # sur ce dépôt — sinon l’extension Actions signale une valeur invalide).
     # Pour des règles d’approbation : créer Settings → Environments → staging
     # puis ajouter la clé job environment pointant vers ce nom.
     steps:
+      - name: Vérifier config staging
+        id: staging_creds
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        run: |
+          if [ -n "$STAGING_HOST" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::STAGING_HOST absent — deploy staging ignoré"
+          fi
       - uses: actions/checkout@v4
+        if: steps.staging_creds.outputs.ok == 'true'
       - uses: actions/setup-node@v4
+        if: steps.staging_creds.outputs.ok == 'true'
         with:
           node-version: '22'
       - name: Deploy via SSH (images + migrate)
+        if: steps.staging_creds.outputs.ok == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}
@@ -161,6 +192,7 @@ jobs:
             # Worker : jobs=true
             docker compose exec -T caddynote-worker node -e "fetch('http://127.0.0.1:4000/health').then(async(r)=>{const j=await r.json(); if(!r.ok||j.processRole!=='worker'||j.jobs!==true) process.exit(1)}).catch(()=>process.exit(1))"
       - name: Smoke API staging
+        if: steps.staging_creds.outputs.ok == 'true'
         env:
           SMOKE_API_URL: ${{ secrets.STAGING_API_URL }}
           SMOKE_EMAIL: ${{ secrets.STAGING_SMOKE_EMAIL }}
