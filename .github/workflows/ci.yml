@@ -81,7 +81,12 @@ jobs:
   docker_push:
     name: Build & Push Docker (main only)
     needs: [build_and_test, server_tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Sans DOCKER_USERNAME / DOCKER_PASSWORD, login-action échoue (« Username and password required »).
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      secrets.DOCKER_USERNAME != '' &&
+      secrets.DOCKER_PASSWORD != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +100,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: docker/setup-buildx-action@v3
       - name: Build & push web
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -106,7 +111,7 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/caddynote:latest
             ${{ secrets.DOCKER_USERNAME }}/caddynote:staging
       - name: Build & push API
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./server
           push: true
@@ -117,7 +122,11 @@ jobs:
   deploy_staging:
     name: Staging — pull image + migrate + smoke
     needs: [docker_push]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      secrets.DOCKER_USERNAME != '' &&
+      secrets.STAGING_HOST != ''
     runs-on: ubuntu-latest
     # Secrets STAGING_* = repository secrets (pas d’Environment GitHub « staging »
     # sur ce dépôt — sinon l’extension Actions signale une valeur invalide).
