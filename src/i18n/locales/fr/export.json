@@ -1,0 +1,44 @@
+{
+  "title": "Exporter les {{type}}",
+  "formatLabel": "Format d'export",
+  "period": "Période",
+  "includeDetails": "Inclure les détails complets",
+  "exporting": "Exportation en cours...",
+  "dataTypes": {
+    "absences": "absences",
+    "signatures": "signatures",
+    "grades": "notes",
+    "attendance": "présences"
+  },
+  "formats": {
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV"
+  },
+  "dateRanges": {
+    "week": "Cette semaine",
+    "month": "Ce mois",
+    "quarter": "Ce trimestre",
+    "year": "Cette année",
+    "all": "Toutes les données"
+  },
+  "preview": {
+    "title": "Aperçu de l'export :",
+    "format": "• Format: {{format}}",
+    "period": "• Période: {{period}}",
+    "count": "• Lignes affichées (indicatif): {{count}}",
+    "viaReports": "• Fichier généré côté serveur (GET /reports/export)",
+    "details": "• Détails: {{details}}",
+    "included": "Inclus",
+    "summaryOnly": "Résumé seulement"
+  },
+  "bulletinHint": "Pour le bulletin officiel PDF (après calcul de moyennes), utilisez",
+  "bulletinLink": "Documents",
+  "toast": {
+    "successTitle": "Export réussi",
+    "successBody": "Le fichier {{fileName}} a été téléchargé avec succès.",
+    "errorTitle": "Erreur d'export",
+    "errorBody": "Une erreur est survenue lors de l'export des données.",
+    "noInstitution": "Aucun établissement associé à votre compte."
+  }
+}

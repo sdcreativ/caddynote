@@ -1,0 +1,24 @@
+{
+  "empty": {
+    "defaultTitle": "Rien à afficher",
+    "defaultDescription": "Aucun élément pour le moment."
+  },
+  "loading": {
+    "default": "Chargement…"
+  },
+  "error": {
+    "defaultTitle": "Une erreur est survenue",
+    "defaultDescription": "Veuillez réessayer. Si le problème persiste, contactez le support.",
+    "retry": "Réessayer"
+  },
+  "nav": {
+    "services": "Services",
+    "settings": "Paramètres"
+  },
+  "notFound": {
+    "title": "Page non trouvée",
+    "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "backDashboard": "Retour au tableau de bord",
+    "backHome": "Retour à l'accueil"
+  }
+}

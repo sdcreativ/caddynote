@@ -1,0 +1,350 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* UX-004 : L assombrie pour blanc ≥ 4.5:1 (était 59.8 % → 3.5:1). */
+    --primary: 217.2 91.2% 52%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 45%;
+
+    --accent: 39 96% 50%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 48%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+    --content-spacing: 1rem;
+
+    /* Enhanced design tokens for CaddyNote */
+    --success: 142.1 76.2% 29%;
+    --success-foreground: 210 40% 98%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 222.2 84% 4.9%;
+    --info: 204.1 94.4% 39%;
+    --info-foreground: 210 40% 98%;
+    
+    /* Gradient tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142.1 76.2% 46.3%));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(45.4 93.4% 57.5%));
+    
+    /* Shadow tokens */
+    --shadow-sm: 0 1px 2px 0 hsl(var(--primary) / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(var(--primary) / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(var(--primary) / 0.1);
+    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.2);
+
+    --sidebar-background: 217.2 91.2% 59.8%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 217.2 91.2% 59.8%;
+    --sidebar-accent: 215 100% 96%;
+    --sidebar-accent-foreground: 217.2 91.2% 59.8%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 39 96% 50%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    
+    /* Dark mode enhanced tokens */
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 222.2 84% 4.9%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 222.2 84% 4.9%;
+    --info: 204.1 94.4% 53.9%;
+    --info-foreground: 222.2 84% 4.9%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142.1 70.6% 55.3%));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(45.4 93.4% 57.5%));
+    
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
+    
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  
+  /* Density settings */
+  body.density-compact .card {
+    @apply p-3;
+  }
+  
+  body.density-normal .card {
+    @apply p-6;
+  }
+  
+  body.density-comfortable .card {
+    @apply p-8;
+  }
+  
+  body.density-compact {
+    --content-spacing: 0.75rem;
+  }
+  
+  body.density-normal {
+    --content-spacing: 1rem;
+  }
+  
+  body.density-comfortable {
+    --content-spacing: 1.5rem;
+  }
+  
+  .density-compact .space-y-6 {
+    @apply space-y-4;
+  }
+  
+  .density-comfortable .space-y-6 {
+    @apply space-y-8;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-edusign-600 sm:text-sm;
+  }
+  
+  .btn-primary {
+    @apply bg-edusign-600 hover:bg-edusign-700 text-white rounded-md px-3.5 py-2.5 text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edusign-600;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-900 rounded-md px-3.5 py-2.5 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300;
+  }
+  
+  .card {
+    @apply rounded-lg border bg-card shadow-sm transition-all duration-200;
+  }
+  
+  .fade-in {
+    @apply animate-fade-in;
+  }
+  
+  .slide-in {
+    @apply animate-slide-in;
+  }
+  
+  /* Advanced utility classes for CaddyNote */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+  
+  .gradient-warning {
+    background: var(--gradient-warning);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  
+  .text-info {
+    color: hsl(var(--info));
+  }
+  
+  .bg-success {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+  
+  .bg-warning {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+  
+  .bg-info {
+    background-color: hsl(var(--info));
+    color: hsl(var(--info-foreground));
+  }
+  
+  .border-success {
+    border-color: hsl(var(--success));
+  }
+  
+  .border-warning {
+    border-color: hsl(var(--warning));
+  }
+  
+  .border-info {
+    border-color: hsl(var(--info));
+  }
+}
+
+/* Pages publiques — n'affecte pas l'app authentifiée. */
+.public-site {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.public-site .font-display,
+.public-site h1,
+.public-site h2 {
+  font-family: "Plus Jakarta Sans", Inter, sans-serif;
+  letter-spacing: -0.035em;
+}
+
+.public-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* Guides (Teacher/Student/School/Admin) : remplace le plugin Tailwind
+   Typography (`prose`, teinté "edusign", une ancienne couleur de marque)
+   par un habillage scopé cohérent avec le reste des pages publiques —
+   voir GuideHero/GuideSection. Le contenu (h3/p/ul/ol/strong/a) reste du
+   HTML simple dans chaque *GuideContent.tsx, seul le style change ici. */
+.guide-prose h3 {
+  margin-top: 1.75rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+.guide-prose h3:first-child {
+  margin-top: 0;
+}
+.guide-prose p {
+  line-height: 1.75;
+}
+.guide-prose ul,
+.guide-prose ol {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+  line-height: 1.7;
+}
+.guide-prose ul {
+  list-style-type: disc;
+}
+.guide-prose ol {
+  list-style-type: decimal;
+}
+.guide-prose li {
+  margin-top: 0.25rem;
+}
+.guide-prose li strong,
+.guide-prose p strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+.guide-prose a {
+  color: #05335c;
+  text-decoration-line: underline;
+  text-decoration-color: rgba(5, 51, 92, 0.3);
+  text-underline-offset: 2px;
+}
+.guide-prose a:hover {
+  color: #031d33;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-orb,
+  .public-site .animate-public-float,
+  .public-site .animate-public-float-slow,
+  .public-site .animate-public-shimmer,
+  .animate-fade-in,
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ACA-003 : impression de l'emploi du temps (et réutilisable ailleurs) —
+   marquer la chrome de l'app (sidebar, navbar, boutons d'action) en
+   `.print-hidden` pour qu'elle disparaisse au moment d'imprimer, sans rien
+   changer à l'affichage écran normal. */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+}

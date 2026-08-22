@@ -1,0 +1,159 @@
+name: CI CaddyNote
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  secrets_guard:
+    name: Guard — pas de secrets trackés
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-no-secrets.mjs
+
+  build_and_test:
+    name: Frontend — lint / tests / build
+    runs-on: ubuntu-latest
+    needs: [secrets_guard]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=critical
+      - run: npm test
+      - run: npm run lint:compat
+      - run: npm run build
+        env:
+          SKIP_PRERENDER: '1'
+      - run: npm run pwa:smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: dist/
+
+  server_tests:
+    name: Serveur — vitest (Postgres)
+    runs-on: ubuntu-latest
+    needs: [secrets_guard]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: caddynote
+          POSTGRES_PASSWORD: caddynote
+          POSTGRES_DB: caddynote_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U caddynote"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://caddynote:caddynote@localhost:5432/caddynote_test
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://caddynote:caddynote@localhost:5432/caddynote_test
+      - run: npm audit --audit-level=high
+
+  docker_push:
+    name: Build & Push Docker (main only)
+    needs: [build_and_test, server_tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: dist/
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build & push web
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/caddynote-web:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/caddynote-web:staging
+            ${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/caddynote:latest
+            ${{ secrets.DOCKER_USERNAME }}/caddynote:staging
+      - name: Build & push API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/caddynote-api:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/caddynote-api:staging
+
+  deploy_staging:
+    name: Staging — pull image + migrate + smoke
+    needs: [docker_push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Secrets STAGING_* = repository secrets (pas d’Environment GitHub « staging »
+    # sur ce dépôt — sinon l’extension Actions signale une valeur invalide).
+    # Pour des règles d’approbation : créer Settings → Environments → staging
+    # puis ajouter la clé job environment pointant vers ce nom.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deploy via SSH (images + migrate)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            WEB_IMAGE="${{ secrets.DOCKER_USERNAME }}/caddynote-web:${{ github.sha }}"
+            API_IMAGE="${{ secrets.DOCKER_USERNAME }}/caddynote-api:${{ github.sha }}"
+            APP_DIR="${{ secrets.STAGING_APP_DIR }}"
+            cd "${APP_DIR:-$HOME/caddynote}"
+            docker pull "$WEB_IMAGE"
+            docker pull "$API_IMAGE"
+            export CADDYNOTE_WEB_IMAGE="$WEB_IMAGE"
+            export CADDYNOTE_API_IMAGE="$API_IMAGE"
+            export CADDYNOTE_PULL_POLICY=always
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile split up -d --remove-orphans caddynote-db caddynote-api caddynote-worker caddynote-web
+            docker compose exec -T caddynote-api npx prisma migrate deploy
+            # API : rôle api, jobs=false
+            docker compose exec -T caddynote-api node -e "fetch('http://127.0.0.1:4000/health').then(async(r)=>{const j=await r.json(); if(!r.ok||j.processRole!=='api'||j.jobs!==false) process.exit(1)}).catch(()=>process.exit(1))"
+            # Worker : jobs=true
+            docker compose exec -T caddynote-worker node -e "fetch('http://127.0.0.1:4000/health').then(async(r)=>{const j=await r.json(); if(!r.ok||j.processRole!=='worker'||j.jobs!==true) process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Smoke API staging
+        env:
+          SMOKE_API_URL: ${{ secrets.STAGING_API_URL }}
+          SMOKE_EMAIL: ${{ secrets.STAGING_SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.STAGING_SMOKE_PASSWORD }}
+        run: node scripts/smoke-api.mjs

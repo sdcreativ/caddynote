@@ -1,0 +1,107 @@
+{
+  "title": "Gestion des Établissements",
+  "subtitle": "Gérez tous les établissements du système",
+  "addInstitution": "Ajouter un établissement",
+  "searchPlaceholder": "Rechercher un établissement...",
+  "loading": "Chargement des établissements...",
+  "emptyTitle": "Aucun établissement",
+  "emptyBody": "Commencez par ajouter votre premier établissement.",
+  "notSpecified": "Non renseignée",
+  "requiredTitle": "Champs requis",
+  "requiredBody": "Le nom et le type sont requis.",
+  "saving": "Enregistrement…",
+  "typePlaceholder": "Sélectionner un type",
+  "columns": {
+    "name": "Nom",
+    "type": "Type",
+    "address": "Adresse",
+    "contact": "Contact",
+    "actions": "Actions",
+    "email": "Email",
+    "phone": "Téléphone",
+    "headcount": "Effectif"
+  },
+  "types": {
+    "elementary_school": "École primaire",
+    "school": "École",
+    "middle_school": "Collège",
+    "high_school": "Lycée",
+    "private_school": "École privée",
+    "university": "Université",
+    "training_center": "Centre de formation"
+  },
+  "aria": {
+    "edit": "Modifier {{name}}",
+    "delete": "Supprimer {{name}}"
+  },
+  "add": {
+    "title": "Ajouter un établissement",
+    "description": "Créez un nouvel établissement dans le système"
+  },
+  "edit": {
+    "title": "Modifier l'établissement",
+    "description": "Mettez à jour les informations de l'établissement"
+  },
+  "fields": {
+    "name": "Nom de l'établissement",
+    "namePlaceholder": "Lycée Jean Dupont",
+    "type": "Type d'établissement",
+    "address": "Adresse",
+    "addressPlaceholder": "123 Rue de l'École, 75001 Paris",
+    "phone": "Téléphone",
+    "phonePlaceholder": "01 23 45 67 89",
+    "email": "Email",
+    "emailPlaceholder": "contact@etablissement.fr"
+  },
+  "delete": {
+    "title": "Êtes-vous sûr ?",
+    "description": "Cette action supprimera définitivement l'établissement et toutes ses données associées.",
+    "descriptionNamed": "Cette action supprimera définitivement l'établissement \"{{name}}\" et toutes ses données associées."
+  },
+  "manager": {
+    "newInstitution": "Nouvel établissement",
+    "totalInstitutions": "Total Établissements",
+    "totalInstitutionsHint": "Compte réel de la plateforme",
+    "totalUsers": "Utilisateurs totaux",
+    "usersBreakdown": "{{students}} élèves · {{teachers}} enseignants",
+    "loading": "Chargement…",
+    "attendance": "Assiduité globale",
+    "noAttendance": "Aucun élève — pas de taux inventé",
+    "attendanceHint": "Taux calculé sur les absences",
+    "typeDistribution": "Répartition par type",
+    "noInstitutionsChart": "Aucun établissement à afficher.",
+    "headcountByInstitution": "Effectif par établissement",
+    "rankingUnavailable": "Classement indisponible (réservé à l’administrateur global, ou aucun établissement).",
+    "usersSeries": "Utilisateurs",
+    "listTitle": "Liste des Établissements",
+    "allTypes": "Tous les types",
+    "trainingCenter": "Centre de Formation",
+    "exportNoneTitle": "Aucune donnée",
+    "exportNoneBody": "Aucun établissement à exporter.",
+    "exportDoneTitle": "Export réussi",
+    "exportDoneBody": "Les données ont été exportées en CSV",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette institution ?",
+    "csv": {
+      "name": "Nom",
+      "type": "Type",
+      "email": "Email",
+      "phone": "Téléphone",
+      "address": "Adresse"
+    }
+  },
+  "createDialog": {
+    "title": "Ajouter une nouvelle institution",
+    "description": "Remplissez les informations pour créer une nouvelle institution",
+    "required": "Le nom et le type sont obligatoires",
+    "successBody": "Institution créée avec succès",
+    "errorBody": "Impossible de créer l'institution",
+    "name": "Nom de l'institution *",
+    "namePlaceholder": "Ex: Lycée Excellence",
+    "type": "Type d'institution *",
+    "addressPlaceholder": "Adresse complète",
+    "phonePlaceholder": "Ex: +221 77 123 45 67",
+    "emailPlaceholder": "contact@institution.com",
+    "submit": "Créer l'institution",
+    "submitting": "Création..."
+  }
+}

@@ -1,0 +1,44 @@
+# Secrets
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/credentials.json
+**/secrets.json
+**/service-account*.json
+
+# Dépendances
+node_modules/
+vendor/
+target/
+.next/
+dist/
+build/
+
+# Journaux
+*.log
+logs/
+
+# Données
+*.sqlite
+*.sqlite3
+backups/
+uploads/private/
+
+# Documentation
+docs/
+docs/**/*.md
+docs/**/*.pdf
+docs/**/*.docx
+docs/**/*.doc
+docs/**/*.xls
+docs/**/*.xlsx
+docs/**/*.pptx
+docs/**/*.ppt
+docs/**/*.xls
+docs/**/*.xlsx
+docs/**/*.pptx
+docs/**/*.ppt
+# Miroir hors runtime (ne pas indexer / éditer comme code app)
+scripts/components/

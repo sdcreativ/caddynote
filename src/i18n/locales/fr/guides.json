@@ -1,0 +1,428 @@
+{
+  "parent": {
+    "heroTitle": "Guide d'utilisation CaddyNote — Profil parent / responsable",
+    "heroDescription": "Ce guide s'adresse aux parents, tuteurs et autres responsables liés à un ou plusieurs élèves. Les droits (notes, présence, facturation, communications) dépendent du lien que l'établissement a enregistré pour vous.",
+    "toc": {
+      "firstSteps": "2. Premiers pas",
+      "children": "3. Mes enfants",
+      "absences": "4. Absences et justificatifs",
+      "grades": "5. Notes et bulletins",
+      "finance": "6. Factures et paiements",
+      "help": "7. Aide"
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "login": "2.1. Connexion",
+      "loginBody": "Connectez-vous depuis la page d'accueil (<home>/</home>) avec l'adresse e-mail communiquée par l'établissement. En cas d'oubli, utilisez « Mot de passe oublié ? ». Si l'établissement a activé la double authentification, un code à 6 chiffres vous sera demandé après le mot de passe.",
+      "dashboard": "2.2. Tableau de bord",
+      "dashboardBody": "Après connexion, votre espace s'ouvre sur <dash>/dashboard</dash>. Le point d'entrée principal pour suivre vos enfants est <children>/my-children</children>."
+    },
+    "children": {
+      "title": "Mes enfants",
+      "body": "La page <children>/my-children</children> liste tous les élèves auxquels vous êtes lié (père, mère, tuteur, payeur, autre personne autorisée). Si vous avez plusieurs enfants, un sélecteur permet de passer de l'un à l'autre sans changer de compte.",
+      "alertTitle": "Droits par lien",
+      "alertBody": "Un payeur peut voir les factures sans forcément voir les notes. Un tuteur peut justifier une absence sans avoir accès à la discipline. Ces droits sont posés par l'établissement, pas par vous."
+    },
+    "absences": {
+      "title": "Absences et justificatifs",
+      "body": "Pour chaque enfant, vous voyez les absences et retards enregistrés. Pour déposer un justificatif : ouvrez l'absence, cliquez sur « Justifier », indiquez le motif et joignez un document si demandé. Le statut passe alors à « En attente de validation ». L'établissement accepte ou refuse ; un nouveau dépôt après refus remet le dossier en attente (jamais auto-accepté).",
+      "alertTitle": "Délais",
+      "alertBody": "Respectez les délais de l'établissement. Passé ce délai, il peut ne plus être possible de justifier une absence."
+    },
+    "grades": {
+      "title": "Notes et bulletins",
+      "body": "Seules les notes <strong>publiées</strong> sont visibles (jamais les brouillons de l'enseignant). Les bulletins générés par l'établissement portent un QR de vérification : n'importe qui peut contrôler l'authenticité du document sans compte, via le lien ou le QR imprimé.",
+      "alertTitle": "Confidentialité",
+      "alertBody": "Un incident disciplinaire n'est visible de la famille que s'il a été explicitement partagé. La direction y a toujours accès."
+    },
+    "finance": {
+      "title": "Factures et paiements",
+      "body": "Si votre lien inclut le droit facturation, vous pouvez consulter les factures de l'élève et payer (Mobile Money, carte, ou selon les modalités de l'établissement). Un paiement partiel est possible. Chaque paiement confirmé produit un reçu avec QR de vérification ; un remboursement n'efface jamais le paiement d'origine."
+    },
+    "help": {
+      "title": "Aide",
+      "faq": "FAQ et autres guides : <aide>/aide</aide>.",
+      "ticket": "Ticket de support (une fois connecté) : <support>/support</support>.",
+      "contact": "Contact public : <contact>/contact</contact>."
+    }
+  },
+  "teacher": {
+    "heroTitle": "Guide d'utilisation CaddyNote — Profil enseignant",
+    "heroDescription": "Bienvenue dans le guide d'utilisation de CaddyNote destiné aux enseignants. Découvrez comment utiliser la plateforme pour gérer la présence de vos élèves et simplifier vos tâches administratives.",
+    "toc": {
+      "firstSteps": "2. Premiers Pas",
+      "attendance": "3. Gestion de la Présence (Appel)",
+      "signature": "4. Signature Électronique",
+      "followUp": "5. Consultation et Suivi",
+      "other": "6. Autres Fonctionnalités Utiles",
+      "help": "7. Aide et Support Supplémentaire"
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "login": "2.1. Connexion",
+      "loginBody": "Pour accéder à votre compte enseignant, rendez-vous sur la page d'accueil (<home>/</home>). Utilisez l'adresse email et le mot de passe fournis par votre administration. En cas d'oubli, utilisez le lien \"Mot de passe oublié ?\".",
+      "dashboard": "2.2. Présentation du tableau de bord enseignant",
+      "dashboardIntro": "Votre tableau de bord (<dash>/dashboard</dash>) est votre point central. Il affiche généralement :",
+      "itemCourses": "<strong>Vos prochains cours :</strong> Accès rapide aux sessions à venir.",
+      "itemNotifs": "<strong>Notifications :</strong> Absences à justifier, messages importants.",
+      "itemShortcuts": "<strong>Accès rapides :</strong> Liens vers l'appel, vos classes, l'historique.",
+      "itemStats": "<strong>Statistiques rapides :</strong> Taux de présence de vos classes (si configuré).",
+      "alertTitle": "Astuce",
+      "alertBody": "Prenez un moment pour explorer votre tableau de bord et repérer où se trouvent les informations les plus importantes pour vous."
+    },
+    "attendance": {
+      "title": "Gestion de la présence (appel)",
+      "access": "3.1. Accéder à la feuille d'appel",
+      "accessIntro": "Vous pouvez accéder à la feuille d'appel de plusieurs manières :",
+      "fromDash": "Depuis le tableau de bord (<dash>/dashboard</dash>), via la section \"Prochains Cours\".",
+      "fromCalendar": "Via votre emploi du temps (<calendar>/calendar</calendar>).",
+      "fromTeaching": "Via la section dédiée à vos enseignements (<teaching>/teaching</teaching>).",
+      "clickCourse": "Cliquez sur le cours concerné pour ouvrir la feuille d'appel.",
+      "mark": "3.2. Marquer les présences, absences et retards",
+      "markIntro": "Sur la feuille d'appel, vous verrez la liste des étudiants inscrits à votre cours. Pour chaque étudiant :",
+      "defaultPresent": "Par défaut, les étudiants sont souvent marqués comme \"Présent\".",
+      "changeStatus": "Cliquez sur le statut pour le changer en \"Absent\" ou \"Retard\".",
+      "otherStatus": "Selon la configuration, vous pourriez avoir d'autres statuts (ex: \"Exclu\", \"Justifié à l'avance\").",
+      "quickNote": "Vous pouvez parfois ajouter une note rapide pour une absence ou un retard.",
+      "alertTitle": "Important",
+      "alertBody": "Assurez-vous de marquer le statut correct pour chaque étudiant. Ces informations sont utilisées pour les rapports et le suivi.",
+      "unlisted": "3.3. Gérer les étudiants non inscrits (si applicable)",
+      "unlistedBody": "Si un étudiant assiste à votre cours mais n'apparaît pas sur la liste, une option \"Ajouter un étudiant\" peut être disponible pour le rechercher et l'ajouter temporairement à la session (l'administration devra régulariser son inscription)."
+    },
+    "signature": {
+      "title": "Signature électronique",
+      "signSheet": "4.1. Signer la feuille de présence",
+      "signSheetBody": "Une fois l'appel terminé et les statuts vérifiés, vous devez généralement valider et signer la feuille de présence. Recherchez un bouton \"Valider\" ou \"Signer\".",
+      "methodsIntro": "La signature peut se faire par :",
+      "click": "Un simple clic de confirmation.",
+      "pin": "La saisie de votre mot de passe ou d'un code PIN.",
+      "handwritten": "Une signature manuscrite sur écran tactile (si équipé).",
+      "locked": "Une fois signée, la feuille est généralement verrouillée et archivée (<signatures>/signatures</signatures>).",
+      "alertTitle": "Attention",
+      "alertBody": "La signature a une valeur légale ou administrative. Vérifiez attentivement la feuille d'appel avant de signer. Les modifications après signature sont souvent restreintes ou impossibles.",
+      "studentSign": "4.2. Signature étudiante (si applicable)",
+      "studentSignIntro": "Pour certains cours, les étudiants peuvent aussi devoir signer. Les méthodes courantes incluent :",
+      "tablet": "Signature sur une tablette passée en classe.",
+      "qr": "Scan d'un QR Code affiché à l'écran.",
+      "account": "Validation depuis leur propre compte CaddyNote.",
+      "follow": "Suivez les instructions spécifiques affichées pour la session de cours."
+    },
+    "followUp": {
+      "title": "Consultation et suivi",
+      "history": "5.1. Consulter l'historique des présences",
+      "historyIntro": "Vous pouvez généralement consulter l'historique des présences pour vos cours passés :",
+      "viaTeaching": "Via la section de vos enseignements (<teaching>/teaching</teaching>).",
+      "viaSignatures": "Via la section des signatures (<signatures>/signatures</signatures>).",
+      "viaProfile": "Parfois directement depuis le profil d'un étudiant.",
+      "justifications": "5.2. Voir le statut des justifications",
+      "justificationsBody": "Lorsque vous consultez l'historique ou une feuille d'appel passée, le statut des absences (Non justifiée, En attente, Justifiée) est souvent indiqué, vous informant si l'administration a traité les demandes."
+    },
+    "other": {
+      "title": "Autres fonctionnalités utiles",
+      "profile": "6.1. Gestion du profil (<profile>/profile</profile>)",
+      "profileBody": "Accédez à votre profil pour mettre à jour vos informations personnelles ou changer votre mot de passe.",
+      "calendar": "6.2. Emploi du temps (<calendar>/calendar</calendar>)",
+      "calendarBody": "Consultez votre emploi du temps personnel avec tous vos cours planifiés.",
+      "grades": "6.3. Notes, devoirs et exercices",
+      "gradesBody": "Saisissez les notes en brouillon puis publiez-les (<grades>/grades</grades>) — une correction après publication conserve l'ancienne valeur. Créez des devoirs (<assignments>/teacher-assignments</assignments>) : les élèves sont notifiés à la publication, puis rappelés avant l'échéance et en cas de retard. Les exercices (y compris une proposition IA, à relire avant enregistrement) se gèrent dans <exercises>/teacher-exercises</exercises>.",
+      "unavailability": "6.4. Indisponibilités",
+      "unavailabilityBody": "Déclarez une indisponibilité ; la direction la valide. Les créneaux déjà planifiés sont signalés, mais un remplacement n'est jamais créé automatiquement."
+    },
+    "help": {
+      "title": "Aide et support supplémentaire",
+      "intro": "Si vous avez besoin d'aide :",
+      "faq": "Consultez la <aide>FAQ et les autres guides</aide> dans la section Aide.",
+      "contact": "Utilisez le <contact>formulaire de contact</contact> pour joindre le support technique ou contactez votre administration."
+    }
+  },
+  "student": {
+    "heroTitle": "Guide d'utilisation CaddyNote — Profil étudiant",
+    "heroDescription": "Bienvenue dans le guide d'utilisation de CaddyNote destiné aux étudiants. Apprenez à consulter vos informations, justifier vos absences et suivre votre parcours.",
+    "toc": {
+      "firstSteps": "2. Premiers Pas",
+      "info": "3. Consulter Vos Informations",
+      "justify": "4. Justifier une Absence",
+      "sign": "5. Signer la Feuille de Présence",
+      "profile": "6. Gestion de Votre Profil",
+      "help": "7. Aide et Support Supplémentaire"
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "login": "2.1. Connexion",
+      "loginBody": "Pour accéder à votre compte étudiant, rendez-vous sur la page d'accueil (<home>/</home>). Utilisez l'adresse email et le mot de passe fournis par votre établissement. En cas d'oubli, utilisez le lien \"Mot de passe oublié ?\".",
+      "space": "2.2. Présentation de votre espace (<dash>/dashboard</dash>)",
+      "spaceIntro": "Votre tableau de bord (<dash>/dashboard</dash>) est votre page d'accueil personnalisée. Vous y trouverez :",
+      "itemSessions": "<strong>Vos prochaines sessions de cours.</strong>",
+      "itemAbsences": "<strong>Un aperçu de vos absences récentes.</strong>",
+      "itemNotifs": "<strong>Des notifications importantes</strong> (ex: justification requise).",
+      "itemLinks": "<strong>Des liens rapides</strong> vers votre emploi du temps, vos absences, etc.",
+      "alertTitle": "Astuce",
+      "alertBody": "Consultez régulièrement votre tableau de bord pour rester informé de votre emploi du temps et de vos éventuelles absences."
+    },
+    "info": {
+      "title": "Consulter vos informations",
+      "calendar": "3.1. Emploi du temps (<calendar>/calendar</calendar>)",
+      "calendarBody": "Accédez à la section \"Emploi du Temps\" pour visualiser vos cours planifiés par jour, semaine ou mois. Cliquez sur un cours pour voir les détails (heure, salle, enseignant).",
+      "absences": "3.2. Mes absences (<absences>/my-absences</absences>)",
+      "absencesIntro": "Cette section répertorie toutes vos absences et retards enregistrés par vos enseignants. Vous y verrez :",
+      "itemDate": "La date et le cours concerné.",
+      "itemStatus": "Le statut de l'absence : \"Non justifiée\", \"En attente de justification\", \"Justifiée\", \"Refusée\".",
+      "itemJustify": "La possibilité de soumettre une justification pour les absences non justifiées.",
+      "alertTitle": "Important",
+      "alertBody": "Vérifiez régulièrement cette section pour vous assurer qu'aucune absence n'a été enregistrée par erreur et pour soumettre vos justificatifs à temps.",
+      "grades": "3.3. Mes notes (<grades>/my-grades</grades>)",
+      "gradesBody": "Consultez vos notes publiées (jamais les brouillons de l'enseignant) et, le cas échéant, vos devoirs dans <assignments>/assignments</assignments>."
+    },
+    "justify": {
+      "title": "Justifier une absence",
+      "submit": "4.1. Soumettre une justification",
+      "submitIntro": "Depuis la page \"Mes Absences\" (<absences>/my-absences</absences>) :",
+      "step1": "Repérez l'absence marquée comme \"Non justifiée\" que vous souhaitez justifier.",
+      "step2": "Cliquez sur l'absence ou sur un bouton \"Justifier\" associé.",
+      "step3": "Un formulaire apparaît (potentiellement dans une modale ou une nouvelle section).",
+      "step4": "Remplissez le motif de votre absence (ex: Maladie, Rendez-vous médical, Raison personnelle...).",
+      "step5": "Téléchargez un document justificatif si nécessaire et demandé (ex: certificat médical, convocation). Formats acceptés : PDF, JPG, PNG...",
+      "step6": "Cliquez sur \"Soumettre\" ou \"Envoyer la justification\".",
+      "follow": "4.2. Suivi de la justification",
+      "followBody": "Une fois soumise, le statut de l'absence passera à \"En attente de justification\". L'administration de votre établissement examinera votre demande. Vous pourrez voir si elle est acceptée (\"Justifiée\") ou refusée (\"Refusée\") dans la section \"Mes Absences\". Vous pourriez également recevoir une notification.",
+      "alertTitle": "Délais",
+      "alertBody": "Respectez les délais imposés par votre établissement pour soumettre vos justificatifs. Passé ce délai, il pourrait ne plus être possible de justifier une absence."
+    },
+    "sign": {
+      "title": "Signer la feuille de présence (si applicable)",
+      "intro": "Pour certains cours, votre enseignant peut vous demander de signer électroniquement votre présence. Les méthodes varient :",
+      "qr": "<strong>Scan de QR Code :</strong> Votre enseignant affiche un QR Code. Vous le scannez avec l'application mobile CaddyNote ou via une page web dédiée (<sign>/sign</sign> ?) pour enregistrer votre présence.",
+      "class": "<strong>Validation en classe :</strong> L'enseignant peut vous demander de cliquer sur votre nom sur une tablette ou un écran interactif.",
+      "code": "<strong>Code de session :</strong> L'enseignant vous donne un code à entrer sur votre interface CaddyNote.",
+      "follow": "Suivez attentivement les instructions de votre enseignant au début ou à la fin du cours concerné."
+    },
+    "profile": {
+      "title": "Gestion de votre profil (<profile>/profile</profile>)",
+      "intro": "Accédez à la section \"Profil\" pour :",
+      "info": "Vérifier et éventuellement modifier certaines de vos informations personnelles (numéro de téléphone, etc., selon ce qui est autorisé).",
+      "password": "Changer votre mot de passe.",
+      "prefs": "Gérer vos préférences de notification (si disponible)."
+    },
+    "help": {
+      "title": "Aide et support supplémentaire",
+      "intro": "Si vous avez besoin d'aide ou si vous constatez une erreur :",
+      "faq": "Consultez la <aide>FAQ et les autres guides</aide> dans la section Aide.",
+      "admin": "Contactez l'administration de votre établissement (secrétariat, vie scolaire) pour les questions relatives à vos absences, justifications ou inscriptions.",
+      "contact": "Utilisez le <contact>formulaire de contact</contact> pour les problèmes techniques avec la plateforme CaddyNote."
+    }
+  },
+  "admin": {
+    "heroTitle": "Guide d'utilisation CaddyNote — Profil administrateur",
+    "heroDescription": "Bienvenue dans le guide d'utilisation de CaddyNote destiné aux administrateurs. Ce guide vous détaille les fonctionnalités clés pour gérer efficacement la plateforme.",
+    "toc": {
+      "firstSteps": "2. Premiers Pas",
+      "users": "3. Gestion des Utilisateurs",
+      "structure": "4. Gestion de la Structure de l'Établissement",
+      "absences": "5. Gestion des Absences et Justifications",
+      "signatures": "6. Gestion des Signatures Électroniques",
+      "reports": "7. Rapports et Statistiques",
+      "modules": "8. Finance, documents, admissions",
+      "config": "9. Configuration de la Plateforme",
+      "help": "10. Aide et Support"
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "login": "2.1. Connexion",
+      "loginBody": "Pour accéder à votre compte administrateur, rendez-vous sur la page d'accueil de CaddyNote (<home>/</home>). Utilisez l'adresse email et le mot de passe fournis. En cas d'oubli, utilisez le lien \"Mot de passe oublié ?\".",
+      "dashboard": "2.2. Présentation du tableau de bord administrateur",
+      "dashboardIntro": "Une fois connecté, vous accédez à votre tableau de bord principal (<dash>/dashboard</dash>). Il affiche typiquement :",
+      "itemStats": "<strong>Statistiques clés :</strong> Taux de présence, absences récentes, justifications en attente.",
+      "itemActivity": "<strong>Activités récentes :</strong> Un flux des dernières actions (absences, signatures, etc.).",
+      "itemShortcuts": "<strong>Accès rapides :</strong> Liens vers les sections importantes.",
+      "itemNotifs": "<strong>Notifications :</strong> Alertes et actions requises.",
+      "alertTitle": "Astuce",
+      "alertBody": "Familiarisez-vous avec les différents widgets et liens de votre tableau de bord, c'est votre point de départ principal."
+    },
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "students": "3.1. Gérer les étudiants (<students>/students</students>)",
+      "add": "<strong>Ajouter :</strong> Cliquez sur \"Ajouter\" et remplissez les informations.",
+      "import": "<strong>Importer :</strong> Utilisez la fonction d'import (CSV/Excel) pour des ajouts en masse (vérifiez le format requis).",
+      "edit": "<strong>Modifier :</strong> Recherchez l'étudiant et cliquez sur l'icône \"Modifier\" ou son nom.",
+      "view": "<strong>Consulter :</strong> Cliquez sur le nom pour voir les détails et l'historique.",
+      "archive": "<strong>Désactiver/Archiver :</strong> Gérez le statut des étudiants ayant quitté l'établissement.",
+      "teachers": "3.2. Gérer les enseignants (<teaching>/teaching</teaching> ou section dédiée)",
+      "teacherAdd": "<strong>Ajouter :</strong> Créez un compte enseignant.",
+      "teacherAssign": "<strong>Assigner :</strong> Liez les enseignants aux classes/cours qu'ils dispensent.",
+      "teacherEdit": "<strong>Modifier/Désactiver :</strong> Gérez les informations et les départs.",
+      "guardians": "3.3. Gérer les responsables (parents / tuteurs)",
+      "guardiansBody": "Depuis la fiche élève, liez un responsable (père, mère, tuteur, payeur, autre personne autorisée) avec des droits différenciés (notes, présence, facturation, communications, discipline). Un même compte parent peut suivre plusieurs enfants.",
+      "admins": "3.4. Gérer les autres administrateurs (si applicable)",
+      "adminsBody": "Si votre rôle le permet, gérez les comptes d'autres administrateurs depuis <users>/users</users>. Un compte n'est jamais supprimé : il est désactivé (sessions révoquées, connexion bloquée) et peut être réactivé."
+    },
+    "structure": {
+      "title": "Gestion de la structure de l'établissement",
+      "institutions": "4.1. Gérer les institutions/écoles (<institutions>/institutions</institutions>)",
+      "institutionsBody": "Créez ou modifiez les informations de votre école/campus. Gérez plusieurs sites si nécessaire.",
+      "classes": "4.2. Gérer les classes (<classes>/classes</classes>)",
+      "classesBody": "Créez des classes, assignez-y des étudiants et éventuellement un enseignant principal.",
+      "courses": "4.3. Gérer les cours/matières (si applicable)",
+      "coursesBody": "Définissez les matières enseignées et liez-les aux classes et enseignants appropriés pour générer les feuilles d'appel. Cette configuration peut se trouver dans les paramètres (<settings>/settings</settings>) ou liée aux classes."
+    },
+    "absences": {
+      "title": "Gestion des absences et justifications",
+      "follow": "5.1. Consulter le suivi des présences (<absences>/absences</absences>)",
+      "followBody": "Visualisez toutes les absences et retards. Utilisez les filtres (date, classe, étudiant, statut) pour rechercher. Repérez facilement les absences non justifiées.",
+      "process": "5.2. Traiter les justificatifs d'absence (<absences>/absences</absences>)",
+      "processBody": "La file « En attente de validation » distingue un justificatif jamais examiné d'un justificatif rejeté. Acceptez ou refusez depuis cet écran. Un nouveau dépôt après refus remet le dossier en attente.",
+      "manual": "5.3. Gérer manuellement les absences",
+      "manualBody": "Si nécessaire, ajoutez, modifiez ou supprimez manuellement un enregistrement d'absence (souvent depuis <absences>/absences</absences>).",
+      "alertTitle": "Attention",
+      "alertBody": "Utilisez la gestion manuelle des absences avec précaution, car elle peut impacter les statistiques et les rapports. Documentez toujours la raison de la modification si possible."
+    },
+    "signatures": {
+      "title": "Gestion des signatures électroniques",
+      "sheets": "6.1. Consulter les feuilles d'émargement signées (<signatures>/signatures</signatures>)",
+      "sheetsBody": "Accédez à l'archive des feuilles de présence signées. Recherchez par date, cours, etc. Visualisez les détails de la signature (qui, quand, comment) pour une traçabilité complète.",
+      "config": "6.2. Configuration des modes de signature (dans <settings>/settings</settings>)",
+      "configBody": "Définissez quels cours nécessitent une signature, qui doit signer (enseignant, étudiant, les deux), et la méthode utilisée (QR Code, clic, tablette, etc.) dans les paramètres de la plateforme."
+    },
+    "reports": {
+      "title": "Rapports et statistiques",
+      "access": "7.1. Accéder aux rapports",
+      "accessBody": "Naviguez vers <exports>/exports</exports>. Filtrez par établissement, classe, matière et dates, puis exportez en CSV, Excel ou PDF.",
+      "generate": "7.2. Générer des rapports d'assiduité",
+      "generateBody": "Sélectionnez le type de rapport (taux d'assiduité, récapitulatif absences, suivi justifications...) et utilisez les filtres (dates, classes...) pour personnaliser.",
+      "export": "7.3. Exporter les données",
+      "exportBody": "Utilisez le bouton \"Exporter\" (souvent présent sur la page des rapports) pour télécharger les données aux formats CSV, Excel ou PDF pour une analyse externe ou archivage.",
+      "alertTitle": "Bon à savoir",
+      "alertBody": "Les rapports sont essentiels pour le suivi pédagogique, administratif et parfois réglementaire. Planifiez des exports réguliers si nécessaire."
+    },
+    "modules": {
+      "title": "Finance, documents, admissions, communication",
+      "finance": "8.1. Finance (<finance>/finance</finance>)",
+      "financeBody": "Catalogue de frais, factures (remises, pénalités de retard optionnelles), paiements Mobile Money / carte / virement / espèces, remboursement traçable, rapprochement bancaire. Les montants sont toujours en centimes.",
+      "documents": "8.2. Documents (<documents>/documents</documents>)",
+      "documentsBody": "Certificats, reçus, bulletins, relevés et listes de classe en PDF, avec QR de vérification publique. Personnalisez le modèle (logo, couleurs) ; la zone de vérification n'est jamais personnalisable. Un document n'est jamais écrasé : chaque génération crée une version.",
+      "admissions": "8.3. Préinscriptions",
+      "admissionsBody": "Les candidats déposent un dossier sans compte. La direction fait avancer le dossier (besoin d'infos, acceptation, inscription). L'inscription crée réellement les comptes élève et responsables (réutilisation si l'e-mail existe déjà).",
+      "comms": "8.4. Communication et support",
+      "commsBody": "Envois e-mail / SMS (et autres canaux selon configuration et consentements). Les messages critiques demandent un accusé de réception. Les tickets de support se gèrent dans <support>/support</support>."
+    },
+    "config": {
+      "title": "Configuration de la plateforme (<settings>/settings</settings>)",
+      "general": "9.1. Paramètres généraux",
+      "generalBody": "Définissez l'année scolaire, les jours fériés/vacances, le fuseau horaire, les formats, et potentiellement le logo de votre établissement.",
+      "absenceTypes": "9.2. Types d'absences et motifs",
+      "absenceTypesBody": "Personnalisez les types d'événements (Absence, Retard...) et les motifs de justification acceptés pour correspondre aux règles de votre institution.",
+      "notifs": "9.3. Paramètres de notification",
+      "notifsBody": "Configurez quand et à qui envoyer des notifications automatiques (ex: absence non justifiée, justification traitée...)."
+    },
+    "help": {
+      "title": "Aide et support supplémentaire",
+      "intro": "Si vous avez besoin d'aide :",
+      "faq": "Consultez la <aide>FAQ et les autres guides</aide> dans la section Aide.",
+      "contact": "Utilisez le <contact>formulaire de contact</contact> pour joindre le support technique."
+    }
+  },
+  "school": {
+    "heroTitle": "Guide CaddyNote — Pour les écoles",
+    "heroDescription": "Guide complet pour les administrateurs d'établissements scolaires. Supervision et tableaux de bord pour une gestion optimale.",
+    "toc": {
+      "setup": "2. Configuration Initiale",
+      "users": "3. Gestion des Utilisateurs",
+      "supervision": "4. Supervision et Contrôle",
+      "reports": "5. Rapports et Statistiques",
+      "signatures": "6. Gestion des Signatures",
+      "support": "7. Support et Formation"
+    },
+    "setup": {
+      "title": "Configuration initiale de l'école",
+      "create": "2.1. Création de l'institution",
+      "createIntro": "Accédez à la section \"Institutions\" (<institutions>/institutions</institutions>) pour configurer votre établissement :",
+      "info": "<strong>Informations générales :</strong> Nom, adresse, contact",
+      "academic": "<strong>Paramètres académiques :</strong> Calendrier scolaire, horaires",
+      "branding": "<strong>Branding :</strong> Logo et couleurs de l'établissement",
+      "org": "2.2. Structure organisationnelle",
+      "orgIntro": "Organisez votre établissement en créant la hiérarchie appropriée :",
+      "depts": "Créez les départements et filières",
+      "levels": "Définissez les niveaux d'études",
+      "classes": "Configurez les classes et groupes"
+    },
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "teachers": "3.1. Administration des enseignants",
+      "teachersIntro": "Gérez votre corps enseignant via la section \"Gestion des Utilisateurs\" (<users>/users</users>) :",
+      "invite": "Invitation et création de comptes enseignants",
+      "assign": "Attribution des matières et classes",
+      "rights": "Gestion des droits et permissions",
+      "activity": "Suivi de l'activité des enseignants",
+      "students": "3.2. Gestion des étudiants",
+      "studentsIntro": "Administrez vos étudiants depuis la section \"Étudiants\" (<students>/students</students>) :",
+      "import": "Import en masse via fichiers CSV/Excel",
+      "assignClass": "Assignation aux classes et groupes",
+      "personal": "Gestion des informations personnelles",
+      "history": "Historique académique et suivi",
+      "alertTitle": "Import de données",
+      "alertBody": "Utilisez les modèles de fichiers fournis pour importer vos données d'étudiants et d'enseignants de manière efficace."
+    },
+    "supervision": {
+      "title": "Supervision et contrôle",
+      "dash": "4.1. Tableaux de bord",
+      "dashIntro": "Le tableau de bord principal (<dash>/dashboard</dash>) vous offre une vue d'ensemble :",
+      "stats": "<strong>Statistiques de présence :</strong> Taux global et par classe",
+      "alerts": "<strong>Alertes :</strong> Absences répétées, justifications en attente",
+      "activity": "<strong>Activité récente :</strong> Dernières signatures et appels",
+      "kpis": "<strong>Indicateurs clés :</strong> Performance académique et assiduité",
+      "absences": "4.2. Gestion des absences",
+      "absencesIntro": "Supervisez les absences depuis la section dédiée (<absences>/absences</absences>) :",
+      "overview": "Vue globale des absences par période",
+      "validate": "Validation des justificatifs",
+      "autoAlerts": "Alertes automatiques pour absences excessives",
+      "families": "Communication avec les familles"
+    },
+    "reports": {
+      "title": "Rapports et statistiques",
+      "generate": "5.1. Génération de rapports",
+      "generateIntro": "Créez des rapports personnalisés pour différents besoins :",
+      "attendance": "<strong>Rapports d'assiduité :</strong> Par classe, période, étudiant",
+      "monthly": "<strong>Bilans mensuels :</strong> Statistiques globales",
+      "predictive": "<strong>Analyses prédictives :</strong> Identification des risques",
+      "exports": "<strong>Exports :</strong> PDF, Excel pour partage externe",
+      "analyze": "5.2. Analyse des données",
+      "analyzeIntro": "Utilisez les outils d'analyse intégrés pour :",
+      "trends": "Identifier les tendances d'absentéisme",
+      "compare": "Comparer les performances entre classes",
+      "evaluate": "Évaluer l'efficacité des mesures prises",
+      "council": "Préparer les conseils de classe",
+      "alertTitle": "Conformité RGPD",
+      "alertBody": "Tous les rapports respectent les réglementations sur la protection des données. Les données personnelles sont anonymisées dans les statistiques globales."
+    },
+    "signatures": {
+      "title": "Gestion des signatures électroniques",
+      "config": "6.1. Configuration des signatures",
+      "configIntro": "Paramétrez le système de signatures depuis la section \"Signatures\" (<signatures>/signatures</signatures>) :",
+      "define": "Définir les cours nécessitant une signature",
+      "methods": "Choisir les méthodes de signature (QR code, tablette, etc.)",
+      "reminders": "Configurer les délais et rappels",
+      "archive": "6.2. Archivage et conformité",
+      "archiveIntro": "Le système assure la traçabilité complète :",
+      "timestamp": "Horodatage de toutes les signatures",
+      "secure": "Archivage sécurisé et chiffré",
+      "audit": "Audit trail complet",
+      "legal": "Conformité légale garantie"
+    },
+    "support": {
+      "title": "Support et formation",
+      "training": "7.1. Formation des équipes",
+      "trainingIntro": "Ressources disponibles pour former vos équipes :",
+      "guides": "Guides utilisateurs pour enseignants et étudiants",
+      "sessions": "Sessions de formation en ligne",
+      "docs": "Documentation technique complète",
+      "videos": "Vidéos tutoriels",
+      "tech": "7.2. Support technique",
+      "techIntro": "En cas de problème, plusieurs options s'offrent à vous :",
+      "help": "Centre d'aide en ligne (<aide>/aide</aide>)",
+      "contact": "Contact direct via le <contact>formulaire de contact</contact>",
+      "chat": "Tickets support dans l’application (/support) pour un suivi structuré",
+      "phone": "Support téléphonique aux heures ouvrables",
+      "alertTitle": "Maintenance programmée",
+      "alertBody": "Les maintenances système sont toujours programmées en dehors des heures de cours. Vous êtes notifiés 48h à l'avance."
+    }
+  }
+}

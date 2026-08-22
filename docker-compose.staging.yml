@@ -1,0 +1,24 @@
+# Overlay staging — split api / worker (P2-D Scale)
+#
+# Usage :
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile split up -d
+#
+# L’API n’exécute plus les crons ; le worker les prend avec verrou advisory
+# (plusieurs replicas worker OK).
+
+services:
+  caddynote-api:
+    environment:
+      CADDYNOTE_PROCESS_ROLE: api
+      CADDYNOTE_DEPLOYMENT: staging
+      # TEST_MODE interdit sur staging (garde démarrage dans index.ts)
+      CADDYNOTE_TEST_MODE: "false"
+
+  caddynote-worker:
+    profiles: ["split"]
+    environment:
+      CADDYNOTE_PROCESS_ROLE: worker
+      CADDYNOTE_DEPLOYMENT: staging
+      CADDYNOTE_TEST_MODE: "false"
+      # Sonde distincte si l’API occupe déjà 4000 sur le même réseau hôte
+      PORT: ${WORKER_PORT:-4000}

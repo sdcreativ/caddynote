@@ -1,0 +1,161 @@
+services:
+  # --- Postgres applicatif ---
+  # Base réelle de la stack : volume nommé, healthcheck, migrations
+  # appliquées au démarrage de caddynote-api (voir server/docker-entrypoint.sh).
+  caddynote-db:
+    image: postgres:16-alpine
+    container_name: caddynote-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-caddynote}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-caddynote}
+      POSTGRES_DB: ${POSTGRES_DB:-caddynote}
+    volumes:
+      - caddynote_pgdata:/var/lib/postgresql/data
+    ports:
+      # 5433 côté hôte : ne pas occuper 5432 (Postgres local / `caddynote_test`).
+      # Pour que `npm run dev` voie les mêmes données, server/.env doit
+      # pointer vers localhost:5433 — voir CADDYNOTE_DB_PROFILE.
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-caddynote} -d ${POSTGRES_DB:-caddynote}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - caddynote-net
+    labels:
+      - "project=CaddyNote"
+      - "service=database"
+
+  # --- Service de l'application Web ---
+  caddynote-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+    image: ${CADDYNOTE_WEB_IMAGE:-caddynote/webapp}
+    pull_policy: ${CADDYNOTE_PULL_POLICY:-build}
+    container_name: caddynote-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks:
+      - caddynote-net
+    depends_on:
+      - caddynote-api
+    labels:
+      - "project=CaddyNote"
+      - "service=frontend"
+
+  # --- Service de l'API (Express/Prisma) ---
+  # `env_file` réutilise `server/.env` (JWT, Stripe, S3, SMTP…).
+  # DATABASE_URL est volontairement surchargé : `server/.env` pointe vers
+  # localhost (valable pour `npm run dev` sur l'hôte), pas vers le service
+  # compose. Mot de passe : rester URL-safe (pas de @ : / dans la valeur).
+  caddynote-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: ${CADDYNOTE_API_IMAGE:-caddynote/api}
+    pull_policy: ${CADDYNOTE_PULL_POLICY:-build}
+    container_name: caddynote-api
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-caddynote}:${POSTGRES_PASSWORD:-caddynote}@caddynote-db:5432/${POSTGRES_DB:-caddynote}
+      # Origine du frontend tel que le navigateur le voit (port hôte).
+      CORS_ORIGIN: http://localhost:${WEB_PORT:-8080}
+      # Antivirus : joindre le service compose (override server/.env local).
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: "3310"
+      # `all` par défaut : un process (HTTP + jobs). Pour séparer :
+      # CADDYNOTE_PROCESS_ROLE=api et `docker compose --profile split up`.
+      CADDYNOTE_PROCESS_ROLE: ${CADDYNOTE_PROCESS_ROLE:-all}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    extra_hosts:
+      # Conservé pour joindre un S3/SMTP éventuellement encore sur l'hôte.
+      - "host.docker.internal:host-gateway"
+    networks:
+      - caddynote-net
+    depends_on:
+      caddynote-db:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    labels:
+      - "project=CaddyNote"
+      - "service=api"
+
+  # --- Worker (crons + file d'attente), optionnel ---
+  # Inactif par défaut. Activation :
+  #   CADDYNOTE_PROCESS_ROLE=api docker compose --profile split up -d
+  # Staging : docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile split up -d
+  # Les crons utilisent un verrou advisory (lib/cronLock.ts) : N workers OK.
+  # Éviter API en `all` + worker (ticks gaspillés).
+  caddynote-worker:
+    profiles: ["split"]
+    image: ${CADDYNOTE_API_IMAGE:-caddynote/api}
+    pull_policy: ${CADDYNOTE_PULL_POLICY:-build}
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: caddynote-worker
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-caddynote}:${POSTGRES_PASSWORD:-caddynote}@caddynote-db:5432/${POSTGRES_DB:-caddynote}
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: "3310"
+      CADDYNOTE_PROCESS_ROLE: worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - caddynote-net
+    depends_on:
+      caddynote-db:
+        condition: service_healthy
+      caddynote-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    labels:
+      - "project=CaddyNote"
+      - "service=worker"
+
+  # --- ClamAV (DOC-005) ---
+  # Scan antivirus des fichiers rattachés. Premier démarrage long (signatures).
+  # L'API pointe dessus via CLAMAV_HOST=clamav (surcharge environment ci-dessus).
+  clamav:
+    image: clamav/clamav:1.4
+    container_name: caddynote-clamav
+    restart: unless-stopped
+    networks:
+      - caddynote-net
+    volumes:
+      - clamav_data:/var/lib/clamav
+    labels:
+      - "project=CaddyNote"
+      - "service=antivirus"
+
+volumes:
+  caddynote_pgdata: {}
+  clamav_data: {}
+
+networks:
+  caddynote-net:
+    driver: bridge

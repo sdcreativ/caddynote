@@ -1,0 +1,32 @@
+{
+  "classes": {
+    "title": "Gestion des classes",
+    "total": "{{count}} classes au total",
+    "newClass": "Nouvelle classe",
+    "totalClasses": "Total Classes",
+    "institutions": "Institutions",
+    "avgSize": "Taille Moyenne",
+    "search": "Recherche",
+    "searchPlaceholder": "Rechercher par nom de classe, institution, enseignant…",
+    "filterInstitution": "Filtrer par établissement",
+    "allInstitutions": "Tous les établissements",
+    "list": "Liste des classes",
+    "listGrouped": "Classes par établissement",
+    "groupCount": "{{count}} classe(s)",
+    "noInstitution": "Sans établissement",
+    "colClass": "Classe",
+    "colInstitution": "Institution",
+    "colTeacher": "Enseignant",
+    "colStudents": "Étudiants",
+    "colYear": "Année académique",
+    "colCreated": "Créée le",
+    "colActions": "Actions",
+    "noDescription": "Aucune description",
+    "none": "Aucune",
+    "unassigned": "Non assigné",
+    "studentCount": "{{count}} étudiants",
+    "yearUndefined": "Non définie",
+    "students": "Étudiants",
+    "empty": "Aucune classe trouvée"
+  }
+}

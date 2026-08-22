@@ -1,0 +1,15 @@
+{
+  "view": "Voir",
+  "loadError": "Impossible de charger les notifications",
+  "markedTitle": "Notifications marquées",
+  "markedBody": "Toutes les notifications ont été marquées comme lues",
+  "agoMinutes": "Il y a {{count}} min",
+  "agoHours": "Il y a {{count}} h",
+  "agoDays": "Il y a {{count}} j",
+  "title": "Notifications",
+  "markAllRead": "Tout marquer comme lu",
+  "unread": "Non lues",
+  "all": "Toutes",
+  "markRead": "Marquer comme lu",
+  "empty": "Aucune nouvelle notification"
+}

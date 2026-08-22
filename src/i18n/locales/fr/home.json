@@ -1,0 +1,181 @@
+{
+  "loading": "Chargement…",
+  "redirecting": "Redirection en cours…",
+  "goDashboard": "Accéder au dashboard",
+  "hero": {
+    "badge": "La gestion scolaire pensée pour l'Afrique",
+    "titleLine1": "L'école avance.",
+    "titleAccent1": "Votre gestion ",
+    "titleAccent2": "aussi.",
+    "subtitle": "CaddyNote connecte directions, enseignants et familles dans une plateforme simple, moderne et adaptée aux réalités des établissements africains.",
+    "ctaStart": "Démarrer avec CaddyNote",
+    "ctaVideo": "Voir la présentation",
+    "trustSetup": "Mise en place accompagnée",
+    "trustSecure": "Données sécurisées",
+    "trustMoney": "Paiement Mobile Money"
+  },
+  "audience": {
+    "nav": "Acteurs",
+    "intro": "Une plateforme conçue pour tous les acteurs de la communauté éducative",
+    "schools": "Établissements",
+    "admins": "Directions",
+    "teachers": "Enseignants",
+    "families": "Familles"
+  },
+  "connected": {
+    "eyebrow": "Tout est connecté",
+    "title": "Une seule plateforme.",
+    "titleMuted": "Toute votre école.",
+    "body": "Du portail d'inscription au bulletin scolaire, CaddyNote élimine les tâches répétitives et remet l'humain au cœur de l'éducation.",
+    "more": "En savoir plus"
+  },
+  "partners": {
+    "eyebrow": "Ils nous font confiance"
+  },
+  "roles": {
+    "eyebrow": "Une expérience pour chacun",
+    "title": "Simple pour tous.",
+    "titleLine2": "Puissant pour l'école.",
+    "tablist": "Expériences par rôle",
+    "cta": "Découvrir cette expérience",
+    "toastParentTitle": "Parent informé",
+    "toastParentBody": "SMS envoyé à M. Jean Dupont",
+    "toastPayTitle": "Paiement reçu",
+    "toastPayBody": "125 000 FCFA — Mobile Money",
+    "directions": {
+      "label": "Directions",
+      "title": "Décidez avec une vision complète.",
+      "body": "Des indicateurs fiables sur les effectifs, l’assiduité, les résultats et les finances de chaque établissement.",
+      "statLabel": "De visibilité"
+    },
+    "enseignants": {
+      "label": "Enseignants",
+      "title": "L’appel et le suivi, sans friction.",
+      "body": "Présences hors ligne, saisie des notes et communication aux parents — pensé pour le quotidien en classe.",
+      "statLabel": "Plus rapide"
+    },
+    "parents": {
+      "label": "Parents",
+      "title": "Tout savoir, au bon moment.",
+      "body": "Notes, absences, factures et messages de l’école dans un espace simple pour chaque enfant.",
+      "statLabel": "Informés"
+    }
+  },
+  "field": {
+    "eyebrow": "Conçu pour le terrain",
+    "title": "Même quand la connexion ralentit,",
+    "titleLine2": "l'école continue.",
+    "body": "CaddyNote est optimisé pour les réseaux mobiles, les smartphones accessibles et les usages quotidiens des établissements en Côte d'Ivoire et en Afrique.",
+    "items": [
+      "Interface légère et responsive",
+      "Paiements en FCFA et Mobile Money",
+      "Alertes SMS pour joindre toutes les familles"
+    ]
+  },
+  "pricing": {
+    "eyebrow": "Des offres qui évoluent avec vous",
+    "title": "Le bon niveau de service, sans complexité.",
+    "body": "Chaque déploiement est adapté à la taille, au fonctionnement et aux ambitions de votre établissement.",
+    "recommended": "Recommandé",
+    "choose": "Choisir cette offre",
+    "onQuote": "Sur devis",
+    "custom": "Personnalisé",
+    "essentiel": {
+      "name": "Essentiel",
+      "description": "Pour démarrer la transformation numérique.",
+      "features": ["Gestion des élèves", "Présences & absences", "Notes et bulletins", "Espace parents"]
+    },
+    "performance": {
+      "name": "Performance",
+      "description": "Pour piloter un établissement complet.",
+      "features": [
+        "Tout Essentiel",
+        "Paiements Mobile Money",
+        "Alertes SMS automatisées",
+        "Rapports avancés",
+        "Support prioritaire"
+      ]
+    },
+    "reseau": {
+      "name": "Réseau",
+      "description": "Pour les groupes scolaires multi-sites.",
+      "features": [
+        "Tout Performance",
+        "Gestion multi-établissements",
+        "Consolidation financière",
+        "API & intégrations",
+        "Accompagnement dédié"
+      ]
+    }
+  },
+  "cta": {
+    "eyebrow": "Prêt à transformer votre établissement ?",
+    "title": "Construisons une école plus connectée.",
+    "body": "Échangez avec notre équipe et découvrez comment CaddyNote peut s'adapter à votre organisation.",
+    "demo": "Demander une démonstration",
+    "explore": "Explorer le tableau de bord"
+  },
+  "video": {
+    "title": "Présentation CaddyNote",
+    "description": "Découvrez en moins d'une minute comment CaddyNote connecte directions, enseignants et familles.",
+    "unsupported": "Votre navigateur ne prend pas en charge la lecture vidéo.",
+    "meta": "Durée ≈ 17 s · Sans son",
+    "seeDirections": "Voir l'expérience Directions",
+    "trial": "Essai gratuit"
+  },
+  "testimonials": {
+    "aria": "Témoignages clients",
+    "eyebrow": "Ils parlent de CaddyNote",
+    "title": "La confiance des équipes sur le terrain",
+    "stars": "5 étoiles",
+    "prev": "Témoignage précédent",
+    "next": "Témoignage suivant",
+    "pick": "Sélection du témoignage",
+    "item": "Témoignage {{n}}",
+    "items": [
+      {
+        "quote": "CaddyNote nous permet de suivre l’établissement avec une clarté que nous n’avions jamais eue. Les parents sont informés plus vite et nos équipes gagnent un temps précieux.",
+        "name": "Grâce N’Guessan",
+        "role": "Directrice d’établissement",
+        "place": "Abidjan"
+      },
+      {
+        "quote": "L’appel hors ligne a changé notre quotidien. Même quand le réseau faiblit, les présences sont saisies et tout se synchronise dès le retour de la connexion.",
+        "name": "Koffi Mensah",
+        "role": "Enseignant de mathématiques",
+        "place": "Accra"
+      },
+      {
+        "quote": "Les paiements Mobile Money et les alertes SMS ont simplifié le dialogue avec les familles. Moins de relances, plus de sérénité pour la trésorerie.",
+        "name": "Aïcha Diallo",
+        "role": "Responsable administrative",
+        "place": "Dakar"
+      }
+    ]
+  },
+  "featurePage": {
+    "back": "Toutes les fonctionnalités",
+    "demo": "Demander une démonstration",
+    "signup": "Créer un compte",
+    "more": "Continuer la découverte"
+  },
+  "experiencePage": {
+    "back": "Une expérience pour chacun",
+    "eyebrow": "Expérience {{label}}",
+    "demo": "Demander une démonstration",
+    "signup": "Créer un compte",
+    "gains": "Ce que vous gagnez",
+    "designedFor": "Une expérience conçue pour {{label}}",
+    "others": "Autres expériences",
+    "discover": "Découvrir"
+  },
+  "heroPreview": {
+    "kpiStudents": "Élèves",
+    "kpiAttendance": "Présence",
+    "kpiPayments": "Paiements",
+    "weekAttendance": "Présence de la semaine",
+    "recentAlerts": "Alertes récentes"
+  },
+  "phoneAlt": "Application CaddyNote sur smartphone — suivi scolaire de Koffi pour Mme Traoré",
+  "heroGreeting": "Bonjour Mariam 👋"
+}

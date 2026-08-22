@@ -1,0 +1,73 @@
+# Dépendances & builds locaux (npm ci / vite build dans l’image)
+node_modules
+dist
+dist-ssr
+build
+*.tsbuildinfo
+
+# Secrets — VITE_* via ARG/ENV Docker, jamais de .env dans le contexte
+.env
+.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Backend (image séparée : context ./server)
+server
+
+# Observabilité locale (compose, hors build web)
+grafana
+prometheus
+promtail
+loki
+alertmanager
+
+# Tests / couverture / smoke locaux
+coverage
+.nyc_output
+a11y-output
+src/test
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.config.ts
+eslint.compat.config.js
+
+# Artefacts locaux
+tmp
+*.dump
+supabase-caddynote-data.dump
+scripts/components
+
+# Doc / notes agent (non nécessaires à l’image)
+docs
+AGENT.md
+CLAUDE.md
+README.md
+
+# Git / CI / IDE / OS
+.git
+.github
+.gitignore
+.gitattributes
+.cursor
+.cursorignore
+.claude
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.sw?
+*~
+bun.lockb
+
+# Compose hors build frontend
+docker-compose.yml
+docker-compose.*.yml

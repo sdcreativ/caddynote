@@ -1,0 +1,559 @@
+import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
+import { useStrkUsers } from '@/hooks/useStrkUsers';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import StatCard from '@/components/dashboard/StatCard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Users,
+  Award,
+  School,
+  UserCheck,
+  AlertCircle,
+  FileText,
+  GraduationCap,
+  BookOpen,
+  Shield,
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { EstablishmentOverview } from '@/components/dashboard/establishment/EstablishmentOverview';
+import { StrkAnalyticsService, type DashboardMetrics } from '@/services/strkAnalyticsService';
+import { useGuardianChildren } from '@/hooks/useGuardianChildren';
+import { fetchGradesByStudent } from '@/services/strkGradeService';
+import { fetchAbsencesByStudent } from '@/services/strkAbsenceService';
+import { fetchAssignmentsByStudent } from '@/services/strkAssignmentService';
+import { fetchInvoicesByStudent, fetchInvoicesByInstitution } from '@/services/strkFinanceService';
+import { roleLabel } from '@/lib/navConfig';
+import { Button } from '@/components/ui/button';
+import { trackProductEvent } from '@/lib/productTelemetry';
+import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  summarizeOpenInvoices,
+  countAbsencesSince,
+  countOpenHomework,
+  formatCentsFr,
+} from '@/lib/dashboardKpis';
+
+type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
+
+const STAFF_ROLES = ['teacher', 'head_teacher', 'secretary', 'supervisor'] as const;
+
+const Dashboard = () => {
+  const { t } = useTranslation('dashboard');
+  const { user } = useStrkAuth();
+  const { institutions, loadInstitutions } = useStrkInstitutions();
+  const { users, loadUsersByInstitution } = useStrkUsers();
+  const navigate = useNavigate();
+  const guardian = useGuardianChildren();
+
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [metricsState, setMetricsState] = useState<LoadState>('idle');
+
+  const [studentKpis, setStudentKpis] = useState<{
+    grades: number;
+    absences: number;
+    homework: number;
+  } | null>(null);
+  const [studentState, setStudentState] = useState<LoadState>('idle');
+
+  const [parentKpis, setParentKpis] = useState<{ invoicesOpen: number; unpaidCents: number } | null>(
+    null
+  );
+  const [parentState, setParentState] = useState<LoadState>('idle');
+
+  const [accountantKpis, setAccountantKpis] = useState<{
+    invoicesOpen: number;
+    unpaidCents: number;
+  } | null>(null);
+  const [accountantState, setAccountantState] = useState<LoadState>('idle');
+
+  const totalInstitutions = institutions?.length || 0;
+  const totalStudents = users?.filter((u) => u.role === 'student').length || 0;
+  const totalTeachers = users?.filter((u) => u.role === 'teacher').length || 0;
+
+  useEffect(() => {
+    if (user?.id) {
+      trackProductEvent('dashboard', 'Ouverture tableau de bord', { role: user.role });
+    }
+  }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!user) return;
+      if (user.role === 'admin') {
+        setMetricsState('loading');
+        try {
+          await loadInstitutions();
+          const m = await StrkAnalyticsService.getDashboardMetrics();
+          setMetrics(m);
+          setMetricsState('ready');
+        } catch {
+          setMetrics(null);
+          setMetricsState('error');
+        }
+        return;
+      }
+      if (user.institutionId) {
+        await loadUsersByInstitution(user.institutionId);
+        if ((STAFF_ROLES as readonly string[]).includes(user.role)) {
+          setMetricsState('loading');
+          try {
+            const m = await StrkAnalyticsService.getDashboardMetrics(user.institutionId);
+            setMetrics(m);
+            setMetricsState('ready');
+          } catch {
+            setMetrics(null);
+            setMetricsState('error');
+          }
+        }
+      }
+    };
+    void loadDashboardData();
+  }, [user, loadInstitutions, loadUsersByInstitution]);
+
+  useEffect(() => {
+    if (user?.role !== 'student' || !user.id) return;
+    setStudentState('loading');
+    void (async () => {
+      try {
+        const [grades, absences, assignments] = await Promise.all([
+          fetchGradesByStudent(user.id),
+          fetchAbsencesByStudent(user.id),
+          fetchAssignmentsByStudent(user.id),
+        ]);
+        const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        setStudentKpis({
+          grades: grades.length,
+          absences: countAbsencesSince(absences, since),
+          homework: countOpenHomework(assignments),
+        });
+        setStudentState(
+          grades.length === 0 && absences.length === 0 && assignments.length === 0
+            ? 'empty'
+            : 'ready'
+        );
+      } catch {
+        setStudentKpis(null);
+        setStudentState('error');
+      }
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role !== 'accountant' || !user.institutionId) return;
+    setAccountantState('loading');
+    void (async () => {
+      try {
+        const invoices = await fetchInvoicesByInstitution(user.institutionId!);
+        const summary = summarizeOpenInvoices(invoices);
+        setAccountantKpis(summary);
+        setAccountantState(invoices.length === 0 ? 'empty' : 'ready');
+      } catch {
+        setAccountantKpis(null);
+        setAccountantState('error');
+      }
+    })();
+  }, [user?.role, user?.institutionId]);
+
+  useEffect(() => {
+    if (user?.role !== 'parent') return;
+    if (guardian.isLoading) {
+      setParentState('loading');
+      return;
+    }
+    if (guardian.error) {
+      setParentKpis(null);
+      setParentState('error');
+      return;
+    }
+    if (guardian.children.length === 0) {
+      setParentKpis(null);
+      setParentState('empty');
+      return;
+    }
+    if (!guardian.selectedChildId) {
+      setParentState('loading');
+      return;
+    }
+    if (guardian.selectedChild && !guardian.selectedChild.canViewBilling) {
+      setParentKpis({ invoicesOpen: 0, unpaidCents: 0 });
+      setParentState('ready');
+      return;
+    }
+    setParentState('loading');
+    void (async () => {
+      try {
+        const invoices = await fetchInvoicesByStudent(guardian.selectedChildId!);
+        const summary = summarizeOpenInvoices(invoices);
+        setParentKpis(summary);
+        setParentState('ready');
+      } catch {
+        setParentKpis(null);
+        setParentState('error');
+      }
+    })();
+  }, [
+    user?.role,
+    guardian.isLoading,
+    guardian.error,
+    guardian.children.length,
+    guardian.selectedChildId,
+    guardian.selectedChild,
+  ]);
+
+  if (user?.role === 'school_admin') {
+    return <EstablishmentOverview />;
+  }
+
+  const kpiValue = (state: LoadState, value: string | number | null | undefined, emptyLabel = '0') => {
+    if (state === 'loading' || state === 'idle') return '…';
+    if (state === 'error') return '—';
+    if (value == null) return emptyLabel;
+    return value;
+  };
+
+  const roleHint =
+    user?.role === 'student'
+      ? t('roleHints.student')
+      : user?.role === 'parent'
+        ? t('roleHints.parent')
+        : user?.role === 'accountant'
+          ? t('roleHints.accountant')
+          : user?.role === 'admin'
+            ? t('roleHints.admin')
+            : (STAFF_ROLES as readonly string[]).includes(user?.role || '')
+              ? t('roleHints.staff')
+              : null;
+
+  return (
+    <div className="space-y-6 py-6 animate-fade-in">
+      {user?.role === 'admin' && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{t('spaces.businessTitle')}</p>
+            <p className="text-sm text-slate-500">{t('spaces.businessHint')}</p>
+          </div>
+          <Button asChild variant="outline" className="shrink-0 rounded-full border-slate-300">
+            <Link to="/super-admin">
+              <Shield className="mr-2 h-4 w-4" aria-hidden />
+              {t('spaces.toPlatformConsole')}
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t('hello', { name: user?.name?.split(' ')[0] ?? '' })}
+          </h1>
+          <p className="text-slate-500">
+            {roleLabel(user?.role)} •{' '}
+            {new Date().toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+          {roleHint ? <p className="mt-1 text-sm text-slate-500">{roleHint}</p> : null}
+        </div>
+      </div>
+
+      {user?.role === 'parent' && parentState === 'empty' && (
+        <EmptyState
+          title={t('empty.parentNoChildrenTitle')}
+          description={t('empty.parentNoChildrenBody')}
+          actionLabel={t('quickActions.myChildren')}
+          onAction={() => navigate('/my-children')}
+        />
+      )}
+
+      {user?.role === 'parent' && parentState === 'error' && (
+        <EmptyState title={t('empty.loadErrorTitle')} description={guardian.error || t('empty.loadErrorBody')} />
+      )}
+
+      {user?.role === 'student' && studentState === 'error' && (
+        <EmptyState title={t('empty.loadErrorTitle')} description={t('empty.loadErrorBody')} />
+      )}
+
+      {user?.role === 'accountant' && accountantState === 'error' && (
+        <EmptyState title={t('empty.loadErrorTitle')} description={t('empty.loadErrorBody')} />
+      )}
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {user?.role === 'admin' && (
+          <StatCard
+            title={t('stats.institutions')}
+            value={kpiValue(metricsState, metrics?.totalInstitutions ?? totalInstitutions)}
+            description={metricsState === 'error' ? t('empty.metricsUnavailable') : undefined}
+            icon={<School className="h-5 w-5" />}
+            color="blue"
+          />
+        )}
+
+        {(user?.role === 'teacher' ||
+          user?.role === 'head_teacher' ||
+          user?.role === 'admin' ||
+          user?.role === 'secretary' ||
+          user?.role === 'supervisor') && (
+          <>
+            <StatCard
+              title={t('stats.students')}
+              value={kpiValue(metricsState, metrics?.students ?? totalStudents)}
+              description={metricsState === 'error' ? t('empty.metricsUnavailable') : undefined}
+              icon={<Users className="h-5 w-5" />}
+            />
+            <StatCard
+              title={t('stats.attendance')}
+              value={
+                metricsState === 'loading' || metricsState === 'idle'
+                  ? '…'
+                  : metrics?.attendanceRate == null
+                    ? '—'
+                    : `${metrics.attendanceRate.toFixed(1)} %`
+              }
+              description={
+                metrics?.attendanceRate == null && metricsState === 'ready'
+                  ? t('empty.noAttendanceData')
+                  : undefined
+              }
+              icon={<UserCheck className="h-5 w-5" />}
+              color="green"
+            />
+            <StatCard
+              title={t('stats.absences')}
+              value={kpiValue(metricsState, metrics?.absences ?? '—', '—')}
+              icon={<AlertCircle className="h-5 w-5" />}
+              color="red"
+            />
+          </>
+        )}
+
+        {user?.role === 'student' && (
+          <>
+            <StatCard
+              title={t('stats.grades')}
+              value={kpiValue(studentState, studentKpis?.grades)}
+              description={studentState === 'empty' ? t('empty.studentNoGrades') : undefined}
+              icon={<GraduationCap className="h-5 w-5" />}
+            />
+            <StatCard
+              title={t('stats.absences30d')}
+              value={kpiValue(studentState, studentKpis?.absences)}
+              icon={<AlertCircle className="h-5 w-5" />}
+              color="red"
+            />
+            <StatCard
+              title={t('stats.homework')}
+              value={kpiValue(studentState, studentKpis?.homework)}
+              description={studentState === 'empty' ? t('empty.studentNoHomework') : undefined}
+              icon={<BookOpen className="h-5 w-5" />}
+            />
+          </>
+        )}
+
+        {user?.role === 'parent' && parentState !== 'empty' && parentState !== 'error' && (
+          <>
+            <StatCard
+              title={t('stats.children')}
+              value={guardian.isLoading ? '…' : guardian.children.length}
+              icon={<Users className="h-5 w-5" />}
+            />
+            <StatCard
+              title={t('stats.openInvoices')}
+              value={kpiValue(parentState, parentKpis?.invoicesOpen)}
+              description={
+                guardian.selectedChild && !guardian.selectedChild.canViewBilling
+                  ? t('empty.parentNoBilling')
+                  : guardian.selectedChild
+                    ? t('stats.forChild', {
+                        name:
+                          [guardian.selectedChild.firstName, guardian.selectedChild.lastName]
+                            .filter(Boolean)
+                            .join(' ') || guardian.selectedChild.studentId,
+                      })
+                    : undefined
+              }
+              icon={<FileText className="h-5 w-5" />}
+            />
+            <StatCard
+              title={t('stats.remainingToPay')}
+              value={
+                parentState === 'loading' || parentState === 'idle'
+                  ? '…'
+                  : parentKpis
+                    ? formatCentsFr(parentKpis.unpaidCents)
+                    : '—'
+              }
+              icon={<Award className="h-5 w-5" />}
+              color="purple"
+            />
+          </>
+        )}
+
+        {user?.role === 'accountant' && (
+          <>
+            <StatCard
+              title={t('stats.openInvoices')}
+              value={kpiValue(accountantState, accountantKpis?.invoicesOpen)}
+              description={accountantState === 'empty' ? t('empty.accountantNoInvoices') : undefined}
+              icon={<FileText className="h-5 w-5" />}
+            />
+            <StatCard
+              title={t('stats.remainingToCollect')}
+              value={
+                accountantState === 'loading' || accountantState === 'idle'
+                  ? '…'
+                  : accountantKpis
+                    ? formatCentsFr(accountantKpis.unpaidCents)
+                    : '—'
+              }
+              icon={<Award className="h-5 w-5" />}
+              color="purple"
+            />
+          </>
+        )}
+
+        {user?.role === 'admin' && (
+          <StatCard
+            title={t('stats.teachers')}
+            value={kpiValue(metricsState, metrics?.teachers ?? totalTeachers)}
+            icon={<Award className="h-5 w-5" />}
+            color="purple"
+          />
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('quickActions.title')}</CardTitle>
+          <CardDescription>{t('quickActions.subtitle')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => navigate('/institutions')}
+                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+              >
+                <School className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                <span className="text-sm font-medium">{t('quickActions.institutions')}</span>
+              </button>
+            )}
+            {(user?.role === 'teacher' || user?.role === 'head_teacher') && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate('/teacher-attendance')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <UserCheck className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.takeAttendance')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/grades')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <GraduationCap className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.grades')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/teacher-availability')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <BookOpen className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.availability')}</span>
+                </button>
+              </>
+            )}
+            {user?.role === 'student' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate('/my-grades')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <GraduationCap className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.myGrades')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/assignments')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <BookOpen className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.homework')}</span>
+                </button>
+              </>
+            )}
+            {user?.role === 'parent' && (
+              <button
+                type="button"
+                onClick={() => navigate('/my-children')}
+                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+              >
+                <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                <span className="text-sm font-medium">{t('quickActions.myChildren')}</span>
+              </button>
+            )}
+            {user?.role === 'secretary' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate('/students')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.students')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admissions/admin')}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+                >
+                  <School className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-medium">{t('quickActions.admissions')}</span>
+                </button>
+              </>
+            )}
+            {user?.role === 'accountant' && (
+              <button
+                type="button"
+                onClick={() => navigate('/finance')}
+                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+              >
+                <FileText className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                <span className="text-sm font-medium">{t('quickActions.finance')}</span>
+              </button>
+            )}
+            {user?.role === 'supervisor' && (
+              <button
+                type="button"
+                onClick={() => navigate('/absences')}
+                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+              >
+                <AlertCircle className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+                <span className="text-sm font-medium">{t('quickActions.absences')}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/messages')}
+              className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
+            >
+              <FileText className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+              <span className="text-sm font-medium">{t('quickActions.messages')}</span>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default Dashboard;

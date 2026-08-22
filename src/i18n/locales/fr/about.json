@@ -1,0 +1,53 @@
+{
+  "eyebrow": "À propos",
+  "title": "À propos de CaddyNote",
+  "subtitle": "Une plateforme scolaire complète : présence, notes, communication et admissions — pensée pour le terrain.",
+  "introBefore": "CaddyNote est votre solution pour la",
+  "introStrong1": "gestion électronique des absences et des signatures",
+  "introMid": ", conçue pour les établissements éducatifs en",
+  "introStrong2": "Europe et en Afrique",
+  "introAfter": ".",
+  "admissionsCta": "Préinscription",
+  "mockupAlt": "Aperçu de l’application CaddyNote sur mobile",
+  "pillTitle": "Présence & signatures",
+  "pillBody": "Appel, justificatifs et émargement au même endroit.",
+  "scopeEuropeTitle": "Europe",
+  "scopeEuropeBody": "Conformité RGPD, rôles clairs et parcours adaptés aux établissements francophones.",
+  "scopeAfricaTitle": "Afrique",
+  "scopeAfricaBody": "Mobile Money, connectivité réelle et interfaces simples pour le quotidien scolaire.",
+  "missionTitle": "Notre mission",
+  "missionBefore": "Fournir aux établissements d’enseignement des outils numériques",
+  "missionStrong": "intuitifs, fiables et performants",
+  "missionAfter": "pour optimiser la gestion de la présence, réduire la charge administrative et améliorer la communication entre l’administration, les enseignants, les élèves et les parents.",
+  "featuresEyebrow": "Produit",
+  "featuresTitle": "Fonctionnalités clés",
+  "features": [
+    {
+      "title": "Suivi de l’assiduité",
+      "description": "Visualisez le statut de présence des élèves pour chaque cours et période."
+    },
+    {
+      "title": "Rapports détaillés",
+      "description": "Générez des rapports personnalisables sur l’assiduité, les absences et les retards."
+    },
+    {
+      "title": "Interface multi-appareils",
+      "description": "Accédez à CaddyNote depuis un ordinateur, une tablette ou un smartphone."
+    }
+  ],
+  "extrasTitle": "Autres avantages",
+  "extras": [
+    "Gestion simplifiée des absences et des justificatifs",
+    "Automatisation des feuilles d’émargement numériques",
+    "Notifications et alertes pour les absences non justifiées",
+    "Tableaux de bord personnalisés par rôle",
+    "Sécurité et conformité RGPD"
+  ],
+  "techTitle": "Technologie fiable",
+  "techBefore": "CaddyNote est développé avec des technologies web modernes pour une expérience",
+  "techStrong": "fluide, réactive et sécurisée",
+  "techAfter": ".",
+  "contactTitle": "Nous contacter",
+  "contactBody": "Pour une question ou une démonstration, écrivez-nous.",
+  "contactCta": "Formulaire de contact"
+}

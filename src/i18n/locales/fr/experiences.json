@@ -1,0 +1,59 @@
+{
+  "directions": {
+    "label": "Directions",
+    "title": "Décidez avec une vision complète.",
+    "body": "Des indicateurs fiables sur les effectifs, l’assiduité, les résultats et les finances de chaque établissement.",
+    "hero": "Pilotez votre établissement avec une vision claire — effectifs, assiduité, résultats et finances au même endroit.",
+    "statLabel": "De visibilité",
+    "pillars": [
+      { "title": "Effectifs", "text": "Suivez les inscriptions, les classes et les mouvements d’élèves, établissement par établissement." },
+      { "title": "Assiduité", "text": "Taux de présence, absences répétées et seuils d’alerte pour intervenir avant que la situation ne s’aggrave." },
+      { "title": "Résultats", "text": "Moyennes, périodes et tendances pédagogiques pour orienter les décisions de direction." },
+      { "title": "Finances", "text": "Encaissements, impayés et Mobile Money : une trésorerie lisible sans tableurs parallèles." }
+    ],
+    "bullets": [
+      "Tableaux de bord consolidés multi-établissements",
+      "Droits d’accès fins pour l’équipe de direction",
+      "Rapports exportables pour le conseil d’administration",
+      "Traçabilité des actions sensibles"
+    ]
+  },
+  "enseignants": {
+    "label": "Enseignants",
+    "title": "L’appel et le suivi, sans friction.",
+    "body": "Présences hors ligne, saisie des notes et communication aux parents — pensé pour le quotidien en classe.",
+    "hero": "Concentrez-vous sur la classe : l’appel, les notes et les échanges avec les familles sont simplifiés.",
+    "statLabel": "Plus rapide",
+    "pillars": [
+      { "title": "Présences hors ligne", "text": "Faites l’appel même sans réseau. Tout se synchronise automatiquement dès le retour de la connexion." },
+      { "title": "Notes & évaluations", "text": "Saisissez les notes, appliquez les coefficients et publiez les résultats en quelques minutes." },
+      { "title": "Lien avec les familles", "text": "Informez les parents d’une absence, d’un devoir ou d’une observation sans multiplier les canaux." },
+      { "title": "Planning du jour", "text": "Cours, salles et classes à portée de main pour démarrer chaque séance sereinement." }
+    ],
+    "bullets": [
+      "Interface légère sur smartphone et tablette",
+      "Devoirs et ressources de cours",
+      "Observations et suivi pédagogique",
+      "Gain de temps sur les tâches répétitives"
+    ]
+  },
+  "parents": {
+    "label": "Parents",
+    "title": "Tout savoir, au bon moment.",
+    "body": "Notes, absences, factures et messages de l’école dans un espace simple pour chaque enfant.",
+    "hero": "Suivez la scolarité de vos enfants : présences, devoirs, notes et paiements, sans stress.",
+    "statLabel": "Informés",
+    "pillars": [
+      { "title": "Présences & alertes", "text": "Recevez une confirmation ou une alerte dès qu’une absence ou un retard est enregistré." },
+      { "title": "Devoirs & résultats", "text": "Consultez les devoirs à venir et les notes publiées pour chaque enfant." },
+      { "title": "Scolarité & paiements", "text": "Suivez les échéances, payez en Mobile Money et conservez vos reçus." },
+      { "title": "Espace sécurisé", "text": "Un accès dédié aux tuteurs, avec multi-enfants et confidentialité respectée." }
+    ],
+    "bullets": [
+      "Notifications SMS et push",
+      "Vue claire par enfant",
+      "Annonces de l’établissement",
+      "Disponible sur mobile"
+    ]
+  }
+}

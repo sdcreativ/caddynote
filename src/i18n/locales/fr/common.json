@@ -1,0 +1,44 @@
+{
+  "actions": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "back": "Retour",
+    "retry": "Réessayer",
+    "create": "Créer",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "import": "Importer",
+    "export": "Exporter",
+    "download": "Télécharger",
+    "send": "Envoyer",
+    "filter": "Filtrer",
+    "reset": "Réinitialiser",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "status": {
+    "success": "Succès",
+    "error": "Erreur",
+    "warning": "Attention",
+    "info": "Information",
+    "saved": "Enregistré",
+    "deleted": "Supprimé",
+    "offline": "Hors ligne",
+    "online": "En ligne"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue. Veuillez réessayer.",
+    "network": "Connexion impossible. Vérifiez votre réseau.",
+    "unauthorized": "Session expirée. Reconnectez-vous.",
+    "forbidden": "Vous n’avez pas les droits pour cette action.",
+    "notFound": "Élément introuvable.",
+    "validation": "Veuillez corriger les champs indiqués."
+  },
+  "skipToContent": "Aller au contenu principal"
+}

@@ -1,0 +1,122 @@
+{
+  "title": "Notes",
+  "subtitleStudent": "Consultez vos notes et évaluations",
+  "subtitleTeacher": "Gérez les notes de vos élèves",
+  "publish": "Publier",
+  "computeAverages": "Calculer moyennes",
+  "importCsv": "Import CSV",
+  "gridEntry": "Saisie en grille",
+  "newGrade": "Nouvelle note",
+  "searchPlaceholder": "Rechercher par titre ou type...",
+  "course": "Cours",
+  "period": "Période",
+  "student": "Élève",
+  "titleLabel": "Titre",
+  "type": "Type",
+  "maxGrade": "Note sur",
+  "date": "Date",
+  "chooseCourse": "Choisir un cours",
+  "chooseStudent": "Choisir un élève",
+  "choosePeriod": "Choisir une période",
+  "courseWithClass": "{{name}} ({{className}})",
+  "periodWithYear": "{{name}} ({{year}})",
+  "outOf20": "{{value}}/20",
+  "types": {
+    "evaluation": "Évaluation",
+    "devoir": "Devoir",
+    "expose": "Exposé",
+    "participation": "Participation"
+  },
+  "filter": {
+    "all": "Tous les types",
+    "evaluation": "Évaluations",
+    "devoir": "Devoirs",
+    "expose": "Exposés",
+    "participation": "Participation"
+  },
+  "stats": {
+    "average": "Moyenne générale",
+    "count": "Nombre d'évaluations",
+    "best": "Meilleures notes"
+  },
+  "empty": {
+    "title": "Aucune note trouvée",
+    "noMatch": "Aucune note ne correspond à vos critères de recherche.",
+    "none": "Aucune note publiée pour le moment."
+  },
+  "my": {
+    "title": "Mes notes",
+    "load": "Chargement de vos notes…",
+    "subjects": "Matières",
+    "bySubject": "Moyennes par matière",
+    "history": "Historique des notes"
+  },
+  "toast": {
+    "missingFields": "Champs manquants",
+    "bulkRequired": "Cours, période et titre sont requis.",
+    "noGrade": "Aucune note",
+    "enterOneGrade": "Saisissez au moins une note.",
+    "gradesSaved": "Notes enregistrées",
+    "gradesCreated": "{{count}} note(s) créée(s).",
+    "importRequired": "Cours, période, titre et CSV sont requis.",
+    "importImpossible": "Import CSV impossible.",
+    "importDone": "Import terminé",
+    "importSummary": "{{created}} créée(s), {{errors}} erreur(s), {{skipped}} ignorée(s)",
+    "loadImpossible": "Impossible de charger les notes",
+    "formIncomplete": "Formulaire incomplet",
+    "addRequired": "Cours, élève, période, titre et note sont requis.",
+    "addImpossible": "Impossible d'ajouter la note.",
+    "gradeAdded": "Note ajoutée",
+    "gradeSaved": "La note a été enregistrée avec succès",
+    "publishRequired": "Cours et période requis",
+    "published": "{{count}} note(s) publiée(s)",
+    "publishImpossible": "Publication impossible",
+    "computeRequired": "Classe et période requis",
+    "computed": "Moyennes calculées ({{count}} élève(s))",
+    "computeImpossible": "Calcul impossible",
+    "computeImpossibleBody": "Vérifiez qu’il existe des notes publiées pour cette classe/période."
+  },
+  "publishDialog": {
+    "title": "Publier les notes brouillon",
+    "action": "Publier les brouillons"
+  },
+  "computeDialog": {
+    "title": "Calculer moyennes et rangs",
+    "classId": "Classe (ID)",
+    "classUuidPlaceholder": "UUID de la classe",
+    "classHint": "Ou reprenez l’ID classe depuis un cours sélectionné ci-dessous.",
+    "fillFromCourse": "Remplir depuis un cours",
+    "action": "Lancer le calcul"
+  },
+  "import": {
+    "title": "Import tableur des notes",
+    "description": "Colonnes : studentNumber ou email, et gradeValue. Une ligne en erreur n’empêche pas le reste du lot.",
+    "template": "Gabarit CSV",
+    "templateFilename": "modele-import-notes.csv",
+    "chooseFile": "Choisir un fichier",
+    "evalTitle": "Titre de l’évaluation",
+    "csvPaste": "CSV (fichier ou collage)",
+    "report": "{{created}} créée(s), {{skipped}} ignorée(s), {{errors}} erreur(s).",
+    "rowError": "Ligne {{row}} ({{key}}) : {{error}}",
+    "errorFallback": "erreur",
+    "importing": "Import…"
+  },
+  "bulk": {
+    "description": "Un devoir, toute la classe — un seul enregistrement (EVA-003). Les cases vides sont ignorées.",
+    "titlePlaceholder": "Ex. Devoir n°2",
+    "emptyRoster": "Choisissez un cours rattaché à une classe pour charger la liste.",
+    "filled": "{{filled}}/{{total}} note(s) saisies",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer la grille",
+    "confirmSkip": "{{count}} note(s) seront enregistrées, {{skipped}} élève(s) sans note seront ignorés. Continuer ?"
+  },
+  "add": {
+    "title": "Ajouter une note",
+    "evalTitle": "Titre de l'évaluation",
+    "evalTitlePlaceholder": "Ex: Contrôle Chapitre 3",
+    "gradeValue": "Note obtenue",
+    "comments": "Commentaires (optionnel)",
+    "commentsPlaceholder": "Commentaires sur l'évaluation...",
+    "save": "Enregistrer la note"
+  }
+}

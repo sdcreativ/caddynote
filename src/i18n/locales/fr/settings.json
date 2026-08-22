@@ -1,0 +1,131 @@
+{
+  "title": "Paramètres Système",
+  "loadError": "Impossible de charger les paramètres",
+  "saveError": "Erreur lors de la sauvegarde: {{message}}",
+  "unknownError": "Erreur inconnue",
+  "unauthenticated": "Utilisateur non authentifié. Veuillez vous reconnecter.",
+  "tabs": {
+    "system": "Système",
+    "notifications": "Notifications",
+    "attendance": "Assiduité",
+    "grading": "Barèmes",
+    "security": "Sécurité",
+    "saas": "Quotas & flags"
+  },
+  "system": {
+    "title": "Configuration Système",
+    "appName": "Nom de l'application",
+    "supportEmail": "Email de support",
+    "maxInstitutions": "Limite d'institutions",
+    "maxUsers": "Limite d'utilisateurs par institution",
+    "maintenance": "Mode maintenance",
+    "maintenanceHint": "Désactiver temporairement l'accès au système",
+    "save": "Sauvegarder les paramètres système",
+    "saved": "Paramètres système sauvegardés"
+  },
+  "notifications": {
+    "title": "Canaux de communication",
+    "subtitle": "Opt-in / opt-out par canal (API /communications/preferences)."
+  },
+  "attendance": {
+    "title": "Paramètres d'Assiduité",
+    "autoMarkAbsent": "Marquer automatiquement absent",
+    "autoMarkAbsentHint": "Marquer les étudiants comme absents automatiquement",
+    "gracePeriod": "Période de grâce (minutes)",
+    "gracePeriodHint": "Délai avant de marquer un étudiant comme en retard",
+    "allowLateMarking": "Permettre marquage tardif",
+    "allowLateMarkingHint": "Autoriser les enseignants à marquer les présences après le cours",
+    "requireJustification": "Justification obligatoire",
+    "requireJustificationHint": "Exiger une justification pour les absences",
+    "save": "Sauvegarder les paramètres d'assiduité",
+    "saved": "Paramètres d'assiduité sauvegardés"
+  },
+  "grading": {
+    "title": "Barèmes de notation",
+    "subtitle": "Définissez les barèmes (ex. « Note sur 20 ») que les enseignants pourront choisir en saisissant une note.",
+    "onMax": "sur {{max}}",
+    "default": "Par défaut",
+    "deleteAria": "Supprimer le barème {{name}}",
+    "empty": "Aucun barème configuré pour le moment.",
+    "name": "Nom",
+    "namePlaceholder": "Ex : Note sur 20",
+    "max": "Sur combien",
+    "asDefault": "Barème par défaut",
+    "add": "Ajouter le barème",
+    "createdTitle": "Barème créé",
+    "createdBody": "« {{name}} » a été ajouté.",
+    "createError": "Impossible de créer le barème.",
+    "deleteError": "Impossible de supprimer ce barème.",
+    "needInstitution": "Les barèmes se configurent au niveau d’un établissement. Connectez-vous avec un compte direction d’école."
+  },
+  "security": {
+    "sessionsTitle": "Sessions actives",
+    "auditTitle": "Journal d’audit"
+  },
+  "channels": {
+    "email": {
+      "label": "E-mail",
+      "hint": "Alertes et messages par e-mail"
+    },
+    "sms": {
+      "label": "SMS",
+      "hint": "Alertes critiques par SMS"
+    },
+    "whatsapp": {
+      "label": "WhatsApp",
+      "hint": "Messages via WhatsApp"
+    },
+    "push": {
+      "label": "Push",
+      "hint": "Notifications dans l’application"
+    }
+  },
+  "prefs": {
+    "title": "Préférences",
+    "loadError": "Chargement impossible",
+    "failTitle": "Échec"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "loadError": "Chargement impossible",
+    "failTitle": "Échec",
+    "revoked": "Session révoquée",
+    "revokedOthers": "{{count}} autre(s) session(s) révoquée(s)",
+    "intro": "Appareils et navigateurs connectés à votre compte.",
+    "refresh": "Actualiser",
+    "revokeOthers": "Révoquer les autres",
+    "empty": "Aucune session listée.",
+    "unknownDevice": "Appareil inconnu",
+    "lastSeen": "Vu {{datetime}}",
+    "current": "Cette session",
+    "revoke": "Révoquer"
+  },
+  "mfa": {
+    "title": "Authentification à deux facteurs",
+    "introDesc": "Renforcez la sécurité de votre compte en activant l'authentification à deux facteurs.",
+    "verifyDesc": "Veuillez scanner le QR code avec votre application d'authentification, puis entrez le code généré.",
+    "recoveryDesc": "Conservez ces codes de secours dans un endroit sûr. Chacun ne peut être utilisé qu’une seule fois.",
+    "recoveryHint": "Si vous perdez votre téléphone, ces codes permettront de vous connecter. Ils ne seront plus affichés.",
+    "successDesc": "L'authentification à deux facteurs a été configurée avec succès!",
+    "securityLayer": "Ajouter une couche de sécurité supplémentaire",
+    "newDeviceCode": "Vous devrez entrer un code à chaque connexion.",
+    "scanQR": "Scannez ce QR code avec votre application d'authentification",
+    "manualEntry": "Ou entrez ce code manuellement :",
+    "verificationCode": "Entrez le code de vérification",
+    "configure": "Configurer",
+    "later": "Plus tard",
+    "verify": "Vérifier",
+    "finish": "Terminer",
+    "copyCodes": "Copier les codes",
+    "codesCopied": "Codes copiés",
+    "codesCopyError": "Impossible de copier dans le presse-papiers",
+    "codesSaved": "J’ai enregistré ces codes",
+    "success": "Votre compte est maintenant protégé par l'authentification à deux facteurs.",
+    "toastSuccess": "2FA activé",
+    "toastDesc": "L'authentification à deux facteurs a été activée avec succès.",
+    "toastError": "Code incorrect",
+    "toastErrorDesc": "Le code que vous avez entré n'est pas valide.",
+    "setupError": "Impossible de générer le QR code MFA. Réessayez.",
+    "qrAlt": "QR code MFA"
+  }
+}

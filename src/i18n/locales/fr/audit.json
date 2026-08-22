@@ -1,0 +1,21 @@
+{
+  "title": "Journal d’audit",
+  "subtitle": "Traces serveur des actions sensibles (IAM-005) — non modifiables depuis le client.",
+  "refresh": "Actualiser",
+  "filterDescription": "Préfixe d’action (ex. finance., assignment., auth.)",
+  "action": "Action",
+  "actionPlaceholder": "ex. assignment.",
+  "apply": "Appliquer",
+  "loading": "Chargement du journal…",
+  "loadError": "Impossible de charger le journal.",
+  "emptyTitle": "Aucune entrée",
+  "emptyDescription": "Aucune action auditée pour ce filtre.",
+  "columns": {
+    "date": "Date",
+    "action": "Action",
+    "actor": "Acteur",
+    "target": "Cible",
+    "ip": "IP"
+  },
+  "footer": "Les écritures d’audit sont réservées au serveur ; cette page est en lecture seule."
+}

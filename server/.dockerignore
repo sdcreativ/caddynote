@@ -1,0 +1,59 @@
+# Dépendances & builds locaux (npm ci / tsc dans l’image)
+node_modules
+dist
+build
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Secrets — injectés via env_file / runtime, jamais dans le contexte
+.env
+.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tests & outils hors runtime
+coverage
+.nyc_output
+src/__tests__
+vitest.config.ts
+vitest.config.ts.timestamp-*
+
+# Recettes, seed loadtest, scripts locaux (non nécessaires au build prod)
+scripts
+loadtest
+recette-output
+
+# Dumps / stockage local
+*.dump
+*.sql.gz
+tmp
+uploads
+storage
+
+# Certificats locaux
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Git / IDE / OS
+.git
+.gitignore
+.dockerignore
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+.cursor
+.claude
+*.sw?
+*~
+
+# Doc (hors image)
+*.md

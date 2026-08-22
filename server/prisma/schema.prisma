@@ -1,0 +1,2515 @@
+// CaddyNote — schéma Prisma (source de vérité Postgres)
+//
+// Origine (août 2026) : reconstruit depuis l'état cumulé de l'ancienne base
+// Supabase, plutôt que rejoué depuis les fichiers SQL fragmentaires. Le fichier
+// généré `src/integrations/supabase/types.ts` a depuis été retiré ; ce schéma
+// est désormais la source unique.
+//
+// Périmètre : uniquement les tables réellement utilisées par CaddyNote
+// (préfixe strk_* + les tables d'abonnement SaaS + notifications). Les
+// dizaines d'autres tables présentes dans le projet Supabase (games, clubs,
+// achievements, orders, products...) appartiennent à un produit distinct
+// hébergé sur le même projet Supabase et NE SONT PAS reprises ici. Les
+// tables historiques `institutions`/`profiles` (sans préfixe strk_) sont
+// également exclues : elles ne sont utilisées par aucune page routée de
+// l'application (code mort, cf. audit §3).
+//
+// Différences volontaires avec Supabase :
+//  - `auth.users` n'existe plus : StrkProfile devient la table racine des
+//    comptes, avec ses propres champs d'authentification (password_hash...).
+//  - RLS (Row Level Security) n'est pas reproduite ici : l'autorisation est
+//    portée par une couche applicative (middleware Express), cf. audit §5.2.
+//  - Seules les relations disposant d'une vraie contrainte de clé étrangère
+//    dans la base d'origine sont modélisées comme relations Prisma ; les
+//    autres restent de simples colonnes UUID, fidèles à l'état réel.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum StrkUserRole {
+  admin
+  school_admin
+  teacher
+  student
+  parent
+  // ORG-002 : "Propriétaire de groupe" — pilote consolidé de plusieurs
+  // établissements (StrkInstitutionGroup), sans être admin global.
+  group_owner
+  // Lot 1 — rôles métier distincts de school_admin/teacher (cahier chap. 7/10).
+  secretary
+  accountant
+  supervisor
+  head_teacher
+
+  @@map("strk_user_role")
+}
+
+enum StrkInstitutionType {
+  school
+  high_school
+  middle_school
+  university
+  training_center
+  elementary_school
+  private_school
+
+  @@map("strk_institution_type")
+}
+
+enum StrkAbsenceType {
+  absence
+  lateness
+
+  @@map("strk_absence_type")
+}
+
+// PRS-005 : statut du justificatif, distinct du booléen `justified` (qui ne
+// distingue pas "jamais soumis" de "rejeté" — les deux valaient `false`).
+// `pending` dès dépôt (`/absences/:id/justify`), tranché par le personnel
+// vers `accepted`/`rejected` (`/absences/:id/review`) ; un nouveau dépôt
+// après rejet repasse à `pending`.
+enum StrkJustificationStatus {
+  none
+  pending
+  accepted
+  rejected
+
+  @@map("strk_justification_status")
+}
+
+enum StrkSignatureType {
+  entry
+  exit
+  document
+
+  @@map("strk_signature_type")
+}
+
+enum StrkSignatureStatus {
+  pending
+  completed
+  expired
+
+  @@map("strk_signature_status")
+}
+
+// ELV-002 : lien de responsabilité parent/tuteur <-> élève
+enum StrkGuardianRelationship {
+  father
+  mother
+  tutor
+  payer
+  other_authorized
+
+  @@map("strk_guardian_relationship")
+}
+
+// EVA-005 : workflow de publication d'une note.
+enum StrkGradeStatus {
+  draft
+  published
+  corrected
+
+  @@map("strk_grade_status")
+}
+
+// SUI-002 : nature d'une observation pédagogique.
+enum StrkObservationCategory {
+  positive
+  negative
+  neutral
+
+  @@map("strk_observation_category")
+}
+
+// SUI-003 : gravité d'un incident disciplinaire.
+enum StrkIncidentSeverity {
+  minor
+  moderate
+  major
+
+  @@map("strk_incident_severity")
+}
+
+// SUI-004 : statut du workflow disciplinaire.
+enum StrkIncidentStatus {
+  reported
+  under_review
+  council_referred
+  resolved
+
+  @@map("strk_incident_status")
+}
+
+// Chap. 8.1/8.2 : workflow de préinscription publique.
+enum StrkAdmissionStatus {
+  draft
+  submitted
+  needs_info
+  conditionally_accepted
+  rejected
+  enrolled
+  cancelled
+
+  @@map("strk_admission_status")
+}
+
+/// Nature de la démarche d'inscription (moteur de pièces).
+enum StrkAdmissionApplicationKind {
+  pre_registration
+  first_enrollment
+  re_enrollment
+  transfer
+
+  @@map("strk_admission_application_kind")
+}
+
+/// Obligation d'une pièce dans un modèle de dossier.
+enum StrkAdmissionDocObligation {
+  required
+  optional
+  conditional
+
+  @@map("strk_admission_doc_obligation")
+}
+
+/// Mode de preuve (numérique / original physique).
+enum StrkAdmissionOriginalMode {
+  digital_only
+  copy_then_original
+  physical_only
+
+  @@map("strk_admission_original_mode")
+}
+
+/// Statut d'une pièce déposée sur un dossier.
+enum StrkAdmissionDocItemStatus {
+  missing
+  uploaded
+  in_review
+  compliant
+  non_compliant
+  unreadable
+  expired
+  original_pending
+  finalized
+
+  @@map("strk_admission_doc_item_status")
+}
+
+// ACA-005 : nature d'une exception ponctuelle à un créneau récurrent.
+enum StrkScheduleExceptionType {
+  cancelled
+  substituted
+
+  @@map("strk_schedule_exception_type")
+}
+
+// PRS-006 : nature du seuil d'assiduité franchi.
+enum StrkThresholdAlertType {
+  absence
+  lateness
+
+  @@map("strk_threshold_alert_type")
+}
+
+// PED-005 : nature d'un rappel de devoir.
+enum StrkAssignmentReminderType {
+  published
+  due_soon
+  overdue
+
+  @@map("strk_assignment_reminder_type")
+}
+
+// PER-003 : statut d'une déclaration de disponibilité/indisponibilité.
+enum StrkAvailabilityStatus {
+  requested
+  approved
+  rejected
+
+  @@map("strk_availability_status")
+}
+
+// FIN-007 : statut de rapprochement d'une ligne de relevé bancaire.
+enum StrkBankLineStatus {
+  unmatched
+  matched
+  ignored
+
+  @@map("strk_bank_line_status")
+}
+
+// ============================================================
+// Socle : institutions & comptes
+// ============================================================
+
+// ORG-002 : groupe scolaire (réseau de plusieurs établissements) piloté par
+// un ou plusieurs comptes `group_owner`, avec vue consolidée en lecture
+// (annuaire des établissements + statistiques agrégées, cf. groups.routes.ts)
+// — jamais un accès aux données opérationnelles (élèves, notes...) des
+// établissements membres, qui restent isolées entre elles (ORG-004).
+model StrkInstitutionGroup {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  institutions StrkInstitution[]
+  members      StrkProfile[]
+
+  @@map("strk_institution_groups")
+}
+
+model StrkInstitution {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  type                StrkInstitutionType
+  address             String?
+  phone               String?
+  email               String?
+  logo                String?
+  adminId             String?             @map("admin_id") @db.Uuid
+  // ORG-002 : établissement optionnellement rattaché à un groupe scolaire
+  // (réseau d'écoles) pour une vue consolidée par un `group_owner`.
+  groupId             String?             @map("group_id") @db.Uuid
+  // PRS-006 : seuils déclenchant une alerte automatique de suivi
+  // d'assiduité — désactivés tant qu'ils ne sont pas définis (`null`), pas
+  // de valeur par défaut imposée qui surprendrait un établissement qui n'a
+  // pas explicitement choisi d'activer ce suivi.
+  absenceThreshold    Int?                @map("absence_threshold")
+  latenessThreshold   Int?                @map("lateness_threshold")
+  thresholdWindowDays Int                 @default(30) @map("threshold_window_days")
+  // FIN-002 : pénalité de retard de paiement — même principe que les seuils
+  // d'assiduité ci-dessus, désactivée tant qu'un établissement ne l'a pas
+  // explicitement configurée (`lateFeeCents` null). Montant fixe (pas un
+  // pourcentage composé) : c'est le choix le moins susceptible de créer une
+  // dette qui s'emballe sans intervention humaine.
+  lateFeeCents        Int?                @map("late_fee_cents")
+  lateFeeGraceDays    Int                 @default(7) @map("late_fee_grace_days")
+  // SAA-005 : surcharges de fonctionnalités propres à cet établissement,
+  // appliquées par-dessus les valeurs par défaut de son plan
+  // (`SubscriptionPlan.features`) — un pilote peut avoir une fonctionnalité
+  // activée en avant-première sans changer son plan facturé, ou une
+  // fonctionnalité normalement incluse désactivée ponctuellement (litige,
+  // dérogation commerciale). `{}` par défaut : aucune surcharge tant que
+  // rien n'est explicitement défini.
+  featureOverrides    Json?               @map("feature_overrides")
+  // SAA-003 : compteur de stockage (octets) maintenu à l'attache/suppression
+  // de fichiers — complément à l'estimation S3 par préfixe.
+  storageUsedBytes    BigInt              @default(0) @map("storage_used_bytes")
+  createdAt           DateTime?           @default(now()) @map("created_at")
+  updatedAt           DateTime?           @updatedAt @map("updated_at")
+
+  admin StrkProfile?          @relation("InstitutionAdmin", fields: [adminId], references: [id])
+  group StrkInstitutionGroup? @relation(fields: [groupId], references: [id])
+
+  profiles                StrkProfile[]                @relation("ProfileInstitution")
+  classes                 StrkClass[]
+  courses                 StrkCourse[]
+  students                StrkStudent[]
+  teachers                StrkTeacher[]
+  subjects                StrkSubject[]
+  schedules               StrkSchedule[]
+  absences                StrkAbsence[]
+  signatures              StrkSignature[]
+  activities              StrkActivity[]
+  analytics               StrkAnalytic[]
+  dashboardStats          StrkDashboardStat[]
+  reports                 StrkReport[]
+  studentGuardians        StrkStudentGuardian[]
+  premiumSubscriptions    PremiumSubscription[]
+  feeItems                StrkFeeItem[]
+  invoices                StrkInvoice[]
+  messageTemplates        StrkMessageTemplate[]
+  communicationLogs       StrkCommunicationLog[]
+  documents               StrkDocument[]
+  documentTemplates       StrkDocumentTemplate[]
+  academicPeriods         StrkAcademicPeriod[]
+  gradeComputations       StrkGradeComputation[]
+  pedagogicalObservations StrkPedagogicalObservation[]
+  disciplinaryIncidents   StrkDisciplinaryIncident[]
+  admissionApplications   StrkAdmissionApplication[]
+  admissionDocumentTypes  StrkAdmissionDocumentType[]
+  admissionPacketTemplates StrkAdmissionPacketTemplate[]
+  admissionRejectionReasons StrkAdmissionRejectionReason[]
+  campuses                StrkCampus[]
+  auditLogs               StrkAuditLog[]
+  scheduleExceptions      StrkScheduleException[]
+  thresholdAlerts         StrkThresholdAlert[]
+  teacherAvailabilities   StrkTeacherAvailability[]
+  bankStatementLines      StrkBankStatementLine[]
+  studentHealthInfo       StrkStudentHealthInfo[]
+  gradingScales           StrkGradingScale[]
+  supportTickets          StrkSupportTicket[]
+  paymentPlans            StrkPaymentPlan[]
+  transportRoutes         StrkTransportRoute[]
+  canteenPlans            StrkCanteenPlan[]
+  libraryItems            StrkLibraryItem[]
+  boardingRooms           StrkBoardingRoom[]
+  clinicVisits            StrkClinicVisit[]
+  hrStaffRecords          StrkHrStaffRecord[]
+
+  @@map("strk_institutions")
+}
+
+// Table racine des comptes utilisateurs (remplace auth.users + strk_profiles
+// de Supabase). Porte désormais elle-même les identifiants d'authentification.
+model StrkProfile {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName     String?      @map("first_name")
+  lastName      String?      @map("last_name")
+  email         String?      @unique
+  phoneNumber   String?      @map("phone_number")
+  profileImage  String?      @map("profile_image")
+  role          StrkUserRole @default(student)
+  institutionId String?      @map("institution_id") @db.Uuid
+  // ORG-002 : renseigné pour un compte `group_owner`, rattache le compte à
+  // un groupe scolaire (accès consolidé en lecture aux établissements du
+  // groupe, jamais aux données opérationnelles élève — cf. groups.routes.ts).
+  groupId       String?      @map("group_id") @db.Uuid
+  createdAt     DateTime?    @default(now()) @map("created_at")
+  updatedAt     DateTime?    @updatedAt @map("updated_at")
+
+  // Authentification applicative (remplace Supabase Auth — IAM-002/003)
+  passwordHash         String?   @map("password_hash")
+  mfaEnabled           Boolean   @default(false) @map("mfa_enabled")
+  mfaSecret            String?   @map("mfa_secret")
+  /// Hashes SHA-256 des codes de secours à usage unique (IAM-003 recovery).
+  mfaBackupCodeHashes  String[]  @default([]) @map("mfa_backup_code_hashes")
+  lastLoginAt          DateTime? @map("last_login_at")
+  passwordResetToken   String?   @map("password_reset_token")
+  passwordResetExpires DateTime? @map("password_reset_expires")
+
+  // PER-005 : désactivation sans perte d'historique. `DELETE /users/:id`
+  // supprimait jusqu'ici le compte pour de bon (`prisma.strkProfile.delete`)
+  // — au mieux ça échouait avec une contrainte de clé étrangère non gérée
+  // dès que le compte avait la moindre donnée liée (notes, absences,
+  // emplois du temps...), au pire ça les supprimait en cascade. `isActive`
+  // remplace la suppression réelle : le compte et tout son historique
+  // restent intacts, seule la connexion est bloquée.
+  isActive      Boolean   @default(true) @map("is_active")
+  deactivatedAt DateTime? @map("deactivated_at")
+  deactivatedBy String?   @map("deactivated_by") @db.Uuid
+
+  institution StrkInstitution?      @relation("ProfileInstitution", fields: [institutionId], references: [id])
+  group       StrkInstitutionGroup? @relation(fields: [groupId], references: [id])
+
+  institutionsAdministered StrkInstitution[] @relation("InstitutionAdmin")
+  studentExtension         StrkStudent?
+  teacherExtension         StrkTeacher?
+
+  classesTaught                 StrkClass[]                @relation("ClassTeacher")
+  classSubjectsTaught           StrkClassSubject[]         @relation("ClassSubjectTeacher")
+  courseMaterialsCreated        StrkCourseMaterial[]       @relation("CourseMaterialCreatedBy")
+  lessonEntriesCreated          StrkLessonEntry[]          @relation("LessonEntryCreatedBy")
+  schedulesTaught               StrkSchedule[]             @relation("ScheduleTeacher")
+  absencesRecorded              StrkAbsence[]              @relation("AbsenceCreatedBy")
+  absenceJustificationsReviewed StrkAbsence[]              @relation("AbsenceJustificationReviewedBy")
+  signaturesSent                StrkSignature[]            @relation("SignatureSender")
+  signaturesReceived            StrkSignature[]            @relation("SignatureRecipient")
+  studentClassEnrollments       StrkStudentClass[]         @relation("StudentClassStudent")
+  subscriptionNotifications     SubscriptionNotification[]
+
+  // ELV-002 : responsables multiples avec droits différenciés
+  guardianLinksAsGuardian StrkStudentGuardian[] @relation("GuardianLinkGuardian")
+  guardianLinksAsStudent  StrkStudentGuardian[] @relation("GuardianLinkStudent")
+  guardianLinksCreated    StrkStudentGuardian[] @relation("GuardianLinkCreatedBy")
+
+  // Finance (chap. 16)
+  invoicesCreated     StrkInvoice[]     @relation("InvoiceCreatedBy")
+  paymentPlansCreated StrkPaymentPlan[] @relation("PaymentPlanCreatedBy")
+  paymentsMade        StrkPayment[]     @relation("PaymentPaidBy")
+  refundsIssued       StrkRefund[]      @relation("RefundBy")
+
+  // Communication (chap. 17)
+  communicationTemplatesCreated StrkMessageTemplate[]         @relation("MessageTemplateCreatedBy")
+  communicationPreferences      StrkCommunicationPreference[]
+  communicationsReceived        StrkCommunicationLog[]        @relation("CommunicationLogRecipient")
+  communicationsRequested       StrkCommunicationLog[]        @relation("CommunicationLogRequestedBy")
+
+  // Documents (chap. 18)
+  documentsGenerated       StrkDocument[]         @relation("DocumentGeneratedBy")
+  documentTemplatesUpdated StrkDocumentTemplate[] @relation("DocumentTemplateUpdatedBy")
+
+  // Suivi pédagogique et discipline (chap. 15)
+  observationsAuthored StrkPedagogicalObservation[] @relation("ObservationAuthor")
+  incidentsReported    StrkDisciplinaryIncident[]   @relation("IncidentReportedBy")
+  incidentsDecided     StrkDisciplinaryIncident[]   @relation("IncidentDecidedBy")
+
+  // Préinscription et admission (chap. 8)
+  admissionsDecided      StrkAdmissionApplication[] @relation("AdmissionDecidedBy")
+  admissionFeesConfirmed StrkAdmissionApplication[] @relation("AdmissionFeeConfirmedBy")
+  admissionContactFor    StrkAdmissionApplication[] @relation("AdmissionContactProfile")
+  admissionDocsReviewed  StrkAdmissionDocumentItem[] @relation("AdmissionDocReviewedBy")
+
+  // Sessions et journal d'audit (IAM-004/005)
+  sessions  StrkSession[]
+  auditLogs StrkAuditLog[]
+
+  // Emploi du temps : exceptions (ACA-005)
+  scheduleExceptionsCreated     StrkScheduleException[] @relation("ScheduleExceptionCreatedBy")
+  scheduleExceptionsSubstituted StrkScheduleException[] @relation("ScheduleExceptionSubstituteTeacher")
+
+  // Disponibilités enseignant (PER-003)
+  availabilitiesRequested StrkTeacherAvailability[] @relation("TeacherAvailabilityTeacher")
+  availabilitiesReviewed  StrkTeacherAvailability[] @relation("TeacherAvailabilityReviewedBy")
+
+  // Rapprochement bancaire (FIN-007)
+  bankLinesMatched  StrkBankStatementLine[] @relation("BankLineMatchedBy")
+  bankLinesImported StrkBankStatementLine[] @relation("BankLineImportedBy")
+
+  // Support client (SAA-006)
+  supportTicketsCreated  StrkSupportTicket[]        @relation("SupportTicketCreatedBy")
+  supportTicketsAssigned StrkSupportTicket[]        @relation("SupportTicketAssignedTo")
+  supportTicketMessages  StrkSupportTicketMessage[] @relation("SupportTicketMessageAuthor")
+  hrStaffRecords         StrkHrStaffRecord[]
+
+  @@map("strk_profiles")
+}
+
+// ============================================================
+// Structure académique
+// ============================================================
+
+model StrkClass {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  institutionId String    @map("institution_id") @db.Uuid
+  campusId      String?   @map("campus_id") @db.Uuid
+  teacherId     String?   @map("teacher_id") @db.Uuid
+  description   String?
+  academicYear  String?   @map("academic_year")
+  maxStudents   Int?      @map("max_students")
+  isActive      Boolean?  @default(true) @map("is_active")
+  createdAt     DateTime? @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  campus      StrkCampus?     @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  teacher     StrkProfile?    @relation("ClassTeacher", fields: [teacherId], references: [id])
+
+  courses               StrkCourse[]
+  students              StrkStudent[]
+  classSubjects         StrkClassSubject[]
+  schedules             StrkSchedule[]
+  studentClasses        StrkStudentClass[]
+  gradeComputations     StrkGradeComputation[]
+  admissionApplications   StrkAdmissionApplication[]
+  admissionPacketTemplates StrkAdmissionPacketTemplate[]
+
+  @@map("strk_classes")
+}
+
+/// Site / campus d'un établissement (multi-sites natif).
+model StrkCampus {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  code          String
+  name          String
+  address       String?
+  phone         String?
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  classes     StrkClass[]
+  admissionApplications StrkAdmissionApplication[]
+  admissionPacketTemplates StrkAdmissionPacketTemplate[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@map("strk_campuses")
+}
+
+model StrkSubject {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  code          String?
+  description   String?
+  institutionId String?  @map("institution_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution       StrkInstitution?       @relation(fields: [institutionId], references: [id])
+  classSubjects     StrkClassSubject[]
+  courses           StrkCourse[]
+  gradeComputations StrkGradeComputation[]
+
+  @@map("strk_subjects")
+}
+
+model StrkClassSubject {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId   String   @map("class_id") @db.Uuid
+  subjectId String   @map("subject_id") @db.Uuid
+  teacherId String?  @map("teacher_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  class   StrkClass    @relation(fields: [classId], references: [id])
+  subject StrkSubject  @relation(fields: [subjectId], references: [id])
+  teacher StrkProfile? @relation("ClassSubjectTeacher", fields: [teacherId], references: [id])
+
+  @@map("strk_class_subjects")
+}
+
+model StrkTeacher {
+  id             String    @id @db.Uuid // == StrkProfile.id (extension 1:1)
+  institutionId  String    @map("institution_id") @db.Uuid
+  employeeNumber String?   @map("employee_number")
+  subjects       String[]
+  hireDate       DateTime? @map("hire_date") @db.Date
+  createdAt      DateTime? @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+
+  profile     StrkProfile     @relation(fields: [id], references: [id], onDelete: Cascade)
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  courses     StrkCourse[]
+
+  @@map("strk_teachers")
+}
+
+model StrkStudent {
+  id             String    @id @db.Uuid // == StrkProfile.id (extension 1:1)
+  institutionId  String    @map("institution_id") @db.Uuid
+  classId        String?   @map("class_id") @db.Uuid
+  studentNumber  String?   @map("student_number")
+  /// `female` | `male` — requis à la préinscription ; utilisé pour les effectifs.
+  gender         String?
+  enrollmentDate DateTime? @map("enrollment_date") @db.Date
+  attendanceRate Decimal?  @map("attendance_rate")
+  createdAt      DateTime? @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+
+  profile     StrkProfile     @relation(fields: [id], references: [id], onDelete: Cascade)
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  class       StrkClass?      @relation(fields: [classId], references: [id])
+
+  absences                StrkAbsence[]
+  signatures              StrkSignature[]
+  courseStudents          StrkCourseStudent[]
+  invoices                StrkInvoice[]
+  paymentPlans            StrkPaymentPlan[]
+  gradeComputations       StrkGradeComputation[]
+  pedagogicalObservations StrkPedagogicalObservation[]
+  disciplinaryIncidents   StrkDisciplinaryIncident[]
+  admissionApplications   StrkAdmissionApplication[]
+  thresholdAlerts         StrkThresholdAlert[]
+  assignmentReminders     StrkAssignmentReminder[]
+  healthInfo              StrkStudentHealthInfo?
+
+  @@map("strk_students")
+}
+
+// ELV-001 : dossier élève — volet santé/contact d'urgence, séparé du reste
+// du dossier (identité/scolarité) car c'est une catégorie de données plus
+// sensible avec un contrôle d'accès dédié (StrkStudentGuardian.canViewHealth)
+// plutôt que les droits de lecture par défaut du personnel/de la famille.
+model StrkStudentHealthInfo {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId             String   @unique @map("student_id") @db.Uuid
+  institutionId         String   @map("institution_id") @db.Uuid
+  bloodType             String?  @map("blood_type")
+  allergies             String?
+  medicalConditions     String?  @map("medical_conditions")
+  medications           String?
+  emergencyContactName  String?  @map("emergency_contact_name")
+  emergencyContactPhone String?  @map("emergency_contact_phone")
+  additionalNotes       String?  @map("additional_notes")
+  updatedBy             String?  @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  student     StrkStudent     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+
+  @@map("strk_student_health_info")
+}
+
+// ELV-002 : responsables multiples (père/mère/tuteur/payeur/autre) avec
+// droits différenciés, et accès "multi-enfants" du rôle parent.
+model StrkStudentGuardian {
+  id                       String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId            String                   @map("institution_id") @db.Uuid
+  studentId                String                   @map("student_id") @db.Uuid
+  guardianId               String                   @map("guardian_id") @db.Uuid
+  relationship             StrkGuardianRelationship @default(tutor)
+  isPrimaryContact         Boolean                  @default(false) @map("is_primary_contact")
+  canViewGrades            Boolean                  @default(true) @map("can_view_grades")
+  canViewAttendance        Boolean                  @default(true) @map("can_view_attendance")
+  canViewBilling           Boolean                  @default(false) @map("can_view_billing")
+  canMakePayments          Boolean                  @default(false) @map("can_make_payments")
+  canReceiveCommunications Boolean                  @default(true) @map("can_receive_communications")
+  canAuthorizePickup       Boolean                  @default(false) @map("can_authorize_pickup")
+  // SUI-005 : droit d'accès de principe aux observations/incidents partagés
+  // avec la famille — s'ajoute, sans le remplacer, au marquage au cas par
+  // cas `visibleToFamily` sur chaque entrée (une entrée non partagée reste
+  // invisible même à un responsable ayant ce droit).
+  canViewDiscipline        Boolean                  @default(true) @map("can_view_discipline")
+  // ELV-001 : accès aux informations de santé/contact d'urgence de l'élève.
+  // Par défaut visible (comme les notes/l'assiduité) : un responsable a
+  // normalement besoin de voir ces informations pour son propre enfant.
+  canViewHealth            Boolean                  @default(true) @map("can_view_health")
+  status                   String                   @default("active")
+  createdBy                String?                  @map("created_by") @db.Uuid
+  createdAt                DateTime                 @default(now()) @map("created_at")
+  updatedAt                DateTime                 @updatedAt @map("updated_at")
+
+  institution      StrkInstitution @relation(fields: [institutionId], references: [id])
+  student          StrkProfile     @relation("GuardianLinkStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  guardian         StrkProfile     @relation("GuardianLinkGuardian", fields: [guardianId], references: [id], onDelete: Cascade)
+  createdByProfile StrkProfile?    @relation("GuardianLinkCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([studentId, guardianId])
+  @@map("strk_student_guardians")
+}
+
+// Table de compatibilité historique (jonction classe <-> profil élève,
+// distincte de strk_class_students / strk_course_students plus récentes).
+model StrkStudentClass {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId    String   @map("class_id") @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  class   StrkClass   @relation(fields: [classId], references: [id])
+  student StrkProfile @relation("StudentClassStudent", fields: [studentId], references: [id])
+
+  @@map("strk_student_classes")
+}
+
+// Jonction classe <-> élève. ELV-003 : une ligne par année scolaire
+// (historique pluriannuel — redoublement, transfert, promotion).
+model StrkClassStudent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId        String    @map("class_id") @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
+  academicYear   String    @map("academic_year")
+  enrollmentDate DateTime  @default(now()) @map("enrollment_date") @db.Date
+  endedAt        DateTime? @map("ended_at") @db.Date
+  // null tant que l'inscription est active ; sinon promoted | repeated | transferred | withdrawn
+  outcome        String?   @map("outcome")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([studentId, academicYear])
+  @@index([classId, studentId])
+  @@map("strk_class_students")
+}
+
+// ============================================================
+// Cours, emploi du temps, présence
+// ============================================================
+
+model StrkCourse {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  description   String?
+  teacherId     String?   @map("teacher_id") @db.Uuid
+  classId       String?   @map("class_id") @db.Uuid
+  institutionId String    @map("institution_id") @db.Uuid
+  room          String?
+  scheduleDay   String?   @map("schedule_day")
+  scheduleTime  String?   @map("schedule_time")
+  duration      Int?
+  status        String?   @default("active")
+  // EVA-004 : matière rattachée (regroupement pour le calcul de moyennes par
+  // matière) et coefficient utilisé pour pondérer cette matière dans la
+  // moyenne générale. Facultatif — un cours sans matière est agrégé sous sa
+  // propre clé (courseId) plutôt que d'échouer le calcul.
+  subjectId     String?   @map("subject_id") @db.Uuid
+  coefficient   Decimal   @default(1)
+  createdAt     DateTime? @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  teacher     StrkTeacher?    @relation(fields: [teacherId], references: [id])
+  class       StrkClass?      @relation(fields: [classId], references: [id])
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  subject     StrkSubject?    @relation(fields: [subjectId], references: [id])
+
+  materials               StrkCourseMaterial[]
+  lessonEntries           StrkLessonEntry[]
+  courseStudents          StrkCourseStudent[]
+  schedules               StrkSchedule[]
+  absences                StrkAbsence[]
+  pedagogicalObservations StrkPedagogicalObservation[]
+
+  @@map("strk_courses")
+}
+
+// PED-001 : cahier de textes — une entrée par séance (contenu fait / à faire,
+// devoirs liés), distincte du conteneur de cours et des ressources PED-002.
+model StrkLessonEntry {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId       String   @map("course_id") @db.Uuid
+  lessonDate     DateTime @map("lesson_date") @db.Date
+  title          String?
+  contentCovered String   @map("content_covered") // ce qui a été fait
+  homeworkGiven  String?  @map("homework_given") // travail à faire
+  // Ids de devoirs (StrkAssignment) liés à cette séance — JSON string[] pour
+  // éviter une table de jonction tant que le besoin reste une simple référence.
+  assignmentIds  Json     @default("[]") @map("assignment_ids")
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  course  StrkCourse  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator StrkProfile @relation("LessonEntryCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([courseId, lessonDate])
+  @@map("strk_lesson_entries")
+}
+
+model StrkCourseMaterial {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId    String    @map("course_id") @db.Uuid
+  title       String
+  type        String?
+  content     String?
+  description String?
+  // PED-002 : clé S3 (dossier course-materials), distincte de `content`
+  // (lien/texte). Absente si la ressource n'est qu'un lien ou un texte.
+  fileKey     String?   @map("file_key")
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime? @default(now()) @map("created_at")
+
+  course  StrkCourse   @relation(fields: [courseId], references: [id])
+  creator StrkProfile? @relation("CourseMaterialCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("strk_course_materials")
+}
+
+model StrkCourseStudent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId       String    @map("course_id") @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
+  enrollmentDate DateTime? @default(now()) @map("enrollment_date") @db.Date
+  grade          Decimal?
+  attendanceRate Decimal?  @map("attendance_rate")
+  lastAttendance DateTime? @map("last_attendance")
+  progress       Decimal?
+
+  course  StrkCourse  @relation(fields: [courseId], references: [id])
+  student StrkStudent @relation(fields: [studentId], references: [id])
+
+  @@map("strk_course_students")
+}
+
+model StrkSchedule {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId       String    @map("course_id") @db.Uuid
+  classId        String?   @map("class_id") @db.Uuid
+  institutionId  String    @map("institution_id") @db.Uuid
+  teacherId      String?   @map("teacher_id") @db.Uuid
+  dayOfWeek      Int       @map("day_of_week")
+  startTime      String    @map("start_time")
+  endTime        String    @map("end_time")
+  room           String?
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  recurringWeeks Int?      @map("recurring_weeks")
+  isActive       Boolean?  @default(true) @map("is_active")
+  createdAt      DateTime? @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+
+  course      StrkCourse              @relation(fields: [courseId], references: [id])
+  class       StrkClass?              @relation(fields: [classId], references: [id])
+  institution StrkInstitution         @relation(fields: [institutionId], references: [id])
+  teacher     StrkProfile?            @relation("ScheduleTeacher", fields: [teacherId], references: [id])
+  exceptions  StrkScheduleException[]
+
+  @@map("strk_schedules")
+}
+
+// ACA-005 : exception ponctuelle à un créneau récurrent — une occurrence
+// précise (date) est annulée ou son enseignant remplacé, sans toucher à la
+// règle récurrente elle-même (`StrkSchedule`). Une seule exception par
+// occurrence (`@@unique([scheduleId, date])`) : la créer une seconde fois
+// pour la même date met à jour l'existante plutôt que d'en empiler une autre.
+model StrkScheduleException {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId          String                    @map("schedule_id") @db.Uuid
+  institutionId       String                    @map("institution_id") @db.Uuid
+  date                DateTime                  @db.Date
+  type                StrkScheduleExceptionType
+  substituteTeacherId String?                   @map("substitute_teacher_id") @db.Uuid
+  reason              String?
+  createdBy           String                    @map("created_by") @db.Uuid
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+
+  schedule          StrkSchedule    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  institution       StrkInstitution @relation(fields: [institutionId], references: [id])
+  substituteTeacher StrkProfile?    @relation("ScheduleExceptionSubstituteTeacher", fields: [substituteTeacherId], references: [id])
+  creator           StrkProfile     @relation("ScheduleExceptionCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([scheduleId, date])
+  @@map("strk_schedule_exceptions")
+}
+
+// PER-003 : déclaration de disponibilité/indisponibilité d'un enseignant
+// (congé, absence prévue...) sur une période. Une déclaration par
+// l'enseignant lui-même reste "requested" jusqu'à validation par la
+// direction ; une déclaration créée directement par la direction est
+// "approved" d'emblée (elle a déjà l'autorité de la décider). Ne crée
+// jamais automatiquement d'exception d'emploi du temps (ACA-005) — les
+// créneaux impactés sont seulement signalés (`GET .../:id/conflicts`,
+// réutilise `lib/scheduling.ts`), le remplacement/l'annulation reste une
+// action manuelle et délibérée de la direction.
+model StrkTeacherAvailability {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String                 @map("institution_id") @db.Uuid
+  teacherId     String                 @map("teacher_id") @db.Uuid
+  startDate     DateTime               @map("start_date") @db.Date
+  endDate       DateTime               @map("end_date") @db.Date
+  reason        String?
+  status        StrkAvailabilityStatus @default(requested)
+  reviewedBy    String?                @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime?              @map("reviewed_at")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  teacher     StrkProfile     @relation("TeacherAvailabilityTeacher", fields: [teacherId], references: [id])
+  reviewer    StrkProfile?    @relation("TeacherAvailabilityReviewedBy", fields: [reviewedBy], references: [id])
+
+  @@map("strk_teacher_availabilities")
+}
+
+// Présence "appel" (distincte du mécanisme de signature entrée/sortie ;
+// pas de contrainte FK au niveau de la base d'origine).
+model StrkAttendance {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId      String   @map("course_id") @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  date          DateTime @default(now()) @db.Date
+  status        String   @default("present")
+  arrivalTime   String?  @map("arrival_time")
+  departureTime String?  @map("departure_time")
+  notes         String?
+  recordedBy    String?  @map("recorded_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("strk_attendances")
+}
+
+model StrkAbsence {
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId               String                  @map("student_id") @db.Uuid
+  institutionId           String                  @map("institution_id") @db.Uuid
+  courseId                String?                 @map("course_id") @db.Uuid
+  date                    DateTime                @db.Date
+  type                    StrkAbsenceType
+  duration                Int
+  justified               Boolean?                @default(false)
+  reason                  String?
+  justification           String?
+  justificationFile       String?                 @map("justification_file")
+  // PRS-005 : voir StrkJustificationStatus — `justified` seul ne
+  // distinguait pas "jamais soumis" de "rejeté" (les deux valaient false).
+  justificationStatus     StrkJustificationStatus @default(none) @map("justification_status")
+  justificationReviewedAt DateTime?               @map("justification_reviewed_at")
+  justificationReviewedBy String?                 @map("justification_reviewed_by") @db.Uuid
+  createdBy               String?                 @map("created_by") @db.Uuid
+  // PRS-004 : horodatage de l'alerte parentale automatique (garde
+  // anti-doublon — cf. lib/absenceAlertCron.ts, jamais renvoyée une fois
+  // posée, même en cas de nouvelle exécution du cron sur la même absence).
+  alertSentAt             DateTime?               @map("alert_sent_at")
+  // PRS-003 : identifiant généré côté client (mode hors ligne) — permet de
+  // rejouer une synchronisation sans jamais créer de doublon, y compris en
+  // cas de retry après une coupure réseau pendant la requête initiale.
+  clientId                String?                 @unique @map("client_id")
+  createdAt               DateTime?               @default(now()) @map("created_at")
+  updatedAt               DateTime?               @updatedAt @map("updated_at")
+
+  student               StrkStudent     @relation(fields: [studentId], references: [id])
+  institution           StrkInstitution @relation(fields: [institutionId], references: [id])
+  course                StrkCourse?     @relation(fields: [courseId], references: [id])
+  creator               StrkProfile?    @relation("AbsenceCreatedBy", fields: [createdBy], references: [id])
+  justificationReviewer StrkProfile?    @relation("AbsenceJustificationReviewedBy", fields: [justificationReviewedBy], references: [id])
+
+  @@map("strk_absences")
+}
+
+// PRS-006 : trace d'une alerte de seuil d'assiduité déclenchée (absentéisme
+// ou retards répétés) — sert à la fois d'historique consultable et de garde
+// anti-doublon (pas de nouvelle alerte pour le même élève/type tant que la
+// fenêtre de calcul n'est pas retombée sous le seuil puis repassée dessus,
+// cf. `lib/attendanceThresholds.ts`).
+model StrkThresholdAlert {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String                 @map("institution_id") @db.Uuid
+  studentId     String                 @map("student_id") @db.Uuid
+  type          StrkThresholdAlertType
+  count         Int
+  threshold     Int
+  windowDays    Int                    @map("window_days")
+  triggeredAt   DateTime               @default(now()) @map("triggered_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  student     StrkStudent     @relation(fields: [studentId], references: [id])
+
+  @@map("strk_threshold_alerts")
+}
+
+// Signatures entrée/sortie/document — mécanisme historique de présence.
+model StrkSignature {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String              @map("student_id") @db.Uuid
+  institutionId String              @map("institution_id") @db.Uuid
+  title         String
+  type          StrkSignatureType
+  status        StrkSignatureStatus @default(pending)
+  date          DateTime            @db.Date
+  timestamp     String?
+  signatureData String?             @map("signature_data")
+  verified      Boolean?            @default(false)
+  senderId      String?             @map("sender_id") @db.Uuid
+  recipientId   String?             @map("recipient_id") @db.Uuid
+  expiresAt     DateTime?           @map("expires_at")
+  completedAt   DateTime?           @map("completed_at")
+  createdAt     DateTime?           @default(now()) @map("created_at")
+  updatedAt     DateTime?           @updatedAt @map("updated_at")
+
+  student     StrkStudent     @relation(fields: [studentId], references: [id])
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  sender      StrkProfile?    @relation("SignatureSender", fields: [senderId], references: [id])
+  recipient   StrkProfile?    @relation("SignatureRecipient", fields: [recipientId], references: [id])
+
+  @@map("strk_signatures")
+}
+
+// ============================================================
+// Pédagogie : devoirs, notes, exercices
+// ============================================================
+
+model StrkAssignment {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId       String   @map("course_id") @db.Uuid
+  teacherId      String   @map("teacher_id") @db.Uuid
+  title          String
+  description    String?
+  instructions   String?
+  dueDate        DateTime @map("due_date")
+  maxGrade       Decimal? @default(20) @map("max_grade")
+  assignmentType String   @default("homework") @map("assignment_type")
+  status         String   @default("active")
+  attachments    Json?    @default("[]")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("strk_assignments")
+}
+
+model StrkSubmission {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assignmentId String    @map("assignment_id") @db.Uuid
+  studentId    String    @map("student_id") @db.Uuid
+  content      String?
+  attachments  Json?     @default("[]")
+  submittedAt  DateTime? @map("submitted_at")
+  grade        Decimal?
+  feedback     String?
+  status       String    @default("pending")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([assignmentId, studentId])
+  @@map("strk_submissions")
+}
+
+// PED-005 : rappels de devoir (publication, échéance proche, retard).
+// `assignmentId` reste sans contrainte de clé étrangère (comme
+// `StrkAssignment`/`StrkSubmission` elles-mêmes, cf. commentaire dans
+// assignments.routes.ts) ; `studentId` référence en revanche réellement
+// `StrkStudent`, une entité de premier ordre bien identifiée ailleurs dans
+// le schéma. Un seul rappel de chaque type par élève et par devoir
+// (`@@unique`) : la garde anti-doublon qui évite de relancer le même
+// rappel à chaque exécution du cron.
+model StrkAssignmentReminder {
+  id           String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assignmentId String                     @map("assignment_id") @db.Uuid
+  studentId    String                     @map("student_id") @db.Uuid
+  type         StrkAssignmentReminderType
+  sentAt       DateTime                   @default(now()) @map("sent_at")
+
+  student StrkStudent @relation(fields: [studentId], references: [id])
+
+  @@unique([assignmentId, studentId, type])
+  @@map("strk_assignment_reminders")
+}
+
+// EVA-004/005 : la note reste par ailleurs sans contrainte de clé étrangère
+// sur student_id/course_id/teacher_id (fidèle à l'origine, cf. commentaire
+// dans grades.routes.ts), mais period_id est un champ neuf : il porte une
+// vraie contrainte référentielle (StrkAcademicPeriod), aucune raison de
+// reproduire la dette de l'existant sur une colonne qu'on introduit.
+model StrkGrade {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String          @map("student_id") @db.Uuid
+  courseId      String          @map("course_id") @db.Uuid
+  teacherId     String          @map("teacher_id") @db.Uuid
+  gradeValue    Decimal         @map("grade_value")
+  maxGrade      Decimal         @default(20) @map("max_grade")
+  gradeType     String          @default("exam") @map("grade_type")
+  title         String
+  description   String?
+  date          DateTime        @default(now()) @db.Date
+  // EVA-002 : poids de cette note précise au sein de sa matière (ex. un
+  // devoir compte moins qu'un examen), distinct du coefficient de la
+  // matière elle-même (StrkCourse.coefficient) qui pondère ensuite la
+  // moyenne générale.
+  coefficient   Decimal         @default(1)
+  periodId      String?         @map("period_id") @db.Uuid
+  // EVA-005 : workflow brouillon → publié → corrigé. Une note "draft" n'est
+  // visible que du personnel (jamais de l'élève/parent) tant qu'elle n'a
+  // pas été publiée en bloc (POST /grades/publish). Une correction après
+  // publication ne l'écrase jamais silencieusement : l'ancienne valeur est
+  // conservée dans previousValue et l'horodatage/l'auteur de la correction
+  // sont tracés.
+  status        StrkGradeStatus @default(draft)
+  previousValue Decimal?        @map("previous_value")
+  publishedAt   DateTime?       @map("published_at")
+  publishedBy   String?         @map("published_by") @db.Uuid
+  correctedAt   DateTime?       @map("corrected_at")
+  correctedBy   String?         @map("corrected_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  period StrkAcademicPeriod? @relation(fields: [periodId], references: [id])
+
+  @@map("strk_grades")
+}
+
+// EVA-004 : découpage de l'année scolaire en périodes (trimestres,
+// semestres...) par établissement — nécessaire pour calculer une moyenne et
+// un rang "sur la période", pas seulement toutes notes confondues.
+model StrkAcademicPeriod {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  academicYear  String   @map("academic_year")
+  name          String
+  // Ordre chronologique d'affichage (1 = premier trimestre...).
+  order         Int
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+
+  grades       StrkGrade[]
+  computations StrkGradeComputation[]
+
+  @@unique([institutionId, academicYear, name])
+  @@map("strk_academic_periods")
+}
+
+// EVA-002 : barèmes nommés et réutilisables (ex. « Note sur 20 », « Note sur
+// 10 »), configurés une fois par établissement plutôt que ressaisis en
+// texte libre à chaque note. `StrkGrade.maxGrade` reste la source de vérité
+// utilisée par le moteur de calcul (gradeEngine.ts, jamais modifié par
+// cette fonctionnalité) — un barème ne fait que pré-remplir ce champ dans
+// le formulaire de saisie, il n'est jamais référencé par la note elle-même
+// (un barème supprimé ou modifié plus tard ne doit jamais changer une note
+// déjà enregistrée).
+model StrkGradingScale {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  name          String
+  maxValue      Decimal  @map("max_value")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+
+  @@unique([institutionId, name])
+  @@map("strk_grading_scales")
+}
+
+// EVA-004 : moyennes et rangs calculés pour une période/classe donnée.
+// Jamais recalculé en place : chaque exécution de POST /grades/compute crée
+// une nouvelle version (toutes les lignes de ce calcul partagent le même
+// numéro), l'historique des calculs précédents reste consultable — même
+// principe de non-écrasement que les documents (DOC-003) et gabarits
+// (DOC-002). subjectId=null désigne la moyenne générale (toutes matières).
+model StrkGradeComputation {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  periodId      String   @map("period_id") @db.Uuid
+  classId       String   @map("class_id") @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  subjectId     String?  @map("subject_id") @db.Uuid
+  average       Decimal
+  rank          Int?
+  // Taille de la cohorte utilisée pour établir ce rang — fige le contexte
+  // même si des élèves rejoignent/quittent la classe par la suite.
+  studentCount  Int      @map("student_count")
+  version       Int
+  computedAt    DateTime @default(now()) @map("computed_at")
+  computedBy    String?  @map("computed_by") @db.Uuid
+
+  institution StrkInstitution    @relation(fields: [institutionId], references: [id])
+  period      StrkAcademicPeriod @relation(fields: [periodId], references: [id])
+  class       StrkClass          @relation(fields: [classId], references: [id])
+  student     StrkStudent        @relation(fields: [studentId], references: [id])
+  subject     StrkSubject?       @relation(fields: [subjectId], references: [id])
+
+  @@index([periodId, classId, studentId, subjectId])
+  @@map("strk_grade_computations")
+}
+
+// ============================================================
+// Suivi pédagogique et discipline (SUI-001 à 005, chap. 15)
+// ============================================================
+
+// SUI-001/002 : le "suivi individuel" d'un élève est la réunion
+// chronologique de ses observations pédagogiques et de ses incidents
+// disciplinaires (GET /observations/timeline) — pas un modèle séparé.
+model StrkPedagogicalObservation {
+  id                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId       String                  @map("institution_id") @db.Uuid
+  studentId           String                  @map("student_id") @db.Uuid
+  authorId            String                  @map("author_id") @db.Uuid
+  courseId            String?                 @map("course_id") @db.Uuid
+  category            StrkObservationCategory @default(neutral)
+  title               String
+  description         String
+  date                DateTime                @default(now()) @db.Date
+  // SUI-005 : confidentialité ciblée — cf. `canViewFollowUpEntry` (authz.ts).
+  restrictedToUserIds String[]                @default([]) @map("restricted_to_user_ids")
+  visibleToFamily     Boolean                 @default(false) @map("visible_to_family")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  student     StrkStudent     @relation(fields: [studentId], references: [id])
+  author      StrkProfile     @relation("ObservationAuthor", fields: [authorId], references: [id])
+  course      StrkCourse?     @relation(fields: [courseId], references: [id])
+
+  @@map("strk_pedagogical_observations")
+}
+
+// SUI-003/004 : incident disciplinaire avec workflow versionné par statut
+// (signalé → en instruction → conseil de discipline → clos — cf.
+// ALLOWED_TRANSITIONS dans discipline.routes.ts, qui fait respecter cet
+// enchaînement plutôt que de laisser `status` être écrit librement).
+model StrkDisciplinaryIncident {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId       String               @map("institution_id") @db.Uuid
+  studentId           String               @map("student_id") @db.Uuid
+  reportedBy          String               @map("reported_by") @db.Uuid
+  date                DateTime             @default(now()) @db.Date
+  description         String
+  severity            StrkIncidentSeverity @default(minor)
+  status              StrkIncidentStatus   @default(reported)
+  // Autres élèves co-impliqués (simple liste d'ids, sans table de jonction ni
+  // second FK réel — cet incident reste porté par `studentId` pour l'accès
+  // et le workflow ; cas limite assumé, pas de "dossier collectif" unique).
+  involvedStudentIds  String[]             @default([]) @map("involved_student_ids")
+  councilDate         DateTime?            @map("council_date")
+  decision            String?
+  sanctionType        String?              @map("sanction_type")
+  decidedBy           String?              @map("decided_by") @db.Uuid
+  decidedAt           DateTime?            @map("decided_at")
+  // SUI-005 : mêmes règles de confidentialité ciblée que les observations.
+  restrictedToUserIds String[]             @default([]) @map("restricted_to_user_ids")
+  visibleToFamily     Boolean              @default(false) @map("visible_to_family")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  student     StrkStudent     @relation(fields: [studentId], references: [id])
+  reporter    StrkProfile     @relation("IncidentReportedBy", fields: [reportedBy], references: [id])
+  decider     StrkProfile?    @relation("IncidentDecidedBy", fields: [decidedBy], references: [id])
+
+  @@map("strk_disciplinary_incidents")
+}
+
+// ============================================================
+// Préinscription publique et admission (chap. 8.1/8.2)
+// ============================================================
+
+// Dossier de préinscription déposé par un parent qui n'a pas encore de
+// compte (le workflow précède justement la création du compte élève/
+// responsable). Accès public via `publicToken`, même principe que
+// `StrkDocument.verificationToken`. L'élève et les responsables ne sont que
+// des données déclaratives (`guardians` en JSON) tant que le dossier n'est
+// pas finalisé — `enroll()` (lib/admissions.ts) crée alors les vrais
+// comptes/extensions.
+model StrkAdmissionApplication {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String              @map("institution_id") @db.Uuid
+  classId       String?             @map("class_id") @db.Uuid
+  academicYear  String              @map("academic_year")
+  status        StrkAdmissionStatus @default(draft)
+
+  /// Nature de la demande (préinscription, 1re inscription, réinscription, transfert).
+  applicationKind StrkAdmissionApplicationKind @default(pre_registration) @map("application_kind")
+  /// Niveau libre (préscolaire, primaire, collège…) pour résoudre le modèle.
+  level           String?                      @map("level")
+  packetTemplateId String?                     @map("packet_template_id") @db.Uuid
+  /// Drapeaux profil pour règles conditionnelles (ex. foreign_student, assigned).
+  profileFlags    String[]                     @default([]) @map("profile_flags")
+  /// Campus / site (entité native) — préférer à `campus` (texte legacy).
+  campusId        String?                      @map("campus_id") @db.Uuid
+  /// Libellé legacy (rétrocompat) — synchronisé depuis le campus si campusId est posé.
+  campus          String?
+  /// Compte parent créé/lié dès la création du dossier (contactEmail).
+  contactProfileId String?                     @map("contact_profile_id") @db.Uuid
+  /// Document PDF de confirmation (acceptation / inscription).
+  confirmationDocumentId String?               @map("confirmation_document_id") @db.Uuid
+  /// Statut d'instruction documentaire dérivé : incomplete | complete | in_review | correction.
+  instructionStatus String?                    @map("instruction_status")
+
+  studentFirstName String   @map("student_first_name")
+  studentLastName  String   @map("student_last_name")
+  studentBirthDate DateTime @map("student_birth_date") @db.Date
+  studentGender    String?  @map("student_gender")
+
+  // [{ firstName, lastName, email, phone, relationship }]
+  guardians Json @default("[]")
+  // Legacy [{ label, fileKey }] — préférer `documentItems` (moteur de pièces).
+  documents Json @default("[]")
+
+  // Chap. 8.2 : détection de doublons — signalée pour arbitrage humain,
+  // jamais bloquante automatiquement (homonymes/fratries légitimes).
+  duplicateWarning String? @map("duplicate_warning")
+
+  // "Paiement" (chap. 8.1) : confirmation manuelle OU passerelle CinetPay/Stripe
+  // (initiate public via token, webhook serveur→serveur — FIN-005).
+  applicationFeeCents       Int?      @map("application_fee_cents")
+  applicationFeeCurrency    String    @default("XOF") @map("application_fee_currency")
+  applicationFeePaid        Boolean   @default(false) @map("application_fee_paid")
+  applicationFeeConfirmedBy String?   @map("application_fee_confirmed_by") @db.Uuid
+  applicationFeeConfirmedAt DateTime? @map("application_fee_confirmed_at")
+  // Référence fournisseur pour le paiement en ligne des frais de dossier
+  // (hors StrkPayment/facture — le compte élève n'existe pas encore).
+  applicationFeeProvider    String?   @map("application_fee_provider") // cinetpay | stripe
+  applicationFeeProviderRef String?   @unique @map("application_fee_provider_ref")
+
+  // Traçabilité de décision (chap. 8.2).
+  decisionNotes String?   @map("decision_notes")
+  decidedBy     String?   @map("decided_by") @db.Uuid
+  decidedAt     DateTime? @map("decided_at")
+  submittedAt   DateTime? @map("submitted_at")
+
+  contactEmail String @map("contact_email")
+  publicToken  String @unique @map("public_token")
+
+  // Réinscription : dossier antérieur dont celui-ci reprend les infos.
+  previousApplicationId String? @map("previous_application_id") @db.Uuid
+  // Une fois finalisé (status=enrolled) : élève réellement créé.
+  enrolledStudentId     String? @map("enrolled_student_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  institution         StrkInstitution            @relation(fields: [institutionId], references: [id])
+  class               StrkClass?                 @relation(fields: [classId], references: [id])
+  campusRef           StrkCampus?                @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  contactProfile      StrkProfile?               @relation("AdmissionContactProfile", fields: [contactProfileId], references: [id], onDelete: SetNull)
+  packetTemplate      StrkAdmissionPacketTemplate? @relation(fields: [packetTemplateId], references: [id])
+  documentItems       StrkAdmissionDocumentItem[]
+  decider             StrkProfile?               @relation("AdmissionDecidedBy", fields: [decidedBy], references: [id])
+  feeConfirmedBy      StrkProfile?               @relation("AdmissionFeeConfirmedBy", fields: [applicationFeeConfirmedBy], references: [id])
+  previousApplication StrkAdmissionApplication?  @relation("AdmissionReenrollment", fields: [previousApplicationId], references: [id])
+  reenrollments       StrkAdmissionApplication[] @relation("AdmissionReenrollment")
+  enrolledStudent     StrkStudent?               @relation(fields: [enrolledStudentId], references: [id])
+
+  @@index([campusId])
+  @@index([contactProfileId])
+  @@map("strk_admission_applications")
+}
+
+/// Type de pièce (catalogue plateforme ou spécifique établissement).
+model StrkAdmissionDocumentType {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// null = entrée du catalogue plateforme (seed CI) ; sinon type local.
+  institutionId String? @map("institution_id") @db.Uuid
+  code          String
+  label         String
+  description   String?
+  category      String
+  allowedMime   String[] @default(["application/pdf", "image/jpeg", "image/png", "image/webp"]) @map("allowed_mime")
+  maxSizeBytes  Int      @default(15728640) @map("max_size_bytes")
+  maxFiles      Int      @default(1) @map("max_files")
+  validityDays  Int?     @map("validity_days")
+  /// Durée de conservation après décision (jours) — purge / archivage.
+  retentionDays Int?     @map("retention_days")
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution  StrkInstitution?                 @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  requirements StrkAdmissionPacketRequirement[]
+  items        StrkAdmissionDocumentItem[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId, category])
+  @@map("strk_admission_document_types")
+}
+
+/// Modèle de dossier (ex. « Première inscription collège »).
+model StrkAdmissionPacketTemplate {
+  id            String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String                       @map("institution_id") @db.Uuid
+  code          String
+  name          String
+  description   String?
+  applicationKind StrkAdmissionApplicationKind @map("application_kind")
+  level         String?
+  campus        String?
+  campusId      String?                      @map("campus_id") @db.Uuid
+  classId       String?                      @map("class_id") @db.Uuid
+  academicYear  String?                      @map("academic_year")
+  isDefault     Boolean                      @default(false) @map("is_default")
+  isActive      Boolean                      @default(true) @map("is_active")
+  createdAt     DateTime                     @default(now()) @map("created_at")
+  updatedAt     DateTime                     @updatedAt @map("updated_at")
+
+  institution  StrkInstitution                 @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  campusRef    StrkCampus?                     @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  class        StrkClass?                      @relation(fields: [classId], references: [id])
+  requirements StrkAdmissionPacketRequirement[]
+  applications StrkAdmissionApplication[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId, applicationKind, isActive])
+  @@map("strk_admission_packet_templates")
+}
+
+model StrkAdmissionPacketRequirement {
+  id             String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId     String                     @map("template_id") @db.Uuid
+  documentTypeId String                     @map("document_type_id") @db.Uuid
+  obligation     StrkAdmissionDocObligation @default(required)
+  originalMode   StrkAdmissionOriginalMode  @default(digital_only) @map("original_mode")
+  sortOrder      Int                        @default(0) @map("sort_order")
+  helpText       String?                    @map("help_text")
+  /// Règle JSON : { applicationKinds?, levels?, classIds?, flags?, requireAll? }
+  conditionRule  Json?                      @map("condition_rule")
+  depositOpensAt DateTime?                  @map("deposit_opens_at")
+  depositClosesAt DateTime?                 @map("deposit_closes_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+
+  template     StrkAdmissionPacketTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  documentType StrkAdmissionDocumentType   @relation(fields: [documentTypeId], references: [id], onDelete: Restrict)
+  items        StrkAdmissionDocumentItem[]
+
+  @@unique([templateId, documentTypeId])
+  @@map("strk_admission_packet_requirements")
+}
+
+/// Pièce concrète rattachée à un dossier (versions + statut de contrôle).
+model StrkAdmissionDocumentItem {
+  id             String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId  String                     @map("application_id") @db.Uuid
+  documentTypeId String                     @map("document_type_id") @db.Uuid
+  requirementId  String?                    @map("requirement_id") @db.Uuid
+  status         StrkAdmissionDocItemStatus @default(missing)
+  fileKey        String?                    @map("file_key")
+  fileName       String?                    @map("file_name")
+  contentType    String?                    @map("content_type")
+  sizeBytes      Int?                       @map("size_bytes")
+  rejectionReason String?                   @map("rejection_reason")
+  reviewNotes    String?                    @map("review_notes")
+  reviewedBy     String?                    @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime?                  @map("reviewed_at")
+  originalSeenAt DateTime?                  @map("original_seen_at")
+  issuedAt       DateTime?                  @map("issued_at")
+  expiresAt      DateTime?                  @map("expires_at")
+  /// true = règle conditionnelle non applicable → ignorée pour la complétude.
+  waived         Boolean                    @default(false)
+  reusedFromItemId String?                  @map("reused_from_item_id") @db.Uuid
+  deadlineRemindedAt DateTime?              @map("deadline_reminded_at")
+  expiryRemindedAt DateTime?                @map("expiry_reminded_at")
+  version        Int                        @default(1)
+  previousItemId String?                    @map("previous_item_id") @db.Uuid
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  application  StrkAdmissionApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentType StrkAdmissionDocumentType     @relation(fields: [documentTypeId], references: [id])
+  requirement  StrkAdmissionPacketRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+  reviewer     StrkProfile?                  @relation("AdmissionDocReviewedBy", fields: [reviewedBy], references: [id])
+  previousItem StrkAdmissionDocumentItem?    @relation("AdmissionDocVersions", fields: [previousItemId], references: [id])
+  replacements StrkAdmissionDocumentItem[]   @relation("AdmissionDocVersions")
+  reusedFrom   StrkAdmissionDocumentItem?    @relation("AdmissionDocReuse", fields: [reusedFromItemId], references: [id])
+  reusedBy     StrkAdmissionDocumentItem[]   @relation("AdmissionDocReuse")
+
+  @@index([applicationId, status])
+  @@index([documentTypeId])
+  @@map("strk_admission_document_items")
+}
+
+/// Motifs standard de non-conformité (catalogue établissement).
+model StrkAdmissionRejectionReason {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  code          String
+  label         String
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@map("strk_admission_rejection_reasons")
+}
+
+// ============================================================
+// Sessions et journal d'audit (IAM-004/005)
+// ============================================================
+
+// IAM-004 : une session par jeton d'accès émis (register/login/vérification
+// MFA). Le JWT porte l'id de cette ligne (claim `sid`) — `requireAuth`
+// vérifie désormais aussi qu'elle existe, n'est pas révoquée et n'a pas
+// expiré (cf. middleware/auth.ts), ce qui rend une révocation immédiate et
+// réelle possible malgré des jetons stateless par nature.
+model StrkSession {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user StrkProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("strk_sessions")
+}
+
+// IAM-005 : journal d'audit écrit uniquement par le serveur lui-même
+// (`lib/audit.ts`, appelé depuis les actions sensibles) — contrairement à
+// `StrkActivity` (flux d'activité alimenté par le client via `POST
+// /activity`, donc falsifiable/omissible), aucune route n'expose d'écriture
+// publique ici : c'est ce qui en fait une piste d'audit fiable.
+model StrkAuditLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String?  @map("institution_id") @db.Uuid
+  actorId       String?  @map("actor_id") @db.Uuid
+  // Ex. "finance.payment.confirmed", "admission.enrolled", "auth.mfa.disabled".
+  action        String
+  targetType    String?  @map("target_type")
+  targetId      String?  @map("target_id")
+  metadata      Json?
+  ipAddress     String?  @map("ip_address")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  institution StrkInstitution? @relation(fields: [institutionId], references: [id])
+  actor       StrkProfile?     @relation(fields: [actorId], references: [id])
+
+  @@index([institutionId, createdAt])
+  @@map("strk_audit_logs")
+}
+
+model StrkExercise {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId   String    @map("institution_id") @db.Uuid
+  teacherId       String    @map("teacher_id") @db.Uuid
+  classId         String?   @map("class_id") @db.Uuid
+  title           String
+  description     String?
+  subject         String?
+  exerciseType    String    @default("quiz") @map("exercise_type")
+  difficultyLevel Int?      @map("difficulty_level")
+  points          Int?
+  timeLimit       Int?      @map("time_limit")
+  maxAttempts     Int?      @map("max_attempts")
+  dueDate         DateTime? @map("due_date")
+  isPublished     Boolean?  @default(false) @map("is_published")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  questions   StrkExerciseQuestion[]
+  assignments StrkExerciseAssignment[]
+  attempts    StrkExerciseAttempt[]
+  progress    StrkExerciseProgress[]
+
+  @@map("strk_exercises")
+}
+
+model StrkExerciseQuestion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId    String   @map("exercise_id") @db.Uuid
+  questionText  String   @map("question_text")
+  questionType  String   @default("multiple_choice") @map("question_type")
+  options       Json?
+  correctAnswer Json?    @map("correct_answer")
+  explanation   String?
+  points        Int?     @default(1)
+  questionOrder Int?     @map("question_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  exercise StrkExercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("strk_exercise_questions")
+}
+
+model StrkExerciseAssignment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId     String    @map("exercise_id") @db.Uuid
+  assignedBy     String    @map("assigned_by") @db.Uuid
+  assignedToType String    @default("class") @map("assigned_to_type")
+  assignedToId   String?   @map("assigned_to_id") @db.Uuid
+  dueDate        DateTime? @map("due_date")
+  autoGrade      Boolean?  @default(true) @map("auto_grade")
+  assignedAt     DateTime  @default(now()) @map("assigned_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  exercise StrkExercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("strk_exercise_assignments")
+}
+
+model StrkExerciseAttempt {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId    String    @map("exercise_id") @db.Uuid
+  studentId     String    @map("student_id") @db.Uuid
+  attemptNumber Int?      @default(1) @map("attempt_number")
+  answers       Json?
+  score         Decimal?
+  maxScore      Decimal?  @map("max_score")
+  status        String?   @default("in_progress")
+  feedback      String?
+  timeSpent     Int?      @map("time_spent")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  submittedAt   DateTime? @map("submitted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  exercise StrkExercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("strk_exercise_attempts")
+}
+
+model StrkExerciseProgress {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId         String    @map("exercise_id") @db.Uuid
+  studentId          String    @map("student_id") @db.Uuid
+  currentQuestionId  String?   @map("current_question_id") @db.Uuid
+  questionsAnswered  Int?      @default(0) @map("questions_answered")
+  totalQuestions     Int?      @map("total_questions")
+  progressPercentage Decimal?  @default(0) @map("progress_percentage")
+  streakCount        Int?      @default(0) @map("streak_count")
+  badgesEarned       Json?     @default("[]") @map("badges_earned")
+  lastActivity       DateTime? @map("last_activity")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  exercise StrkExercise @relation(fields: [exerciseId], references: [id])
+
+  @@unique([exerciseId, studentId])
+  @@map("strk_exercise_progress")
+}
+
+// ============================================================
+// Communication
+// ============================================================
+
+model StrkMessage {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  senderId        String    @map("sender_id") @db.Uuid
+  recipientId     String?   @map("recipient_id") @db.Uuid
+  subject         String
+  content         String
+  messageType     String    @default("general") @map("message_type")
+  priority        String    @default("normal")
+  readAt          DateTime? @map("read_at")
+  repliedAt       DateTime? @map("replied_at")
+  parentMessageId String?   @map("parent_message_id") @db.Uuid
+  attachments     Json?     @default("[]")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("strk_messages")
+}
+
+model StrkNotification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  title     String
+  message   String
+  type      String    @default("info")
+  priority  String    @default("normal")
+  isRead    Boolean   @default(false) @map("is_read")
+  actionUrl String?   @map("action_url")
+  metadata  Json?
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("strk_notifications")
+}
+
+model StrkNotificationSetting {
+  userId             String  @id @map("user_id") @db.Uuid
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  pushNotifications  Boolean @default(true) @map("push_notifications")
+  smsNotifications   Boolean @default(false) @map("sms_notifications")
+  attendanceAlerts   Boolean @default(true) @map("attendance_alerts")
+  signatureRequests  Boolean @default(true) @map("signature_requests")
+  systemUpdates      Boolean @default(true) @map("system_updates")
+  dailyDigest        Boolean @default(false) @map("daily_digest")
+
+  @@map("strk_notification_settings")
+}
+
+// Notifications applicatives génériques (canal historique, distinct de
+// strk_notifications).
+model Notification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  title     String
+  message   String
+  type      String    @default("info")
+  read      Boolean   @default(false)
+  actionUrl String?   @map("action_url")
+  data      Json?
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+// ============================================================
+// Réglages, activité, reporting
+// ============================================================
+
+model StrkSetting {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category    String
+  key         String
+  value       Json
+  description String?
+  isPublic    Boolean?  @default(false) @map("is_public")
+  createdAt   DateTime? @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+
+  @@unique([category, key])
+  @@map("strk_settings")
+}
+
+model StrkActivity {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String?   @map("institution_id") @db.Uuid
+  userId        String?   @map("user_id") @db.Uuid
+  type          String
+  description   String
+  targetType    String?   @map("target_type")
+  targetId      String?   @map("target_id") @db.Uuid
+  metadata      Json?
+  createdAt     DateTime? @default(now()) @map("created_at")
+
+  institution StrkInstitution? @relation(fields: [institutionId], references: [id])
+
+  @@map("strk_activities")
+}
+
+model StrkAnalytic {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String?   @map("institution_id") @db.Uuid
+  userId        String?   @map("user_id") @db.Uuid
+  metricType    String    @map("metric_type")
+  metricName    String    @map("metric_name")
+  value         Decimal
+  dateKey       DateTime? @map("date_key") @db.Date
+  metadata      Json?
+  recordedAt    DateTime? @default(now()) @map("recorded_at")
+
+  institution StrkInstitution? @relation(fields: [institutionId], references: [id])
+
+  @@map("strk_analytics")
+}
+
+model StrkDashboardStat {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String?   @map("institution_id") @db.Uuid
+  statType      String    @map("stat_type")
+  period        String
+  data          Json
+  calculatedAt  DateTime? @default(now()) @map("calculated_at")
+  validUntil    DateTime? @map("valid_until")
+
+  institution StrkInstitution? @relation(fields: [institutionId], references: [id])
+
+  @@map("strk_dashboard_stats")
+}
+
+model StrkReport {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String?   @map("institution_id") @db.Uuid
+  createdBy     String    @map("created_by") @db.Uuid
+  reportType    String    @map("report_type")
+  title         String
+  parameters    Json?
+  data          Json?
+  fileUrl       String?   @map("file_url")
+  status        String?   @default("pending")
+  createdAt     DateTime? @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  institution StrkInstitution? @relation(fields: [institutionId], references: [id])
+
+  @@map("strk_reports")
+}
+
+// ============================================================
+// Administration SaaS & abonnements (facturation SDCREATIV <-> établissement)
+// ============================================================
+
+model SubscriptionPlan {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  priceMonthly        Decimal   @map("price_monthly")
+  priceYearly         Decimal?  @map("price_yearly")
+  stripePriceId       String?   @map("stripe_price_id")
+  stripeYearlyPriceId String?   @map("stripe_yearly_price_id")
+  maxStudents         Int?      @map("max_students")
+  maxInstitutions     Int?      @map("max_institutions")
+  maxMonthlyReports   Int?      @map("max_monthly_reports")
+  storageLimitGb      Int?      @map("storage_limit_gb")
+  // SAA-003 : quotas élèves/établissements/rapports/stockage existaient déjà
+  // dans le schéma mais n'étaient lus nulle part côté application — jamais
+  // appliqués. "Utilisateurs" (personnel/comptes, distinct des élèves) et
+  // "SMS" (chap. 17, coût variable par envoi) manquaient carrément de champ.
+  maxUsers            Int?      @map("max_users")
+  maxSmsPerMonth      Int?      @map("max_sms_per_month")
+  // Quota mensuel d'appels générateur IA exercices (`POST /exercises/ai/generate`).
+  maxAiPerMonth       Int?      @map("max_ai_per_month")
+  features            Json      @default("{}")
+  isTrial             Boolean?  @default(false) @map("is_trial")
+  isActive            Boolean?  @default(true) @map("is_active")
+  sortOrder           Int?      @default(0) @map("sort_order")
+  createdAt           DateTime? @default(now()) @map("created_at")
+  updatedAt           DateTime? @updatedAt @map("updated_at")
+
+  subscriptions PremiumSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model PremiumSubscription {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                      String    @map("user_id") @db.Uuid
+  institutionId               String?   @map("institution_id") @db.Uuid
+  planId                      String?   @map("plan_id") @db.Uuid
+  plan                        String
+  status                      String    @default("active")
+  billingCycle                String?   @default("monthly") @map("billing_cycle")
+  startsAt                    DateTime  @default(now()) @map("starts_at")
+  expiresAt                   DateTime  @map("expires_at")
+  trialStartsAt               DateTime? @map("trial_starts_at")
+  trialEndsAt                 DateTime? @map("trial_ends_at")
+  autoRenew                   Boolean?  @default(true) @map("auto_renew")
+  stripeCustomerId            String?   @map("stripe_customer_id")
+  stripeSubscriptionId        String?   @map("stripe_subscription_id")
+  paymentMethodId             String?   @map("payment_method_id")
+  lastPaymentDate             DateTime? @map("last_payment_date")
+  nextBillingDate             DateTime? @map("next_billing_date")
+  expirationNotificationsSent Json?     @default("[]") @map("expiration_notifications_sent")
+  // SAA-004 : suspension graduée — `status` passe de 'active' à 'grace'
+  // (avertissement, accès intact) puis 'suspended' (lecture seule, jamais de
+  // suppression de données) après le délai de grâce. `suspendedAt` distingue
+  // une suspension réelle d'un simple changement de statut administratif.
+  suspendedAt                 DateTime? @map("suspended_at")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+
+  institution StrkInstitution?  @relation(fields: [institutionId], references: [id])
+  plan_       SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  billingHistory            BillingHistory[]
+  subscriptionNotifications SubscriptionNotification[]
+
+  @@map("premium_subscriptions")
+}
+
+model BillingHistory {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subscriptionId     String    @map("subscription_id") @db.Uuid
+  stripeInvoiceId    String?   @map("stripe_invoice_id")
+  amount             Decimal
+  currency           String?   @default("EUR")
+  status             String
+  billingPeriodStart DateTime? @map("billing_period_start")
+  billingPeriodEnd   DateTime? @map("billing_period_end")
+  paymentDate        DateTime? @map("payment_date")
+  invoiceUrl         String?   @map("invoice_url")
+  metadata           Json?     @default("{}")
+  createdAt          DateTime? @default(now()) @map("created_at")
+
+  subscription PremiumSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("billing_history")
+}
+
+model SubscriptionNotification {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subscriptionId       String    @map("subscription_id") @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  notificationType     String    @map("notification_type")
+  daysBeforeExpiration Int?      @map("days_before_expiration")
+  sentAt               DateTime? @default(now()) @map("sent_at")
+  emailSent            Boolean?  @default(false) @map("email_sent")
+  inAppRead            Boolean?  @default(false) @map("in_app_read")
+  createdAt            DateTime? @default(now()) @map("created_at")
+
+  subscription PremiumSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user         StrkProfile         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_notifications")
+}
+
+// ============================================================
+// Finance / facturation établissement ↔ parents (chap. 16, FIN-001 à 008)
+// Distinct de PremiumSubscription/BillingHistory ci-dessus qui couvrent
+// l'abonnement SaaS établissement ↔ SDCREATIV.
+// Montants stockés en entiers (centimes) + code devise — jamais en flottant
+// (cf. audit §6 Lot 5). Confirmation de paiement uniquement côté serveur
+// après vérification du provider (webhook + appel de contrôle), jamais sur
+// la seule foi du retour navigateur (FIN-005).
+// ============================================================
+
+model StrkFeeItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  name          String
+  description   String?
+  amountCents   Int      @map("amount_cents")
+  currency      String   @default("XOF")
+  academicYear  String?  @map("academic_year")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution  StrkInstitution   @relation(fields: [institutionId], references: [id])
+  invoiceLines StrkInvoiceLine[]
+
+  @@map("strk_fee_items")
+}
+
+model StrkInvoice {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String    @map("institution_id") @db.Uuid
+  studentId     String    @map("student_id") @db.Uuid
+  invoiceNumber String    @unique @map("invoice_number")
+  status        String    @default("issued") // draft | issued | partially_paid | paid | overdue | cancelled
+  totalCents    Int       @map("total_cents")
+  paidCents     Int       @default(0) @map("paid_cents")
+  currency      String    @default("XOF")
+  dueDate       DateTime? @map("due_date")
+  issuedAt      DateTime  @default(now()) @map("issued_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  // FIN : facture générée depuis un échéancier (plan de paiement).
+  paymentPlanId String?   @map("payment_plan_id") @db.Uuid
+  // Rang de l'échéance dans le plan (1..N), null si facture hors plan.
+  installmentIndex Int?   @map("installment_index")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  institution      StrkInstitution @relation(fields: [institutionId], references: [id])
+  student          StrkStudent     @relation(fields: [studentId], references: [id])
+  createdByProfile StrkProfile     @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
+  paymentPlan      StrkPaymentPlan? @relation(fields: [paymentPlanId], references: [id])
+
+  lines    StrkInvoiceLine[]
+  payments StrkPayment[]
+  canteenSubscription StrkCanteenSubscription?
+
+  @@map("strk_invoices")
+}
+
+// FIN : échéancier de scolarité — plan parent qui génère N factures
+// (échéances) pour un élève, avec montants et dates distincts.
+model StrkPaymentPlan {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  label         String
+  currency      String   @default("XOF")
+  totalCents    Int      @map("total_cents")
+  academicYear  String?  @map("academic_year")
+  status        String   @default("active") // active | cancelled | completed
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  student     StrkStudent     @relation(fields: [studentId], references: [id])
+  creator     StrkProfile     @relation("PaymentPlanCreatedBy", fields: [createdBy], references: [id])
+  invoices    StrkInvoice[]
+
+  @@map("strk_payment_plans")
+}
+
+model StrkInvoiceLine {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId   String  @map("invoice_id") @db.Uuid
+  feeItemId   String? @map("fee_item_id") @db.Uuid
+  label       String
+  amountCents Int     @map("amount_cents")
+  quantity    Int     @default(1)
+  // FIN-002 : remise/bourse — `amountCents` reste toujours un montant positif
+  // (magnitude), jamais stocké négatif (éviterait de fausser tout code qui
+  // suppose des montants positifs ailleurs, ex. Stripe). C'est `lineType`
+  // qui détermine si la ligne s'ajoute ou se retranche du total de la
+  // facture (POST /finance/invoices).
+  lineType    String  @default("fee") @map("line_type") // "fee" | "discount"
+
+  invoice StrkInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeItem StrkFeeItem? @relation(fields: [feeItemId], references: [id])
+
+  @@map("strk_invoice_lines")
+}
+
+model StrkPayment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId         String    @map("invoice_id") @db.Uuid
+  amountCents       Int       @map("amount_cents")
+  currency          String    @default("XOF")
+  method            String // mobile_money | card | bank_transfer | cash
+  status            String    @default("pending") // pending | paid | failed | refunded
+  provider          String? // cinetpay | stripe | manual
+  providerRef       String?   @unique @map("provider_ref") // transaction_id envoyé au provider
+  providerPaymentId String?   @map("provider_payment_id") // id renvoyé par le provider une fois confirmé
+  paidAt            DateTime? @map("paid_at")
+  paidBy            String?   @map("paid_by") @db.Uuid
+  receiptNumber     String?   @unique @map("receipt_number")
+  verificationToken String?   @unique @map("verification_token")
+  metadata          Json?     @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  invoice       StrkInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paidByProfile StrkProfile? @relation("PaymentPaidBy", fields: [paidBy], references: [id])
+
+  refunds            StrkRefund[]
+  bankStatementLines StrkBankStatementLine[]
+
+  @@map("strk_payments")
+}
+
+model StrkRefund {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId   String   @map("payment_id") @db.Uuid
+  amountCents Int      @map("amount_cents")
+  reason      String?
+  refundedBy  String   @map("refunded_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  payment           StrkPayment @relation(fields: [paymentId], references: [id])
+  refundedByProfile StrkProfile @relation("RefundBy", fields: [refundedBy], references: [id])
+
+  @@map("strk_refunds")
+}
+
+// FIN-007 : ligne de relevé bancaire importée pour rapprochement avec les
+// paiements enregistrés. Le rapprochement automatique (`lib/bankReconciliation.ts`)
+// ne matche que s'il trouve un unique paiement confirmé de même montant dans
+// une fenêtre de quelques jours autour de la date de la ligne — en cas
+// d'ambiguïté (plusieurs candidats, ou aucun), la ligne reste "unmatched"
+// pour un rapprochement manuel plutôt qu'un mauvais matching automatique.
+model StrkBankStatementLine {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId    String             @map("institution_id") @db.Uuid
+  date             DateTime           @db.Date
+  amountCents      Int                @map("amount_cents")
+  currency         String             @default("XOF")
+  label            String
+  externalRef      String?            @map("external_ref")
+  status           StrkBankLineStatus @default(unmatched)
+  matchedPaymentId String?            @map("matched_payment_id") @db.Uuid
+  matchedBy        String?            @map("matched_by") @db.Uuid
+  matchedAt        DateTime?          @map("matched_at")
+  importedBy       String             @map("imported_by") @db.Uuid
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  institution       StrkInstitution @relation(fields: [institutionId], references: [id])
+  matchedPayment    StrkPayment?    @relation(fields: [matchedPaymentId], references: [id])
+  matchedByProfile  StrkProfile?    @relation("BankLineMatchedBy", fields: [matchedBy], references: [id])
+  importedByProfile StrkProfile     @relation("BankLineImportedBy", fields: [importedBy], references: [id])
+
+  @@map("strk_bank_statement_lines")
+}
+
+// ============================================================
+// Communication multicanal (chap. 17, COM-001 à 005)
+// ============================================================
+
+enum StrkCommChannel {
+  email
+  sms
+  whatsapp
+  push // notifications internes existantes (table `notifications`)
+
+  @@map("strk_comm_channel")
+}
+
+enum StrkCommStatus {
+  queued
+  sent
+  delivered
+  read
+  failed
+
+  @@map("strk_comm_status")
+}
+
+// COM-002 : modèle de message versionné. Une nouvelle version n'écrase
+// jamais l'ancienne (désactivée via `isActive: false`) — l'historique
+// complet des libellés envoyés reste consultable.
+model StrkMessageTemplate {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Null = modèle global (fourni par défaut, valable pour tout établissement
+  // qui n'a pas défini sa propre version pour ce useCase/canal/langue).
+  institutionId String?         @map("institution_id") @db.Uuid
+  useCase       String          @map("use_case") // ex. "absence_alert", "invoice_due", "welcome"
+  channel       StrkCommChannel
+  locale        String          @default("fr")
+  version       Int             @default(1)
+  isActive      Boolean         @default(true) @map("is_active")
+  subject       String? // e-mail uniquement
+  body          String // "{{variableName}}" remplacé à l'envoi (cf. lib/templates.ts)
+  variables     Json            @default("[]") // liste des noms de variables autorisées
+  createdBy     String?         @map("created_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  institution StrkInstitution?       @relation(fields: [institutionId], references: [id])
+  creator     StrkProfile?           @relation("MessageTemplateCreatedBy", fields: [createdBy], references: [id])
+  logs        StrkCommunicationLog[]
+
+  @@unique([institutionId, useCase, channel, locale, version])
+  @@map("strk_message_templates")
+}
+
+// COM-003 : consentement/préférence de canal par utilisateur. Absence de
+// ligne = opt-in par défaut (comportement conservé pour ne pas couper la
+// communication existante rétroactivement) ; une ligne explicite fait foi.
+model StrkCommunicationPreference {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId String          @map("profile_id") @db.Uuid
+  channel   StrkCommChannel
+  optedIn   Boolean         @default(true) @map("opted_in")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  profile StrkProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, channel])
+  @@map("strk_communication_preferences")
+}
+
+// COM-004/005 : traçabilité complète du cycle de vie d'un message envoyé
+// (demandé → mis en file → envoyé → livré → lu → échoué) + accusé de
+// réception explicite pour les communications critiques.
+model StrkCommunicationLog {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId     String?         @map("institution_id") @db.Uuid
+  templateId        String?         @map("template_id") @db.Uuid
+  // Cas d’usage métier (ex. platform_campaign) — pour rapports de délivrance
+  // même sans template versionné rattaché.
+  useCase           String?         @map("use_case")
+  channel           StrkCommChannel
+  recipientId       String?         @map("recipient_id") @db.Uuid
+  toAddress         String          @map("to_address") // e-mail ou numéro effectivement utilisé
+  subject           String?
+  body              String
+  status            StrkCommStatus  @default(queued)
+  // Le destinataire a explicitement refusé ce canal (COM-003) : le message
+  // n'a jamais été transmis au fournisseur, distinct d'un échec technique.
+  skippedOptOut     Boolean         @default(false) @map("skipped_opt_out")
+  isCritical        Boolean         @default(false) @map("is_critical")
+  providerMessageId String?         @unique @map("provider_message_id")
+  errorMessage      String?         @map("error_message")
+  requestedBy       String          @map("requested_by") @db.Uuid
+  requestedAt       DateTime        @default(now()) @map("requested_at")
+  sentAt            DateTime?       @map("sent_at")
+  deliveredAt       DateTime?       @map("delivered_at")
+  readAt            DateTime?       @map("read_at")
+  failedAt          DateTime?       @map("failed_at")
+  acknowledgedAt    DateTime?       @map("acknowledged_at")
+
+  institution StrkInstitution?     @relation(fields: [institutionId], references: [id])
+  template    StrkMessageTemplate? @relation(fields: [templateId], references: [id])
+  recipient   StrkProfile?         @relation("CommunicationLogRecipient", fields: [recipientId], references: [id])
+  requester   StrkProfile          @relation("CommunicationLogRequestedBy", fields: [requestedBy], references: [id])
+
+  @@map("strk_communication_logs")
+}
+
+// ============================================================
+// Documents & vérification (chap. 18, DOC-001 à 005)
+// ============================================================
+
+enum StrkDocumentType {
+  enrollment_certificate // certificat de scolarité (élève)
+  school_attestation // attestation distincte (présence / scolarité courte)
+  payment_receipt // reçu de paiement (module Finance)
+  invoice // facture PDF dédiée (FIN)
+  report_card // EVA-006 : bulletin (moyennes/rangs par période, cf. StrkGradeComputation)
+  // DOC-001 : relevé de notes — cumul de toutes les périodes d'une année
+  // scolaire pour un élève (distinct du bulletin, qui porte sur une seule
+  // période), et liste de classe — document administratif, pas rattaché à
+  // un élève en particulier.
+  transcript
+  class_list
+  // DOC-001 : carte d'élève (identité + matricule) — format carte (CR80).
+  student_card
+  /// Confirmation d'acceptation / dossier d'admission (PDF famille).
+  admission_confirmation
+
+  @@map("strk_document_type")
+}
+
+enum StrkDocumentStatus {
+  generated
+  revoked
+
+  @@map("strk_document_status")
+}
+
+enum StrkDocumentFont {
+  helvetica
+  times
+  courier
+
+  @@map("strk_document_font")
+}
+
+// Un document généré (certificat, reçu...) avec QR de vérification publique.
+// Une nouvelle génération pour la même clé logique (établissement + type +
+// sujet) crée une nouvelle version — jamais d'écrasement (DOC-003), tout
+// l'historique reste consultable et vérifiable, y compris après révocation.
+model StrkDocument {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId     String             @map("institution_id") @db.Uuid
+  type              StrkDocumentType
+  // Clé logique du document : id élève pour un certificat de scolarité, id
+  // paiement pour un reçu — regroupe les versions successives entre elles.
+  subjectId         String             @map("subject_id") @db.Uuid
+  version           Int                @default(1)
+  status            StrkDocumentStatus @default(generated)
+  title             String
+  // Données utilisées pour générer le PDF, conservées pour pouvoir le
+  // reproduire à l'identique sans dépendre du stockage S3 (DOC-005).
+  dataSnapshot      Json               @map("data_snapshot")
+  // Clé S3 si le stockage est configuré au moment de la génération ; sinon
+  // le PDF est regénéré à la volée depuis `dataSnapshot` à chaque téléchargement.
+  fileKey           String?            @map("file_key")
+  verificationToken String             @unique @map("verification_token")
+  generatedBy       String             @map("generated_by") @db.Uuid
+  generatedAt       DateTime           @default(now()) @map("generated_at")
+  revokedAt         DateTime?          @map("revoked_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  generator   StrkProfile     @relation("DocumentGeneratedBy", fields: [generatedBy], references: [id])
+
+  @@unique([institutionId, type, subjectId, version])
+  @@map("strk_documents")
+}
+
+// DOC-002 : personnalisation par établissement de l'apparence des documents
+// générés (logo, couleur d'accent, mention de pied de page, affichage de
+// l'adresse). Configuration courante (pas d'historique de versions ici,
+// contrairement à `StrkDocument` — c'est un réglage, pas une preuve émise).
+// Volontairement limité : le bloc de vérification (QR, jeton, établissement,
+// version, date — DOC-004) reste toujours généré par le système à un
+// emplacement fixe, jamais personnalisable ni supprimable ("zone protégée")
+// afin qu'aucune configuration d'établissement ne puisse compromettre
+// l'authenticité vérifiable d'un document.
+model StrkDocumentTemplate {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId    String           @map("institution_id") @db.Uuid
+  type             StrkDocumentType
+  // Clé S3 du logo (dossier "documents", périmètre établissement) — absent
+  // si l'établissement n'a pas encore téléversé de logo ou si S3 n'est pas
+  // configuré sur cette instance.
+  logoKey          String?          @map("logo_key")
+  // Couleur d'accent du titre/des séparateurs, format hexadécimal "#RRGGBB".
+  accentColor      String?          @map("accent_color")
+  footerText       String?          @map("footer_text")
+  showAddress      Boolean          @default(true) @map("show_address")
+  font             StrkDocumentFont @default(helvetica)
+  // Filigrane discret (nom de l'établissement en diagonale, très clair,
+  // derrière le texte) — dissuasif contre la reproduction non autorisée,
+  // sans jamais recouvrir la zone protégée de vérification.
+  watermarkEnabled Boolean          @default(false) @map("watermark_enabled")
+  // Bloc de signature manuscrite (ex. "Le directeur" + nom) au-dessus de la
+  // zone protégée — usage courant sur un certificat/une attestation.
+  signatureLabel   String?          @map("signature_label")
+  signatureName    String?          @map("signature_name")
+  updatedBy        String           @map("updated_by") @db.Uuid
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id])
+  updater     StrkProfile     @relation("DocumentTemplateUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@unique([institutionId, type])
+  @@map("strk_document_templates")
+}
+
+// ============================================================
+// Support client (chap. 23/Lot 10, SAA-006) — jusqu'ici totalement absent :
+// `CriticalAlertsCenter`/`LogsCenter` sont des tableaux de bord de
+// supervision technique/sécurité (alertes système, journaux), pas un canal
+// structuré pour qu'un établissement signale un problème et suive sa
+// résolution. Modèle volontairement simple (ticket + fil de messages) —
+// pas de champs de routage/SLA avancés non demandés par le cahier des
+// charges (sujet, priorité, statut, historique).
+// ============================================================
+
+enum StrkSupportTicketPriority {
+  low
+  normal
+  high
+  urgent
+
+  @@map("strk_support_ticket_priority")
+}
+
+enum StrkSupportTicketStatus {
+  open
+  in_progress
+  waiting_on_customer
+  resolved
+  closed
+
+  @@map("strk_support_ticket_status")
+}
+
+model StrkSupportTicket {
+  id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Nullable : un admin global (SDCREATIV) peut ouvrir un ticket sans être
+  // rattaché à un établissement particulier.
+  institutionId String?                   @map("institution_id") @db.Uuid
+  createdBy     String                    @map("created_by") @db.Uuid
+  assignedTo    String?                   @map("assigned_to") @db.Uuid
+  subject       String
+  priority      StrkSupportTicketPriority @default(normal)
+  status        StrkSupportTicketStatus   @default(open)
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  closedAt      DateTime?                 @map("closed_at")
+
+  institution StrkInstitution?           @relation(fields: [institutionId], references: [id])
+  creator     StrkProfile                @relation("SupportTicketCreatedBy", fields: [createdBy], references: [id])
+  assignee    StrkProfile?               @relation("SupportTicketAssignedTo", fields: [assignedTo], references: [id])
+  messages    StrkSupportTicketMessage[]
+
+  @@map("strk_support_tickets")
+}
+
+model StrkSupportTicketMessage {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId   String   @map("ticket_id") @db.Uuid
+  authorId   String   @map("author_id") @db.Uuid
+  body       String
+  // Note d'équipe SDCREATIV, jamais visible du client qui a ouvert le ticket
+  // — distinct d'une réponse adressée au demandeur.
+  isInternal Boolean  @default(false) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  ticket StrkSupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author StrkProfile       @relation("SupportTicketMessageAuthor", fields: [authorId], references: [id])
+
+  @@map("strk_support_ticket_messages")
+}
+
+// --- Lot 9 : modules complémentaires (SHOULD/COULD) — socle CRUD, hors paie ---
+
+model StrkTransportRoute {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  name          String
+  description   String?
+  capacity      Int?
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  enrollments StrkTransportEnrollment[]
+
+  @@map("strk_transport_routes")
+}
+
+model StrkTransportEnrollment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  routeId   String    @map("route_id") @db.Uuid
+  studentId String    @map("student_id") @db.Uuid
+  startDate DateTime  @default(now()) @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  route StrkTransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, studentId])
+  @@map("strk_transport_enrollments")
+}
+
+model StrkCanteenPlan {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  name          String
+  priceCents    Int      @default(0) @map("price_cents")
+  currency      String   @default("XOF")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution   StrkInstitution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  subscriptions StrkCanteenSubscription[]
+
+  @@map("strk_canteen_plans")
+}
+
+model StrkCanteenSubscription {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId    String    @map("plan_id") @db.Uuid
+  studentId String    @map("student_id") @db.Uuid
+  startDate DateTime  @default(now()) @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  status    String    @default("active")
+  /// Facture finance générée à l’inscription (null si gratuit ou legacy).
+  invoiceId String?   @unique @map("invoice_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  plan    StrkCanteenPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  invoice StrkInvoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, status])
+  @@map("strk_canteen_subscriptions")
+}
+
+model StrkLibraryItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  title         String
+  author        String?
+  isbn          String?
+  quantity      Int      @default(1)
+  available     Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  loans       StrkLibraryLoan[]
+
+  @@map("strk_library_items")
+}
+
+model StrkLibraryLoan {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId     String    @map("item_id") @db.Uuid
+  studentId  String    @map("student_id") @db.Uuid
+  borrowedAt DateTime  @default(now()) @map("borrowed_at")
+  dueAt      DateTime  @map("due_at")
+  returnedAt DateTime? @map("returned_at")
+
+  item StrkLibraryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("strk_library_loans")
+}
+
+model StrkBoardingRoom {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  label         String
+  capacity      Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution StrkInstitution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  assignments StrkBoardingAssignment[]
+
+  @@map("strk_boarding_rooms")
+}
+
+model StrkBoardingAssignment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId    String    @map("room_id") @db.Uuid
+  studentId String    @map("student_id") @db.Uuid
+  startDate DateTime  @default(now()) @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  room StrkBoardingRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("strk_boarding_assignments")
+}
+
+model StrkClinicVisit {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  visitAt       DateTime @default(now()) @map("visit_at")
+  reason        String
+  notes         String?
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@map("strk_clinic_visits")
+}
+
+model StrkHrStaffRecord {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String    @map("institution_id") @db.Uuid
+  profileId     String    @map("profile_id") @db.Uuid
+  jobTitle      String    @map("job_title")
+  contractType  String?   @map("contract_type")
+  startDate     DateTime? @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  profile     StrkProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, profileId])
+  @@map("strk_hr_staff_records")
+}
+
+model StrkContactMessage {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  email              String
+  subject            String
+  message            String
+  ipAddress          String?   @map("ip_address")
+  /** new | acknowledged | converted | closed */
+  status             String    @default("new")
+  convertedTicketId  String?   @map("converted_ticket_id") @db.Uuid
+  handledAt          DateTime? @map("handled_at")
+  handledBy          String?   @map("handled_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@map("strk_contact_messages")
+}

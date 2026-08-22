@@ -1,0 +1,19 @@
+{
+  "title": "Enseignants",
+  "subtitle": "Équipe pédagogique de votre établissement",
+  "templateCsv": "Gabarit CSV",
+  "newTeacher": "Nouvel enseignant",
+  "loading": "Chargement des enseignants…",
+  "emptyTitle": "Aucun enseignant",
+  "emptyBody": "Importez un CSV ou créez un premier compte enseignant.",
+  "roleHeadTeacher": "Chef d’établissement",
+  "roleTeacher": "Enseignant",
+  "inactive": "Inactif",
+  "importTitle": "Aperçu de l’import enseignants",
+  "importDescription": "Colonnes : firstName, lastName, email, phoneNumber, role (teacher ou head_teacher). Une ligne en erreur n’empêche pas le reste du lot.",
+  "importing": "Import…",
+  "importDoneTitle": "Import terminé",
+  "importDoneBody": "{{created}} enseignant(s) créé(s), {{skipped}} doublon(s), {{errors}} erreur(s).",
+  "importErrorTitle": "Erreur d'import",
+  "importErrorBody": "L'import a échoué."
+}

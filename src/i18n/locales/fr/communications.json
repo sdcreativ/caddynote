@@ -1,0 +1,29 @@
+{
+  "title": "Communications",
+  "subtitle": "E-mail, SMS, WhatsApp et notifications — journal de livraison unifié.",
+  "refresh": "Actualiser",
+  "loadErrorTitle": "Impossible de charger le journal",
+  "networkError": "Erreur réseau",
+  "queuedTitle": "Communication mise en file",
+  "queuedBody": "Consultez le journal pour le statut.",
+  "sendFailedTitle": "Envoi impossible",
+  "composeTitle": "Nouvel envoi",
+  "composeDescription": "L’identifiant destinataire est l’UUID du profil utilisateur (annuaire / fiche).",
+  "recipient": "Destinataire (profil ID)",
+  "recipientPlaceholder": "uuid du profil",
+  "channel": "Canal",
+  "subject": "Objet (e-mail)",
+  "body": "Message",
+  "sending": "Envoi…",
+  "journalTitle": "Journal",
+  "journalDescription": "Traçabilité COM-004 — statuts queued / sent / delivered / failed.",
+  "loading": "Chargement du journal…",
+  "emptyTitle": "Aucune communication",
+  "emptyBody": "Les envois apparaîtront ici avec leur statut de livraison.",
+  "channels": {
+    "email": "E-mail",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "push": "Notification push"
+  }
+}

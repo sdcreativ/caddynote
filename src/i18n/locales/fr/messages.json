@@ -1,0 +1,38 @@
+{
+  "title": "Messages",
+  "subtitle": "Communiquez avec les enseignants, élèves et administration",
+  "loadError": "Impossible de charger les messages",
+  "sentTitle": "Message envoyé",
+  "sentBody": "Votre message a été envoyé avec succès",
+  "sendError": "Impossible d'envoyer le message",
+  "todayAt": "Aujourd'hui à {{time}}",
+  "yesterdayAt": "Hier à {{time}}",
+  "daysAgo": "Il y a {{count}} jours",
+  "compose": "Nouveau message",
+  "messageType": "Type de message",
+  "priority": "Priorité",
+  "subject": "Objet",
+  "subjectPlaceholder": "Objet du message",
+  "content": "Message",
+  "contentPlaceholder": "Écrivez votre message ici...",
+  "send": "Envoyer le message",
+  "received": "Reçus",
+  "sent": "Envoyés",
+  "searchPlaceholder": "Rechercher dans les messages...",
+  "emptyTitle": "Aucun message",
+  "emptySearch": "Aucun message ne correspond à votre recherche",
+  "emptyReceived": "Vous n'avez aucun message reçu pour le moment",
+  "emptySent": "Vous n'avez aucun message envoyé pour le moment",
+  "types": {
+    "general": "Général",
+    "urgent": "Urgent",
+    "academic": "Académique",
+    "administrative": "Administratif"
+  },
+  "priorities": {
+    "low": "Faible",
+    "normal": "Normale",
+    "high": "Élevée",
+    "urgent": "Urgente"
+  }
+}

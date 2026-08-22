@@ -1,0 +1,23 @@
+{
+  "title": "Disponibilités",
+  "subtitle": "Indisponibilités enseignant (PER-003) et validation direction.",
+  "refresh": "Actualiser",
+  "declareTitle": "Déclarer une indisponibilité",
+  "start": "Début",
+  "end": "Fin",
+  "reason": "Motif",
+  "listTitle": "Liste",
+  "listAll": "Toutes les demandes de l’établissement",
+  "listMine": "Vos demandes",
+  "empty": "Aucune indisponibilité.",
+  "noReason": "Sans motif",
+  "approve": "OK",
+  "reject": "Refuser",
+  "toast": {
+    "loadImpossible": "Chargement impossible",
+    "created": "Indisponibilité enregistrée",
+    "failed": "Échec",
+    "approved": "Approuvée",
+    "rejected": "Refusée"
+  }
+}

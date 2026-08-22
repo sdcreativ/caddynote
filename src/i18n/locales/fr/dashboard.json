@@ -1,0 +1,129 @@
+{
+  "hello": "Bonjour, {{name}}",
+  "spaces": {
+    "businessTitle": "Pilotage métier",
+    "businessHint": "Vue multi-établissements : élèves, finances, communications.",
+    "toPlatformConsole": "Console plateforme"
+  },
+  "roleHints": {
+    "admin": "Vue consolidée plateforme — la console Super Admin gère abonnements et ops.",
+    "staff": "Indicateurs de votre établissement (effectif, présence, absences).",
+    "student": "Vos notes, absences récentes et devoirs en cours.",
+    "parent": "Suivi de l’enfant sélectionné (facturation et accès famille).",
+    "accountant": "Factures ouvertes et reste à encaisser pour l’établissement."
+  },
+  "stats": {
+    "institutions": "Établissements",
+    "students": "Élèves",
+    "attendance": "Présence",
+    "absences": "Absences",
+    "grades": "Notes",
+    "absences30d": "Absences (30j)",
+    "homework": "Devoirs",
+    "children": "Enfants",
+    "openInvoices": "Factures ouvertes",
+    "remainingToPay": "Reste à payer",
+    "remainingToCollect": "Reste à encaisser",
+    "teachers": "Enseignants",
+    "forChild": "Enfant : {{name}}"
+  },
+  "empty": {
+    "loadErrorTitle": "Données indisponibles",
+    "loadErrorBody": "Impossible de charger les indicateurs pour le moment. Réessayez plus tard.",
+    "metricsUnavailable": "Métriques temporairement indisponibles",
+    "noAttendanceData": "Pas encore de données de présence",
+    "studentNoGrades": "Aucune note pour l’instant",
+    "studentNoHomework": "Aucun devoir en cours",
+    "parentNoChildrenTitle": "Aucun enfant lié",
+    "parentNoChildrenBody": "Votre compte parent n’est rattaché à aucun élève actif. Contactez l’établissement si besoin.",
+    "parentNoBilling": "Pas d’accès facturation pour cet enfant",
+    "accountantNoInvoices": "Aucune facture pour cet établissement"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "subtitle": "Raccourcis selon votre rôle.",
+    "institutions": "Établissements",
+    "takeAttendance": "Faire l'appel",
+    "grades": "Notes",
+    "availability": "Disponibilités",
+    "myGrades": "Mes notes",
+    "homework": "Devoirs",
+    "myChildren": "Mes enfants",
+    "students": "Élèves",
+    "admissions": "Admissions",
+    "finance": "Finances",
+    "absences": "Absences",
+    "messages": "Messages"
+  },
+  "statCard": {
+    "vsLastMonth": "par rapport au mois dernier"
+  },
+  "recentActivity": {
+    "title": "Activités récentes",
+    "user": "Utilisateur"
+  },
+  "overview": {
+    "welcomeBack": "Bonjour {{name}}, ravie de vous revoir.",
+    "enrolledStudents": "Élèves inscrits",
+    "girlsBoys": "{{girls}} fille(s) · {{boys}} garçon(s)",
+    "studentsDelta": "+{{count}} ce mois",
+    "currentHeadcount": "Effectif actuel",
+    "attendanceToday": "Présence aujourd'hui",
+    "paymentsReceived": "Paiements reçus",
+    "thisMonth": "ce mois",
+    "alertsToHandle": "Alertes à traiter",
+    "priorityCount": "{{count}} prioritaires",
+    "noStudentsYet": "Aucun élève inscrit",
+    "noAttendanceYet": "Pas encore de données",
+    "basedOnHeadcount": "Calculé sur l’effectif",
+    "noFinanceYet": "Aucune facture",
+    "frozenTitle": "Établissement gelé",
+    "frozenBody": "Les écritures sont bloquées (freeze ops). Contactez le support plateforme.",
+    "suspendedTitle": "Abonnement en lecture seule",
+    "suspendedBody": "L’abonnement est suspendu : consultation possible, modifications limitées.",
+    "graceTitle": "Abonnement en période de grâce",
+    "graceBody": "Renouvelez bientôt pour éviter le passage en lecture seule.",
+    "openSubscription": "Voir l’abonnement",
+    "emptyTitle": "Établissement à initialiser",
+    "emptyBody": "Pas encore d’élèves, d’absences ni de factures. Commencez par importer ou créer des élèves.",
+    "emptyAction": "Gérer les élèves",
+    "loadErrorTitle": "Tableau de bord indisponible",
+    "retry": "Réessayer"
+  },
+  "finance": {
+    "section": "Finances",
+    "title": "Collecte des frais",
+    "paid": "Réglé",
+    "pending": "En attente",
+    "overdue": "En retard",
+    "empty": "Vide",
+    "collected": "collectés",
+    "familiesUpToDate": "{{count}} familles à jour",
+    "seeFinance": "Voir finances"
+  },
+  "alerts": {
+    "section": "Suivi prioritaire",
+    "recent": "Alertes récentes",
+    "seeAll": "Tout voir",
+    "emptyTitle": "Aucune alerte",
+    "emptyBody": "Les absences et retards à traiter apparaîtront ici."
+  },
+  "agenda": {
+    "today": "Aujourd'hui",
+    "title": "Agenda",
+    "emptyTitle": "Rien de planifié",
+    "emptyBody": "Les cours et événements du jour apparaîtront ici.",
+    "addEvent": "Ajouter un événement"
+  },
+  "attendanceChart": {
+    "section": "Assiduité",
+    "title": "Présence des élèves",
+    "vsPrevious": "+{{delta}}% vs période préc.",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois",
+    "presence": "Présence",
+    "monthHint": "Vue mensuelle : agrégation hebdomadaire affichée (détail jour par jour en semaine).",
+    "emptyHint": "Ajoutez des élèves pour voir la présence",
+    "weekAvg": "Moyenne de la semaine"
+  }
+}

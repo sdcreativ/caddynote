@@ -1,0 +1,18 @@
+{
+  "ariaHome": "CaddyNote — Accueil",
+  "ariaMenu": "Menu",
+  "ariaNav": "Navigation principale",
+  "announce": "CaddyNote accompagne la rentrée scolaire 2025-2027",
+  "announceCta": "Demander une présentation",
+  "nav": {
+    "features": "Fonctionnalités",
+    "solutions": "Solutions",
+    "pricing": "Tarifs",
+    "admissions": "Préinscription",
+    "about": "À propos"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "demo": "Demander une démo"
+  }
+}

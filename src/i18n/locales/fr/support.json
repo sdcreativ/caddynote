@@ -1,0 +1,46 @@
+{
+  "title": "Support",
+  "subtitle": "Signalez un problème et suivez sa résolution",
+  "newTicket": "Nouveau ticket",
+  "tickets": "Tickets",
+  "empty": "Aucun ticket pour l'instant.",
+  "selectTicket": "Sélectionnez un ticket pour voir le fil de discussion.",
+  "priorityLabel": "Priorité : {{priority}}",
+  "userFallback": "Utilisateur",
+  "internalNote": "Note interne",
+  "replyPlaceholder": "Votre réponse...",
+  "internalNoteToggle": "Note interne plateforme (invisible établissement)",
+  "escalate": "Escalader vers SDCREATIV",
+  "slaBreached": "SLA dépassé",
+  "createTitle": "Nouveau ticket de support",
+  "subject": "Sujet",
+  "subjectPlaceholder": "Résumé du problème",
+  "priority": "Priorité",
+  "description": "Description",
+  "bodyPlaceholder": "Décrivez le problème en détail...",
+  "status": {
+    "open": "Ouvert",
+    "in_progress": "En cours",
+    "waiting_on_customer": "En attente de réponse",
+    "resolved": "Résolu",
+    "closed": "Fermé"
+  },
+  "priorities": {
+    "low": "Basse",
+    "normal": "Normale",
+    "high": "Haute",
+    "urgent": "Urgente"
+  },
+  "toast": {
+    "loadListError": "Impossible de charger les tickets.",
+    "loadDetailError": "Impossible de charger ce ticket.",
+    "createdTitle": "Ticket créé",
+    "createdBody": "Votre demande a bien été enregistrée.",
+    "createError": "Impossible de créer le ticket.",
+    "replyError": "Impossible d'envoyer la réponse.",
+    "statusError": "Impossible de mettre à jour le statut.",
+    "escalatedTitle": "Ticket escaladé",
+    "escalatedBody": "Le support plateforme a été alerté.",
+    "escalateError": "Impossible d'escalader ce ticket."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "eyebrow": "Support",
+  "title": "Aide & Support CaddyNote",
+  "intro": "Bienvenue dans la section d'aide de CaddyNote. Trouvez ici des réponses aux questions courantes sur la gestion des absences, les signatures électroniques, les différents rôles et plus encore.",
+  "faqTitle": "Questions Fréquentes (FAQ)",
+  "faq": [
+    {
+      "q": "Comment me connecter ou réinitialiser mon mot de passe ?",
+      "a": "Utilisez l'adresse email et le mot de passe fournis par votre établissement sur la page d'accueil. Si vous avez oublié votre mot de passe, cliquez sur le lien \"Mot de passe oublié ?\" sous le formulaire de connexion et suivez les instructions envoyées par email."
+    },
+    {
+      "q": "Comment marquer les présences pour ma classe (Enseignant) ?",
+      "a": "Depuis votre tableau de bord, accédez à la section \"Mes Cours\" ou \"Appel\". Sélectionnez le cours concerné. Vous verrez la liste des élèves. Marquez les présents, absents ou en retard. N'oubliez pas de valider/signer la feuille d'appel à la fin."
+    },
+    {
+      "q": "Comment justifier une absence (Étudiant/Parent) ?",
+      "a": "Allez dans la section \"Mes Absences\". Cliquez sur l'absence concernée, puis sur le bouton \"Justifier\". Remplissez le motif et téléchargez un document justificatif si nécessaire (certificat médical, etc.). L'administration examinera votre demande."
+    },
+    {
+      "q": "Où puis-je voir le récapitulatif de mes absences (Étudiant) ?",
+      "a": "Votre historique d'absences et leur statut (justifiée, non justifiée) sont disponibles dans la section \"Mes Absences\" de votre tableau de bord."
+    },
+    {
+      "q": "Comment générer des rapports d'assiduité (Administration) ?",
+      "a": "Dans le tableau de bord administrateur, naviguez vers la section \"Rapports\" ou \"Statistiques\". Vous pourrez y filtrer par classe, élève, période et type d'événement (absences, retards) pour générer et exporter des rapports détaillés."
+    },
+    {
+      "q": "Comment fonctionne la signature électronique des feuilles d'émargement ?",
+      "a": "Après avoir fait l'appel, l'enseignant peut être invité à signer électroniquement la feuille de présence via l'interface. Certains cours peuvent aussi nécessiter la signature des étudiants présents (par exemple, via un code QR, un clic sur leur nom, ou une tablette dédiée). Les feuilles signées sont ensuite archivées et consultables par l'administration."
+    }
+  ],
+  "guidesTitle": "Guides d'Utilisation",
+  "guidesIntro": "Guides en ligne, à jour avec les modules livrés (présence, notes, finance, documents, espace parent).",
+  "consult": "Consulter",
+  "guides": [
+    {
+      "to": "/aide/guide-ecoles",
+      "title": "Guide établissements",
+      "description": "Supervision, structure, rapports."
+    },
+    {
+      "to": "/aide/guide-admin",
+      "title": "Guide administration",
+      "description": "Utilisateurs, absences, finance, documents, admissions."
+    },
+    {
+      "to": "/aide/guide-enseignants",
+      "title": "Guide enseignant",
+      "description": "Appel, notes, devoirs, exercices, indisponibilités."
+    },
+    {
+      "to": "/aide/guide-etudiants",
+      "title": "Guide élève",
+      "description": "Emploi du temps, absences, justificatifs, notes."
+    },
+    {
+      "to": "/aide/guide-parents",
+      "title": "Guide parent / responsable",
+      "description": "Suivi multi-enfants, justificatifs, notes publiées, factures."
+    }
+  ],
+  "moreTitle": "Besoin d'aide supplémentaire ?",
+  "moreBody": "Si vous n'avez pas trouvé de réponse dans la FAQ ou les guides, notre équipe est prête à vous assister.",
+  "contactCta": "Contacter le Support"
+}

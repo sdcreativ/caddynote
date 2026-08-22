@@ -1,0 +1,69 @@
+{
+  "title": "Exports",
+  "subtitle": "Générez un export de vos données au format CSV, Excel ou PDF",
+  "reportType": "Type de rapport",
+  "reportTypeDescription": "Choisissez le type de données à exporter",
+  "configTitle": "Configuration de l'export",
+  "configDescription": "Personnalisez votre rapport",
+  "format": "Format",
+  "formats": {
+    "csv": "CSV",
+    "xlsx": "Excel (XLSX)",
+    "pdf": "PDF"
+  },
+  "includedColumns": "Colonnes incluses",
+  "exporting": "Export en cours...",
+  "download": "Télécharger ({{format}})",
+  "toast": {
+    "successTitle": "Export terminé",
+    "successBody": "Le fichier a été téléchargé.",
+    "errorTitle": "Erreur d'export",
+    "errorBody": "Une erreur est survenue lors de l'export."
+  },
+  "bulletinHint": "Le bulletin scolaire officiel (PDF + QR) se génère depuis Documents après calcul des moyennes — distinct de cet export tabulaire.",
+  "bulletinLink": "Ouvrir Documents",
+  "schedule": {
+    "title": "Export planifié",
+    "hint": "Le serveur génère un CSV à l’heure choisie (file toutes les 5 min). Formats XLSX/PDF : export immédiat uniquement.",
+    "when": "Date et heure",
+    "submit": "Planifier",
+    "scheduling": "Planification…",
+    "successTitle": "Export planifié",
+    "successBody": "La génération sera lancée à l’heure indiquée.",
+    "errorTitle": "Planification impossible",
+    "errorBody": "Vérifiez la date et vos droits.",
+    "listTitle": "File planifiée",
+    "listDescription": "Exports en attente ou terminés pour cet établissement",
+    "empty": "Aucun export planifié.",
+    "download": "Télécharger le CSV",
+    "refresh": "Actualiser"
+  },
+  "templates": {
+    "absences": {
+      "name": "Rapport d'absences",
+      "description": "Export détaillé des absences par période"
+    },
+    "grades": {
+      "name": "Export des notes",
+      "description": "Notes publiées (CSV/XLSX/PDF). Bulletin officiel PDF : page Documents."
+    },
+    "attendance": {
+      "name": "Rapport de présence",
+      "description": "Statistiques de présence globales"
+    },
+    "students": {
+      "name": "Liste des élèves",
+      "description": "Export des informations des élèves"
+    }
+  },
+  "filters": {
+    "institution": "Établissement",
+    "allInstitutions": "Tous les établissements",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "class": "Classe",
+    "allClasses": "Toutes les classes",
+    "subject": "Matière",
+    "allSubjects": "Toutes les matières"
+  }
+}

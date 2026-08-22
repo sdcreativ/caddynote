@@ -1,0 +1,142 @@
+{
+  "title": "Gestion des Utilisateurs",
+  "subtitle": "Gérez tous les utilisateurs dans le système",
+  "addUser": "Ajouter un utilisateur",
+  "searchPlaceholder": "Rechercher un utilisateur...",
+  "loading": "Chargement des utilisateurs...",
+  "empty": "Aucun utilisateur trouvé correspondant à vos critères.",
+  "unassigned": "Non assigné",
+  "unknownInstitution": "Institution inconnue",
+  "requiredTitle": "Champs requis",
+  "requiredBody": "Le prénom, nom, email et rôle sont requis.",
+  "createdTitle": "Utilisateur créé",
+  "createdBody": "Un mot de passe temporaire a été généré pour {{email}}. L'envoi automatique par e-mail n'est pas encore en place — communiquez-le manuellement.",
+  "createError": "Erreur lors de la création de l'utilisateur",
+  "updatedTitle": "Utilisateur mis à jour",
+  "updatedBody": "L'utilisateur a été mis à jour avec succès",
+  "noClassesTitle": "Aucune classe disponible",
+  "noClassesEditBody": "Cette institution n'a pas encore de classes. Vous pouvez modifier l'utilisateur maintenant et l'assigner à une classe plus tard.",
+  "noClassesCreateBody": "Cette institution n'a pas encore de classes. Vous pouvez créer l'utilisateur maintenant et l'assigner à une classe plus tard.",
+  "createClassNow": "Créer une classe maintenant",
+  "tipLabel": "Conseil :",
+  "tipCreateClasses": "Créez des classes pour \"{{name}}\"",
+  "tipGoManageBody": "Allez dans la gestion des institutions pour créer des classes pour \"{{name}}\"",
+  "thisInstitution": "cette institution",
+  "tabs": {
+    "all": "Tous",
+    "admin": "Admin",
+    "school_admin": "Admin École",
+    "teacher": "Enseignants",
+    "student": "Étudiants"
+  },
+  "columns": {
+    "user": "Utilisateur",
+    "role": "Rôle",
+    "institution": "Institution",
+    "email": "Email",
+    "status": "Statut",
+    "actions": "Actions"
+  },
+  "status": {
+    "active": "Actif",
+    "disabled": "Désactivé"
+  },
+  "roles": {
+    "admin": "Administrateur",
+    "school_admin": "Admin. École",
+    "teacher": "Enseignant",
+    "student": "Étudiant",
+    "user": "Utilisateur"
+  },
+  "roleOptions": {
+    "admin": "Administrateur",
+    "school_admin": "Administrateur d'école",
+    "teacher": "Enseignant",
+    "student": "Étudiant"
+  },
+  "aria": {
+    "edit": "Modifier {{name}}",
+    "reactivate": "Réactiver {{name}}",
+    "deactivate": "Désactiver {{name}}"
+  },
+  "fields": {
+    "firstName": "Prénom",
+    "firstNamePlaceholder": "Prénom",
+    "lastName": "Nom",
+    "lastNamePlaceholder": "Nom de famille",
+    "email": "Email",
+    "emailPlaceholder": "Email de l'utilisateur",
+    "emailPlaceholderAdd": "email@exemple.com",
+    "phone": "Numéro de téléphone (optionnel)",
+    "phonePlaceholder": "+33 1 23 45 67 89",
+    "role": "Rôle",
+    "rolePlaceholder": "Sélectionner un rôle",
+    "institution": "Institution",
+    "institutionOptional": "Institution (optionnel)",
+    "institutionPlaceholder": "Sélectionner une institution",
+    "classOptional": "Classe (optionnel)",
+    "classTeachOptional": "Classe à enseigner (optionnel)",
+    "classPlaceholder": "Sélectionner une classe",
+    "classPlaceholderOptional": "Sélectionner une classe (optionnel)",
+    "noClass": "Aucune classe assignée",
+    "password": "Mot de passe"
+  },
+  "edit": {
+    "title": "Modifier l'utilisateur",
+    "description": "Mettez à jour les informations de l'utilisateur",
+    "submit": "Mettre à jour"
+  },
+  "add": {
+    "title": "Ajouter un nouvel utilisateur",
+    "description": "Créez un nouveau compte utilisateur dans le système",
+    "passwordHint": "Un mot de passe temporaire sécurisé sera généré automatiquement et envoyé par email à l'utilisateur. Ce mot de passe expirera dans 24 heures et devra être changé lors de la première connexion.",
+    "submit": "Créer l'utilisateur",
+    "submitting": "Création..."
+  },
+  "deactivate": {
+    "title": "Êtes-vous sûr de vouloir désactiver cet utilisateur ?",
+    "description": "{{name}} ne pourra plus se connecter. Son historique (notes, absences, factures...) est conservé, et le compte pourra être réactivé à tout moment.",
+    "thisAccount": "Ce compte",
+    "submit": "Désactiver"
+  },
+  "createDialog": {
+    "title": "Ajouter un utilisateur",
+    "description": "Un mot de passe temporaire sera généré automatiquement et envoyé par email à l'utilisateur.",
+    "firstName": "Prénom *",
+    "lastName": "Nom *",
+    "email": "Email *",
+    "role": "Rôle *",
+    "rolePlaceholder": "Sélectionner le rôle",
+    "institution": "Établissement",
+    "institutionPlaceholder": "Sélectionner un établissement",
+    "phone": "Téléphone",
+    "phonePlaceholder": "0123456789",
+    "required": "Veuillez remplir tous les champs obligatoires.",
+    "invalidEmail": "Veuillez entrer une adresse email valide.",
+    "createdTitle": "Utilisateur créé",
+    "createdAccount": "Compte {{email}}. Mot de passe temporaire : {{password}}",
+    "emailSent": "Invitation e-mail envoyée.",
+    "emailNotSent": "E-mail non envoyé (SMTP non configuré).",
+    "smsSent": "SMS envoyé.",
+    "smsNotSent": "SMS non envoyé (Twilio non configuré ou numéro invalide).",
+    "errorBody": "Une erreur est survenue lors de la création de l'utilisateur.",
+    "submit": "Créer utilisateur",
+    "submitting": "Création en cours...",
+    "infoTitle": "Informations importantes :",
+    "info1": "Un mot de passe temporaire est généré automatiquement",
+    "info2": "Invitation par e-mail (et SMS si un téléphone est renseigné et Twilio configuré)",
+    "info3": "L'utilisateur devra changer ce mot de passe à la première connexion",
+    "noClassesTeacherBody": "Cette institution n'a pas encore de classes. L'enseignant pourra être assigné à une classe plus tard.",
+    "roles": {
+      "student": "Étudiant",
+      "parent": "Parent / Responsable",
+      "teacher": "Enseignant",
+      "head_teacher": "Professeur principal",
+      "supervisor": "Éducateur / surveillant",
+      "secretary": "Secrétariat",
+      "accountant": "Comptable / économe",
+      "school_admin": "Admin École",
+      "admin": "Admin Système"
+    }
+  }
+}

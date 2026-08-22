@@ -1,0 +1,156 @@
+name: CI/CD Pipeline CaddyNote
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  # Permet un déclenchement manuel du workflow depuis l'interface GitHub
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    name: Build & Test Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js v22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm' # Active le cache pour les dépendances npm
+
+      - name: Install dependencies
+        # 'npm ci' est plus rapide et plus sûr pour la CI car il utilise le fichier package-lock.json
+        run: npm ci
+
+      - name: Revue des dépendances frontend (Lot 12 — échoue sur critical, voir docs/DEPENDANCES.md)
+        run: npm audit --audit-level=critical
+
+      - name: Debug - Lister les fichiers
+        run: ls -la
+
+      - name: Run tests
+        run: npm test
+
+      - name: Compatibilité navigateurs (NFR-007)
+        run: npm run lint:compat
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: dist/ # Répertoire de sortie du build React
+
+  server_tests:
+    name: "Serveur — Tests d'isolation multi-tenant (ORG-004)"
+    runs-on: ubuntu-latest
+    # Base de test dédiée, jetable à chaque run — jamais la base de dev/prod.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: caddynote
+          POSTGRES_PASSWORD: caddynote
+          POSTGRES_DB: caddynote_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U caddynote"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js v22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Appliquer les migrations Prisma sur la base de test
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://caddynote:caddynote@localhost:5432/caddynote_test
+
+      - name: Lancer la suite de tests (isolation multi-tenant + unitaires)
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://caddynote:caddynote@localhost:5432/caddynote_test
+
+      - name: Revue des dépendances serveur (Lot 12)
+        run: npm audit --audit-level=high
+
+  build_and_push_docker_image:
+    name: Build & Push Docker Image
+    needs: [build_and_test, server_tests] # Dépend du succès des deux jobs de test précédents
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: dist/ # Télécharge l'artefact dans le dossier 'dist' pour le Dockerfile
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/caddynote:latest
+          # Le cache accélère les builds futurs en réutilisant les couches de l'image
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/caddynote:cache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/caddynote:cache,mode=max
+
+
+  deploy:
+    name: Deploy to Production
+    needs: build_and_push_docker_image # Dépend de la publication de l'image Docker
+    # Ne se déclenche que sur un push vers la branche 'main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production # Utilise les environnements GitHub pour les secrets et règles
+    steps:
+      - name: Deploy to server
+        run: |
+          echo "Déploiement de l'image ${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }} vers le serveur..."
+          # Remplacez les lignes ci-dessous par vos commandes de déploiement réelles.
+          #
+          # Exemple 1: Déploiement SSH (pour un serveur distant simple)
+          # ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "docker pull ${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }} && docker stop caddynote || true && docker rm caddynote || true && docker run -d --name caddynote -p 80:80 ${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }}"
+          #
+          # Exemple 2: Déploiement Kubernetes (avec kubectl)
+          # kubectl set image deployment/caddynote-deployment caddynote-container=${{ secrets.DOCKER_USERNAME }}/caddynote:${{ github.sha }} -n production
+          #
+          # Assurez-vous d'avoir les secrets nécessaires configurés dans votre dépôt GitHub (ex: SSH_USER, SSH_HOST, DOCKER_USERNAME, etc.)
+
