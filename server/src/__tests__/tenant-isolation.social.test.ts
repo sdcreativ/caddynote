@@ -13,6 +13,12 @@ describe('Isolation multi-tenant — communication, supervision, fichiers', () =
 
   beforeAll(async () => {
     fx = await buildFixture();
+    for (const institutionId of [fx.a.institutionId, fx.b.institutionId]) {
+      await request(app)
+        .put(`/institutions/${institutionId}/features/advancedReports`)
+        .set(auth(fx.globalAdmin.token))
+        .send({ enabled: true });
+    }
   }, 30000);
 
   describe('messages', () => {

@@ -17,6 +17,10 @@ describe('Métriques analytics réelles (RPT-003)', () => {
 
   beforeAll(async () => {
     fx = await buildFixture();
+    await request(app)
+      .put(`/institutions/${fx.a.institutionId}/features/advancedReports`)
+      .set(auth(fx.globalAdmin.token))
+      .send({ enabled: true });
   }, 30000);
 
   it("dashboard-metrics : le taux d'assiduité reflète le nombre réel d'élèves, pas une constante de 50", async () => {

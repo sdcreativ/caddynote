@@ -20,6 +20,7 @@ describe('Admissions — moteur de pièces (spec complète)', () => {
     studentFirstName: `Pieces${Date.now().toString(36)}`,
     studentLastName: 'Test',
     studentBirthDate: '2015-01-15',
+    studentGender: 'female',
     guardians: [
       {
         firstName: 'Parent',
