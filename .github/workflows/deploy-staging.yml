@@ -1,0 +1,51 @@
+# Déploiement staging manuel (après push Docker sur main).
+# Prérequis : secrets STAGING_* + DOCKER_USERNAME (voir server/scripts/staging-deploy-checklist.md).
+# L’IDE signale « Context access might be invalid » tant que ces secrets
+# n’existent pas encore dans Settings → Secrets and variables → Actions.
+
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Tag d’image Docker (sha ou staging)
+        required: true
+        default: staging
+
+jobs:
+  deploy:
+    name: Staging — pull image + migrate + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deploy via SSH (images + migrate)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            WEB_IMAGE="${{ secrets.DOCKER_USERNAME }}/caddynote-web:${{ inputs.image_tag }}"
+            API_IMAGE="${{ secrets.DOCKER_USERNAME }}/caddynote-api:${{ inputs.image_tag }}"
+            APP_DIR="${{ secrets.STAGING_APP_DIR }}"
+            cd "${APP_DIR:-$HOME/caddynote}"
+            docker pull "$WEB_IMAGE"
+            docker pull "$API_IMAGE"
+            export CADDYNOTE_WEB_IMAGE="$WEB_IMAGE"
+            export CADDYNOTE_API_IMAGE="$API_IMAGE"
+            export CADDYNOTE_PULL_POLICY=always
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile split up -d --remove-orphans caddynote-db caddynote-api caddynote-worker caddynote-web
+            docker compose exec -T caddynote-api npx prisma migrate deploy
+            docker compose exec -T caddynote-api node -e "fetch('http://127.0.0.1:4000/health').then(async(r)=>{const j=await r.json(); if(!r.ok||j.processRole!=='api'||j.jobs!==false) process.exit(1)}).catch(()=>process.exit(1))"
+            docker compose exec -T caddynote-worker node -e "fetch('http://127.0.0.1:4000/health').then(async(r)=>{const j=await r.json(); if(!r.ok||j.processRole!=='worker'||j.jobs!==true) process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Smoke API staging
+        env:
+          SMOKE_API_URL: ${{ secrets.STAGING_API_URL }}
+          SMOKE_EMAIL: ${{ secrets.STAGING_SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.STAGING_SMOKE_PASSWORD }}
+        run: node scripts/smoke-api.mjs
