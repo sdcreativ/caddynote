@@ -104,7 +104,7 @@ Job CI : `deploy_staging_self_hosted` dans [`.github/workflows/ci.yml`](../../.g
 
 - Déclenché : push `main` après tests verts
 - Runner labels : `self-hosted`, `linux`, `ARM64`, `staging`
-- Actions : `git fetch` + `reset --hard origin/main` → `compose up --build` → migrate → `/health`
+- Actions : `git fetch` + `reset --hard origin/main` → `compose up --build` → attendre `/health` (retries) → migrate → `docker compose ps`
 - Variable optionnelle : `STAGING_APP_DIR` (défaut `/home/ubuntu/caddynote`)
 
 Checklist runner :
