@@ -66,11 +66,13 @@ services:
       - ./server/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-caddynote}:${POSTGRES_PASSWORD:-caddynote}@caddynote-db:5432/${POSTGRES_DB:-caddynote}
-      # Origine du frontend tel que le navigateur le voit (port hôte).
-      CORS_ORIGIN: http://localhost:${WEB_PORT:-8080}
-      # Antivirus : joindre le service compose (override server/.env local).
-      CLAMAV_HOST: clamav
-      CLAMAV_PORT: "3310"
+      # Origine du frontend (navigateur). Surchargeable via `.env` racine
+      # (staging Oracle : http://IP:8080). Sinon défaut localhost.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      # Antivirus optionnel : profil `antivirus` (pas d’image ARM64 officielle).
+      # Sans profil : laisser vide / server/.env — scan désactivé (DOC-005).
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       # `all` par défaut : un process (HTTP + jobs). Pour séparer :
       # CADDYNOTE_PROCESS_ROLE=api et `docker compose --profile split up`.
       CADDYNOTE_PROCESS_ROLE: ${CADDYNOTE_PROCESS_ROLE:-all}
@@ -84,8 +86,6 @@ services:
     depends_on:
       caddynote-db:
         condition: service_healthy
-      clamav:
-        condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -115,8 +115,8 @@ services:
       - ./server/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-caddynote}:${POSTGRES_PASSWORD:-caddynote}@caddynote-db:5432/${POSTGRES_DB:-caddynote}
-      CLAMAV_HOST: clamav
-      CLAMAV_PORT: "3310"
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       CADDYNOTE_PROCESS_ROLE: worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -137,10 +137,12 @@ services:
       - "project=CaddyNote"
       - "service=worker"
 
-  # --- ClamAV (DOC-005) ---
-  # Scan antivirus des fichiers rattachés. Premier démarrage long (signatures).
-  # L'API pointe dessus via CLAMAV_HOST=clamav (surcharge environment ci-dessus).
+  # --- ClamAV (DOC-005), optionnel ---
+  # Pas d’image linux/arm64 officielle → inactif par défaut (Oracle A1, Apple Silicon
+  # sans emulation). Activation x86_64 :
+  #   CLAMAV_HOST=clamav docker compose --profile antivirus up -d
   clamav:
+    profiles: ["antivirus"]
     image: clamav/clamav:1.4
     container_name: caddynote-clamav
     restart: unless-stopped

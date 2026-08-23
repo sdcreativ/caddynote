@@ -127,3 +127,32 @@ jobs:
           tags: |
             ${{ env.DOCKER_USERNAME }}/caddynote-api:${{ github.sha }}
             ${{ env.DOCKER_USERNAME }}/caddynote-api:staging
+
+  # Déploiement staging Oracle A1 (ARM) via runner self-hosted.
+  # Prérequis VM : labels self-hosted,linux,ARM64,staging + APP_DIR git + .env
+  # (voir server/scripts/oracle-cloud-always-free.md §8).
+  # Les .env gitignorés sont conservés (git reset --hard ne les touche pas).
+  deploy_staging_self_hosted:
+    name: Staging — self-hosted rebuild
+    needs: [build_and_test, server_tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, ARM64, staging]
+    timeout-minutes: 60
+    steps:
+      - name: Pull + compose build + migrate + health
+        env:
+          # Surcharge possible : variable Actions STAGING_APP_DIR
+          STAGING_APP_DIR: ${{ vars.STAGING_APP_DIR }}
+        run: |
+          set -euo pipefail
+          APP_DIR="${STAGING_APP_DIR:-/home/ubuntu/caddynote}"
+          cd "$APP_DIR"
+          echo "Deploying in $APP_DIR @ $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+          git fetch origin main
+          git reset --hard origin/main
+          echo "Now at $(git rev-parse --short HEAD)"
+          docker compose up -d --build caddynote-db caddynote-api caddynote-web
+          docker compose exec -T caddynote-api npx prisma migrate deploy
+          curl -fsS http://127.0.0.1:4000/health
+          echo
+          docker compose ps

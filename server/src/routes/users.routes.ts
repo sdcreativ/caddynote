@@ -189,6 +189,8 @@ usersRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
       firstName,
       tempPassword,
       phoneNumber,
+      role,
+      accountKind: role,
     });
     res.status(201).json({ user, tempPassword, emailSent, smsSent });
   } catch (error) {

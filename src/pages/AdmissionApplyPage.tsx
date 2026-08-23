@@ -33,6 +33,29 @@ import {
 
 const BLUE = BRAND.blue;
 const NAVY = BRAND.navy;
+const ADMISSION_DRAFT_KEY = 'caddynote.admission.apply.draft.v1';
+
+type AdmissionDraftV1 = {
+  v: 1;
+  step: number;
+  institutionId: string;
+  classId: string;
+  academicYear: string;
+  applicationKind: 'pre_registration' | 'first_enrollment' | 're_enrollment' | 'transfer';
+  level: string;
+  foreignStudent: boolean;
+  assignedStudent: boolean;
+  scholarshipStudent: boolean;
+  campus: string;
+  campusId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  studentBirthDate: string;
+  studentGender: string;
+  guardian: AdmissionGuardianInput;
+  token?: string;
+  applicationId?: string;
+};
 
 const currentAcademicYear = () => {
   const year = new Date().getFullYear();
@@ -266,6 +289,7 @@ const AdmissionApplyPage = () => {
   const [busy, setBusy] = useState(false);
   const [storageMode, setStorageMode] = useState<'s3' | 'local' | null>(null);
   const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   useEffect(() => {
     fetchAdmissionInstitutions()
@@ -274,6 +298,57 @@ const AdmissionApplyPage = () => {
         toast({ title: tc('status.error'), description: t('apply.loadInstitutionsError'), variant: 'destructive' })
       );
   }, [toast, t, tc]);
+
+  useEffect(() => {
+    if (draftHydrated) return;
+    try {
+      const raw = localStorage.getItem(ADMISSION_DRAFT_KEY);
+      if (!raw) {
+        setDraftHydrated(true);
+        return;
+      }
+      const draft = JSON.parse(raw) as AdmissionDraftV1;
+      if (draft?.v !== 1) {
+        setDraftHydrated(true);
+        return;
+      }
+      setInstitutionId(draft.institutionId || '');
+      setClassId(draft.classId || '');
+      setAcademicYear(draft.academicYear || currentAcademicYear());
+      setApplicationKind(draft.applicationKind || 'pre_registration');
+      setLevel(draft.level || '');
+      setForeignStudent(!!draft.foreignStudent);
+      setAssignedStudent(!!draft.assignedStudent);
+      setScholarshipStudent(!!draft.scholarshipStudent);
+      setCampus(draft.campus || '');
+      setCampusId(draft.campusId || '');
+      setStudentFirstName(draft.studentFirstName || '');
+      setStudentLastName(draft.studentLastName || '');
+      setStudentBirthDate(draft.studentBirthDate || '');
+      setStudentGender(draft.studentGender || '');
+      if (draft.guardian) setGuardian(draft.guardian);
+      if (draft.token) setToken(draft.token);
+      if (draft.applicationId) setApplicationId(draft.applicationId);
+      // Ne pas restaurer l’étape confirmation / pièces sans token valide
+      const maxStep = draft.token ? Math.min(draft.step ?? 0, 6) : Math.min(draft.step ?? 0, 4);
+      setStep(Number.isFinite(maxStep) ? maxStep : 0);
+      toast({ title: t('apply.draftRestoredTitle'), description: t('apply.draftRestoredBody') });
+    } catch {
+      /* ignore corrupt draft */
+    } finally {
+      setDraftHydrated(true);
+    }
+  }, [draftHydrated, t, toast]);
+
+  useEffect(() => {
+    if (!token || step < 5) return;
+    fetchAdmissionPacket(token)
+      .then((pkt) => {
+        setPacket(pkt);
+        setStorageMode(pkt.storageMode);
+      })
+      .catch(() => undefined);
+  }, [token, step]);
 
   useEffect(() => {
     if (!institutionId) {
@@ -294,6 +369,53 @@ const AdmissionApplyPage = () => {
     if (step === 3) return !!guardian.firstName && !!guardian.lastName && !!guardian.email;
     return true;
   };
+
+  const buildDraftPayload = (nextStep = step): AdmissionDraftV1 => ({
+    v: 1,
+    step: nextStep,
+    institutionId,
+    classId,
+    academicYear,
+    applicationKind,
+    level,
+    foreignStudent,
+    assignedStudent,
+    scholarshipStudent,
+    campus,
+    campusId,
+    studentFirstName,
+    studentLastName,
+    studentBirthDate,
+    studentGender,
+    guardian,
+    token: token || undefined,
+    applicationId: applicationId || undefined,
+  });
+
+  const persistDraft = (nextStep = step) => {
+    try {
+      localStorage.setItem(ADMISSION_DRAFT_KEY, JSON.stringify(buildDraftPayload(nextStep)));
+    } catch {
+      /* quota / private mode */
+    }
+  };
+
+  const saveForLater = () => {
+    persistDraft(step);
+    if (token) {
+      toast({
+        title: t('apply.savedRemoteTitle'),
+        description: t('apply.savedRemoteBody', { email: guardian.email || '—' }),
+      });
+      return;
+    }
+    toast({
+      title: t('apply.savedLocalTitle'),
+      description: t('apply.savedLocalBody'),
+    });
+  };
+
+  const goPrevious = () => setStep((s) => Math.max(0, s - 1));
 
   const createDraft = async () => {
     setBusy(true);
@@ -326,6 +448,18 @@ const AdmissionApplyPage = () => {
       setPacket(pkt);
       setStorageMode(pkt.storageMode);
       setStep(5);
+      try {
+        localStorage.setItem(
+          ADMISSION_DRAFT_KEY,
+          JSON.stringify({
+            ...buildDraftPayload(5),
+            token: application.publicToken,
+            applicationId: application.id,
+          })
+        );
+      } catch {
+        /* ignore */
+      }
     } catch (error) {
       toast({
         title: tc('status.error'),
@@ -371,6 +505,11 @@ const AdmissionApplyPage = () => {
     try {
       const { followEmailSent: emailOk } = await submitAdmission(token);
       if (typeof emailOk === 'boolean') setFollowEmailSent(emailOk);
+      try {
+        localStorage.removeItem(ADMISSION_DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
       setStep(7);
     } catch (error) {
       toast({
@@ -724,9 +863,6 @@ const AdmissionApplyPage = () => {
                       </div>
                     </dl>
                     <p className="text-slate-500">{t('apply.draftHint')}</p>
-                    <Button className={cn('w-full sm:w-auto', primaryBtn)} onClick={createDraft} disabled={busy}>
-                      {busy ? t('apply.creating') : t('apply.createDraft')}
-                    </Button>
                   </div>
                 )}
 
@@ -894,9 +1030,6 @@ const AdmissionApplyPage = () => {
                 {step === 6 && (
                   <div className="space-y-4">
                     <p className="text-sm leading-relaxed text-slate-600">{t('apply.submitHint')}</p>
-                    <Button className={cn('w-full sm:w-auto', primaryBtn)} onClick={handleSubmit} disabled={busy}>
-                      {busy ? t('apply.submitting') : t('apply.submit')}
-                    </Button>
                   </div>
                 )}
 
@@ -908,29 +1041,72 @@ const AdmissionApplyPage = () => {
                     followEmailSent={followEmailSent}
                   />
                 )}
-                {step < 4 && (
-                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                    {step === 0 ? (
-                      <span />
-                    ) : (
-                      <Button variant="ghost" className="text-slate-600" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-                        {tc('actions.back')}
+                {step < 7 && (
+                  <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap gap-2">
+                      {step > 0 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="text-slate-600"
+                          onClick={goPrevious}
+                          disabled={busy}
+                        >
+                          {t('apply.previous')}
+                        </Button>
+                      ) : null}
+                      <Button type="button" variant="outline" onClick={saveForLater} disabled={busy}>
+                        {t('apply.saveForLater')}
                       </Button>
-                    )}
-                    <Button
-                      className={cn('min-w-[8.5rem]', primaryBtn)}
-                      onClick={() => setStep((s) => s + 1)}
-                      disabled={!canNext()}
-                    >
-                      {t('apply.continue')}
-                    </Button>
-                  </div>
-                )}
-                {step === 5 && (
-                  <div className="flex justify-end border-t border-slate-100 pt-5">
-                    <Button className={cn('min-w-[8.5rem]', primaryBtn)} onClick={() => setStep(6)}>
-                      {t('apply.continue')}
-                    </Button>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {step < 4 && (
+                        <Button
+                          type="button"
+                          className={cn('min-w-[8.5rem]', primaryBtn)}
+                          onClick={() => {
+                            persistDraft(step + 1);
+                            setStep((s) => s + 1);
+                          }}
+                          disabled={!canNext() || busy}
+                        >
+                          {t('apply.next')}
+                        </Button>
+                      )}
+                      {step === 4 && (
+                        <Button
+                          type="button"
+                          className={cn('min-w-[8.5rem]', primaryBtn)}
+                          onClick={() => void createDraft()}
+                          disabled={busy}
+                        >
+                          {busy ? t('apply.creating') : t('apply.createDraft')}
+                        </Button>
+                      )}
+                      {step === 5 && (
+                        <Button
+                          type="button"
+                          className={cn('min-w-[8.5rem]', primaryBtn)}
+                          onClick={() => {
+                            persistDraft(6);
+                            setStep(6);
+                          }}
+                          disabled={busy || !token}
+                        >
+                          {t('apply.next')}
+                        </Button>
+                      )}
+                      {step === 6 && (
+                        <Button
+                          type="button"
+                          className={cn('min-w-[8.5rem]', primaryBtn)}
+                          onClick={() => void handleSubmit()}
+                          disabled={busy || !token}
+                        >
+                          {busy ? t('apply.submitting') : t('apply.submit')}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

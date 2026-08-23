@@ -1,5 +1,7 @@
-# Déploiement staging manuel (après push Docker sur main).
-# Prérequis : secrets STAGING_* + DOCKER_USERNAME (voir server/scripts/staging-deploy-checklist.md).
+# Déploiement staging via Docker Hub + SSH (optionnel).
+# Préféré sur Oracle A1 ARM : self-hosted runner dans ci.yml
+# (job deploy_staging_self_hosted) — voir oracle-cloud-always-free.md §8.
+# Prérequis ici : secrets STAGING_* + DOCKER_USERNAME.
 # L’IDE signale « Context access might be invalid » tant que ces secrets
 # n’existent pas encore dans Settings → Secrets and variables → Actions.
 

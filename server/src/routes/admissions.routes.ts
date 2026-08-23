@@ -51,14 +51,32 @@ import type { StrkAdmissionStatus } from '@prisma/client';
  * uniquement par webhook serveur (mêmes principes FIN-005).
  */
 
-const submitLimiter = rateLimit({
+/**
+ * Création de dossier (POST /) — plafond bas anti-spam.
+ * Les uploads / PATCH / submit d’une même session consomment `wizardLimiter`
+ * (sinon 10 pièces + retries épuisent vite 20/h et bloquent l’UX).
+ */
+const createLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  limit: 20,
+  limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives, réessayez plus tard.' },
   skip: () => process.env.NODE_ENV === 'test' || isTestMode(),
 });
+
+/** Parcours wizard public (pièces, patch, soumission, paiement initiate). */
+const wizardLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 180,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives, réessayez plus tard.' },
+  skip: () => process.env.NODE_ENV === 'test' || isTestMode(),
+});
+
+/** @deprecated alias — anciens imports / greps ; préférer wizardLimiter */
+const submitLimiter = wizardLimiter;
 
 /** Récupération du lien par e-mail — plus strict pour limiter l’énumération. */
 const recoverLimiter = rateLimit({
@@ -154,7 +172,7 @@ const applicationInputSchema = z.object({
   contactEmail: z.string().email(),
 });
 
-admissionsPublicRouter.post('/', submitLimiter, async (req, res) => {
+admissionsPublicRouter.post('/', createLimiter, async (req, res) => {
   const parsed = applicationInputSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });

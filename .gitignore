@@ -69,3 +69,7 @@ scripts/components/
 AGENT.md
 CLAUDE.md
 docs/
+
+# Deploy keys locales (ne jamais committer)
+caddynote-deploy-ro
+caddynote-deploy-ro.pub

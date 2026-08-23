@@ -59,5 +59,8 @@ Thumbs.db
 *.swo
 *~
 
-# DOCS
+# DOCS (guides ops staging/Oracle versionnés)
 *.md
+!scripts/oracle-cloud-always-free.md
+!scripts/staging-deploy-checklist.md
+!scripts/setup-self-hosted-runner.md

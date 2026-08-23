@@ -10,6 +10,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
 import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, consumeBackupCode, looksLikeBackupCode } from '../lib/mfa.js';
 import { isEmailConfigured, sendEmail } from '../lib/email.js';
+import { escapeHtml, wrapTransactionalEmail } from '../lib/emailLayout.js';
 import { createSession } from '../lib/sessions.js';
 import { logAudit } from '../lib/audit.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
@@ -438,10 +439,26 @@ authRouter.post('/forgot-password', authLimiter, async (req, res) => {
       },
     });
     const resetUrl = `${process.env.APP_URL || 'http://localhost:8080'}/reset-password?token=${token}`;
+    const first = escapeHtml(profile.firstName ?? '');
+    const html = wrapTransactionalEmail({
+      preheader: 'Réinitialisez votre mot de passe CaddyNote (lien valable 1 heure)',
+      title: 'Réinitialisation du mot de passe',
+      bodyHtml: `
+        <p style="margin:0 0 16px;">Bonjour${first ? ` <strong>${first}</strong>` : ''},</p>
+        <p style="margin:0 0 16px;">
+          Une demande de réinitialisation de mot de passe a été effectuée pour votre compte CaddyNote.
+          Le lien ci-dessous est valable <strong>1 heure</strong>.
+        </p>
+      `,
+      cta: { label: 'Choisir un nouveau mot de passe', url: resetUrl },
+      footerNote:
+        'Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail — votre mot de passe actuel reste inchangé.',
+    });
     const sent = await sendEmail({
       to: profile.email!,
       subject: 'Réinitialisation de votre mot de passe CaddyNote',
-      html: `<p>Bonjour ${profile.firstName ?? ''},</p><p>Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>`,
+      html,
+      text: `Bonjour${profile.firstName ? ` ${profile.firstName}` : ''},\n\nRéinitialisez votre mot de passe (valable 1 h) :\n${resetUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
     });
     if (!sent) {
       // SMTP non configuré sur cette instance : le jeton reste journalisé
