@@ -172,20 +172,18 @@ const Dashboard = () => {
       setParentState('empty');
       return;
     }
-    if (!guardian.selectedChildId) {
-      setParentState('loading');
-      return;
-    }
-    if (guardian.selectedChild && !guardian.selectedChild.canViewBilling) {
-      setParentKpis({ invoicesOpen: 0, unpaidCents: 0 });
-      setParentState('ready');
-      return;
-    }
     setParentState('loading');
     void (async () => {
       try {
-        const invoices = await fetchInvoicesByStudent(guardian.selectedChildId!);
-        const summary = summarizeOpenInvoices(invoices);
+        const billable = guardian.children.filter((c) => c.canViewBilling);
+        if (billable.length === 0) {
+          setParentKpis({ invoicesOpen: 0, unpaidCents: 0 });
+          setParentState('ready');
+          return;
+        }
+        const lists = await Promise.all(billable.map((c) => fetchInvoicesByStudent(c.studentId)));
+        const all = lists.flat();
+        const summary = summarizeOpenInvoices(all);
         setParentKpis(summary);
         setParentState('ready');
       } catch {
@@ -197,9 +195,7 @@ const Dashboard = () => {
     user?.role,
     guardian.isLoading,
     guardian.error,
-    guardian.children.length,
-    guardian.selectedChildId,
-    guardian.selectedChild,
+    guardian.children,
   ]);
 
   if (user?.role === 'school_admin') {
@@ -365,16 +361,11 @@ const Dashboard = () => {
               title={t('stats.openInvoices')}
               value={kpiValue(parentState, parentKpis?.invoicesOpen)}
               description={
-                guardian.selectedChild && !guardian.selectedChild.canViewBilling
-                  ? t('empty.parentNoBilling')
-                  : guardian.selectedChild
-                    ? t('stats.forChild', {
-                        name:
-                          [guardian.selectedChild.firstName, guardian.selectedChild.lastName]
-                            .filter(Boolean)
-                            .join(' ') || guardian.selectedChild.studentId,
-                      })
-                    : undefined
+                guardian.children.some((c) => c.canViewBilling)
+                  ? t('stats.allChildrenBilling', {
+                      defaultValue: 'Tous les enfants avec accès facturation',
+                    })
+                  : t('empty.parentNoBilling')
               }
               icon={<FileText className="h-5 w-5" />}
             />

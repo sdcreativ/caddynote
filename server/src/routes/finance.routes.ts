@@ -10,6 +10,10 @@ import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
 import { logAudit } from '../lib/audit.js';
 import { importBankStatementLines, attemptAutoMatch } from '../lib/bankReconciliation.js';
 import { runLateFeeCheck } from '../lib/lateFees.js';
+import { feeGridRouter } from './feeGrid.routes.js';
+import { computeStudentBalances } from '../lib/financeBalances.js';
+import { toCsv } from '../lib/csvExport.js';
+import { toXlsx } from '../lib/xlsxExport.js';
 
 /**
  * Module Finance (chap. 16, FIN-001 à 008) : catalogue de frais, factures,
@@ -34,6 +38,9 @@ const generateVerificationToken = (): string => crypto.randomBytes(16).toString(
 
 financeRouter.use(requireAuth);
 financeRouter.use(requireFeature('finance'));
+
+// Grille financière CI (Lots 1–3) — fee-types, schedules, templates, national.
+financeRouter.use(feeGridRouter);
 
 // Déclenchement manuel de la tâche planifiée quotidienne (FIN-002), même
 // principe que POST /absences/threshold-check — utile pour tester sans
@@ -680,6 +687,91 @@ financeRouter.get('/bank-statement/summary', requireRole(...FINANCE_ROLES), asyn
     unmatchedLines,
     unreconciledPayments,
   });
+});
+
+// --- Soldes à une date (Lot 5) ---------------------------------------------
+
+const asOfQuerySchema = z.object({
+  asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  format: z.enum(['csv', 'xlsx']).optional(),
+});
+
+financeRouter.get('/balances', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const institutionId = req.auth!.institutionId;
+  if (!institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé à ce compte' });
+  }
+  const parsed = asOfQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Paramètre asOf requis (YYYY-MM-DD)' });
+  }
+  const asOf = new Date(`${parsed.data.asOf}T00:00:00.000Z`);
+  const rows = await computeStudentBalances({ institutionId, asOf });
+  const totals = rows.reduce(
+    (acc, r) => {
+      acc.totalCents += r.totalCents;
+      acc.paidCents += r.paidCents;
+      acc.balanceCents += r.balanceCents;
+      return acc;
+    },
+    { totalCents: 0, paidCents: 0, balanceCents: 0 }
+  );
+  res.json({
+    asOf: parsed.data.asOf,
+    currency: rows[0]?.currency ?? 'XOF',
+    totals,
+    unpaidStudentCount: rows.filter((r) => r.balanceCents > 0).length,
+    scheduleInvoiceCount: rows.reduce((s, r) => s + r.scheduleInvoiceCount, 0),
+    rows,
+  });
+});
+
+financeRouter.get('/balances/export', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const institutionId = req.auth!.institutionId;
+  if (!institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé à ce compte' });
+  }
+  const parsed = asOfQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Paramètre asOf requis (YYYY-MM-DD)' });
+  }
+  const format = parsed.data.format ?? 'csv';
+  const asOf = new Date(`${parsed.data.asOf}T00:00:00.000Z`);
+  const rows = await computeStudentBalances({ institutionId, asOf });
+  const columns = [
+    { key: 'studentName', label: 'Élève', value: (r: (typeof rows)[0]) => r.studentName },
+    { key: 'invoiceCount', label: 'Factures', value: (r: (typeof rows)[0]) => r.invoiceCount },
+    {
+      key: 'scheduleInvoiceCount',
+      label: 'Dont grille',
+      value: (r: (typeof rows)[0]) => r.scheduleInvoiceCount,
+    },
+    { key: 'totalCents', label: 'Total (centimes)', value: (r: (typeof rows)[0]) => r.totalCents },
+    { key: 'paidCents', label: 'Payé (centimes)', value: (r: (typeof rows)[0]) => r.paidCents },
+    { key: 'balanceCents', label: 'Solde (centimes)', value: (r: (typeof rows)[0]) => r.balanceCents },
+    { key: 'currency', label: 'Devise', value: (r: (typeof rows)[0]) => r.currency },
+  ];
+
+  await logAudit({
+    institutionId,
+    actorId: req.auth!.sub,
+    action: 'finance.balances.exported',
+    targetType: 'institution',
+    targetId: institutionId,
+    metadata: { asOf: parsed.data.asOf, format, rowCount: rows.length },
+    ipAddress: req.ip,
+  });
+
+  const base = `soldes-${parsed.data.asOf}`;
+  if (format === 'xlsx') {
+    const buffer = await toXlsx(`Soldes au ${parsed.data.asOf}`, rows, columns);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${base}.xlsx"`);
+    return res.send(buffer);
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${base}.csv"`);
+  return res.send(toCsv(rows, columns));
 });
 
 // --- Échéanciers de paiement (FIN) ---

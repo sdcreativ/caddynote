@@ -83,11 +83,21 @@ export function FinanceCollecte({ finance }: Props) {
         </li>
       </ul>
 
-      <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4 text-sm">
-        <span className="text-slate-500">{t('finance.familiesUpToDate', { count: finance.familiesUpToDate })}</span>
-        <Link to="/finance" className="font-medium text-blue-600 hover:text-blue-700">
-          {t('finance.seeFinance')}
-        </Link>
+      <div className="mt-auto space-y-2 border-t border-slate-100 pt-4 text-sm">
+        <div className="flex items-center justify-between gap-2 text-slate-600">
+          <span>{t('finance.unpaidInvoices', { count: finance.unpaidInvoiceCount })}</span>
+          <span className="font-medium text-slate-900">{finance.unpaidInvoiceCount}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-slate-600">
+          <span>{t('finance.fromSchedule')}</span>
+          <span className="font-medium text-slate-900">{finance.scheduleInvoiceCount}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-slate-500">{t('finance.familiesUpToDate', { count: finance.familiesUpToDate })}</span>
+          <Link to="/finance" className="font-medium text-blue-600 hover:text-blue-700">
+            {t('finance.seeFinance')}
+          </Link>
+        </div>
       </div>
     </section>
   );

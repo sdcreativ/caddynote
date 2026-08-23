@@ -37,6 +37,8 @@ export type FinanceSnapshot = {
   currency: string;
   familiesUpToDate: number;
   collectedRatio: number;
+  unpaidInvoiceCount: number;
+  scheduleInvoiceCount: number;
 };
 
 export type TenantOpsStatus = {
@@ -212,15 +214,19 @@ export function useEstablishmentDashboard() {
     let pending = 0;
     let overdue = 0;
     let upToDate = 0;
+    let unpaidInvoiceCount = 0;
+    let scheduleInvoiceCount = 0;
     const currency = invoices[0]?.currency || 'XOF';
     const now = Date.now();
     for (const inv of invoices) {
+      if (inv.fee_schedule_id) scheduleInvoiceCount += 1;
       paid += inv.paid_cents || 0;
       const remaining = Math.max(0, (inv.total_cents || 0) - (inv.paid_cents || 0));
       if (remaining <= 0 || inv.status === 'paid') {
         upToDate += 1;
         continue;
       }
+      unpaidInvoiceCount += 1;
       const due = inv.due_date ? new Date(inv.due_date).getTime() : null;
       if (due && due < now) overdue += remaining;
       else pending += remaining;
@@ -233,6 +239,8 @@ export function useEstablishmentDashboard() {
       currency,
       familiesUpToDate: upToDate,
       collectedRatio: total > 0 ? paid / total : 0,
+      unpaidInvoiceCount,
+      scheduleInvoiceCount,
     };
   }, [invoices]);
 

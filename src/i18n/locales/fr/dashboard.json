@@ -105,7 +105,9 @@
     "empty": "Vide",
     "collected": "collectés",
     "familiesUpToDate": "{{count}} familles à jour",
-    "seeFinance": "Voir finances"
+    "seeFinance": "Voir finances",
+    "unpaidInvoices": "Factures impayées",
+    "fromSchedule": "Issues d’une grille"
   },
   "alerts": {
     "section": "Suivi prioritaire",

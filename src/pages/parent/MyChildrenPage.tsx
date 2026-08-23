@@ -17,8 +17,15 @@ import { useStrkAbsences } from '@/hooks/useStrkAbsences';
 import { JustificationDialog } from '@/components/absences/JustificationDialog';
 import { StudentHealthForm } from '@/components/students/StudentHealthForm';
 import { fetchGradesByStudent } from '@/services/strkGradeService';
-import { fetchInvoicesByStudent, type StrkInvoice } from '@/services/strkFinanceService';
-import { apiClient } from '@/lib/apiClient';
+import {
+  fetchInvoicesByStudent,
+  initiateCinetPayPayment,
+  initiateStripePayment,
+  formatInvoiceMoney,
+  type StrkInvoice,
+} from '@/services/strkFinanceService';
+import { apiClient, ApiError } from '@/lib/apiClient';
+import { useToast } from '@/hooks/use-toast';
 import {
   fetchMyAdmissionApplications,
   type AdmissionApplication,
@@ -49,6 +56,7 @@ type ParentServicesChild = {
 
 const MyChildrenPage = () => {
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const initialTab =
     searchParams.get('tab') === 'finance'
       ? 'finance'
@@ -61,6 +69,10 @@ const MyChildrenPage = () => {
   const [gradesLoading, setGradesLoading] = useState(false);
   const [invoices, setInvoices] = useState<StrkInvoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [familyFinance, setFamilyFinance] = useState<
+    { studentId: string; name: string; unpaidCents: number; openCount: number; canView: boolean }[]
+  >([]);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [servicesChild, setServicesChild] = useState<ParentServicesChild | null>(null);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [selectedAbsenceId, setSelectedAbsenceId] = useState<string | undefined>();
@@ -93,6 +105,32 @@ const MyChildrenPage = () => {
     }
   }, []);
 
+  const loadFamilyFinance = useCallback(async () => {
+    const rows = await Promise.all(
+      children.map(async (child) => {
+        const name =
+          [child.firstName, child.lastName].filter(Boolean).join(' ') || child.studentId;
+        if (!child.canViewBilling) {
+          return { studentId: child.studentId, name, unpaidCents: 0, openCount: 0, canView: false };
+        }
+        const invs = await fetchInvoicesByStudent(child.studentId);
+        const open = invs.filter((i) => i.status !== 'paid' && i.status !== 'cancelled');
+        const unpaidCents = open.reduce(
+          (s, i) => s + Math.max(0, i.total_cents - i.paid_cents),
+          0
+        );
+        return {
+          studentId: child.studentId,
+          name,
+          unpaidCents,
+          openCount: open.length,
+          canView: true,
+        };
+      })
+    );
+    setFamilyFinance(rows);
+  }, [children]);
+
   const loadServices = useCallback(async (studentId: string) => {
     setServicesLoading(true);
     try {
@@ -118,6 +156,9 @@ const MyChildrenPage = () => {
     if (selectedChildId) {
       loadServices(selectedChildId);
     }
+    if (children.length > 0) {
+      void loadFamilyFinance();
+    }
   }, [
     selectedChildId,
     selectedChild?.canViewAttendance,
@@ -127,7 +168,28 @@ const MyChildrenPage = () => {
     loadGrades,
     loadInvoices,
     loadServices,
+    children.length,
+    loadFamilyFinance,
   ]);
+
+  const handlePay = async (invoiceId: string, method: 'cinetpay' | 'stripe') => {
+    setPayingId(invoiceId);
+    try {
+      const url =
+        method === 'cinetpay'
+          ? await initiateCinetPayPayment(invoiceId)
+          : await initiateStripePayment(invoiceId);
+      window.location.href = url;
+    } catch (e) {
+      toast({
+        title: 'Paiement indisponible',
+        description: e instanceof ApiError ? e.message : 'Impossible d’initier le paiement.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   const handleJustifyAbsence = (absenceId: string) => {
     setSelectedAbsenceId(absenceId);
@@ -369,13 +431,15 @@ const MyChildrenPage = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {grades.map((grade) => (
+                  {grades.map((grade) => {
+                    const courseName = (grade as StrkGrade & { course?: { name?: string } }).course?.name;
+                    return (
                     <Card key={grade.id}>
                       <CardContent className="p-4 flex items-center justify-between">
                         <div>
                           <p className="font-semibold">{grade.title}</p>
                           <p className="text-sm text-gray-500">
-                            {(grade as any).course?.name && `${(grade as any).course.name} • `}
+                            {courseName && `${courseName} • `}
                             {new Date(grade.date).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
@@ -384,7 +448,8 @@ const MyChildrenPage = () => {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -411,6 +476,43 @@ const MyChildrenPage = () => {
             </TabsContent>
 
             <TabsContent value="finance" className="space-y-4 pt-4">
+              {familyFinance.length > 1 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Vue famille</CardTitle>
+                    <CardDescription>
+                      Soldes par enfant (paiement multi-factures reporté — chaque facture se paie
+                      séparément).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {familyFinance.map((row) => (
+                      <button
+                        key={row.studentId}
+                        type="button"
+                        onClick={() => setSelectedChildId(row.studentId)}
+                        className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                          selectedChildId === row.studentId
+                            ? 'border-blue-300 bg-blue-50'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="font-medium">{row.name}</span>
+                        <span className="text-muted-foreground">
+                          {!row.canView
+                            ? 'Accès facturation fermé'
+                            : row.openCount === 0
+                              ? 'À jour'
+                              : `${row.openCount} ouverte(s) · ${row.unpaidCents.toLocaleString('fr-FR')} ${
+                                  invoices[0]?.currency || 'XOF'
+                                }`}
+                        </span>
+                      </button>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               {!selectedChild.canViewBilling ? (
                 <p className="text-sm text-gray-500">Vous n&apos;avez pas accès à la facturation de cet enfant.</p>
               ) : invoicesLoading ? (
@@ -425,29 +527,129 @@ const MyChildrenPage = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {invoices.map((inv) => (
-                    <Card key={inv.id}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="font-semibold">{inv.invoice_number}</p>
-                          <p className="text-sm text-gray-500">
-                            Émise le {new Date(inv.issued_at).toLocaleDateString('fr-FR')}
-                            {inv.due_date ? ` · échéance ${new Date(inv.due_date).toLocaleDateString('fr-FR')}` : ''}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">
-                            {(inv.total_cents / 100).toLocaleString('fr-FR')} {inv.currency}
-                          </p>
-                          <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>{inv.status}</Badge>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Payé {(inv.paid_cents / 100).toLocaleString('fr-FR')} /{' '}
-                            {(inv.total_cents / 100).toLocaleString('fr-FR')}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {invoices.map((inv) => {
+                    const remaining = Math.max(0, inv.total_cents - inv.paid_cents);
+                    const canPay =
+                      selectedChild.canMakePayments &&
+                      remaining > 0 &&
+                      inv.status !== 'cancelled' &&
+                      inv.status !== 'paid';
+                    const stateLines = inv.lines.filter(
+                      (l) => l.line_type === 'fee' && l.fee_origin === 'state'
+                    );
+                    const schoolLines = inv.lines.filter(
+                      (l) => l.line_type === 'fee' && l.fee_origin !== 'state'
+                    );
+                    const discountLines = inv.lines.filter((l) => l.line_type === 'discount');
+                    const hasOriginSplit = inv.lines.some((l) => l.fee_origin);
+
+                    return (
+                      <Card key={inv.id}>
+                        <CardContent className="space-y-3 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold">{inv.invoice_number}</p>
+                              <p className="text-sm text-gray-500">
+                                Émise le {new Date(inv.issued_at).toLocaleDateString('fr-FR')}
+                                {inv.due_date
+                                  ? ` · échéance ${new Date(inv.due_date).toLocaleDateString('fr-FR')}`
+                                  : ''}
+                                {inv.fee_schedule_id ? ' · grille tarifaire' : ''}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold">{formatInvoiceMoney(inv, inv.total_cents)}</p>
+                              <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>
+                                {inv.status}
+                              </Badge>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Payé {formatInvoiceMoney(inv, inv.paid_cents)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {hasOriginSplit && (
+                            <div className="grid gap-2 text-sm md:grid-cols-2">
+                              <div className="rounded-md border bg-slate-50/80 p-3">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Frais officiels (État)
+                                </p>
+                                {stateLines.length === 0 ? (
+                                  <p className="text-muted-foreground">Aucun</p>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {stateLines.map((l) => (
+                                      <li key={l.id} className="flex justify-between gap-2">
+                                        <span>{l.label}</span>
+                                        <span>{formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                              <div className="rounded-md border bg-slate-50/80 p-3">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Frais établissement
+                                </p>
+                                {schoolLines.length === 0 ? (
+                                  <p className="text-muted-foreground">Aucun</p>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {schoolLines.map((l) => (
+                                      <li key={l.id} className="flex justify-between gap-2">
+                                        <span>{l.label}</span>
+                                        <span>{formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                              {discountLines.length > 0 && (
+                                <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3 md:col-span-2">
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                                    Remises / prises en charge
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {discountLines.map((l) => (
+                                      <li key={l.id} className="flex justify-between gap-2">
+                                        <span>{l.label}</span>
+                                        <span>− {formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {canPay && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <Button
+                                size="sm"
+                                disabled={payingId === inv.id}
+                                onClick={() => void handlePay(inv.id, 'cinetpay')}
+                              >
+                                Payer par Mobile Money
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={payingId === inv.id}
+                                onClick={() => void handlePay(inv.id, 'stripe')}
+                              >
+                                Payer par carte
+                              </Button>
+                            </div>
+                          )}
+                          {!selectedChild.canMakePayments && remaining > 0 && inv.status !== 'cancelled' && (
+                            <p className="text-xs text-muted-foreground">
+                              Consultation seule — le paiement en ligne n’est pas autorisé pour votre lien.
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>

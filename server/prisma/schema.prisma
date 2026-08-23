@@ -297,6 +297,9 @@ model StrkInstitution {
   // dette qui s'emballe sans intervention humaine.
   lateFeeCents        Int?                @map("late_fee_cents")
   lateFeeGraceDays    Int                 @default(7) @map("late_fee_grace_days")
+  // Grille financière CI : secteur de financement (public | private | mixed).
+  // Complète `type` (école/collège/…) — les deux coexistent (décision §11).
+  fundingSector       String?             @map("funding_sector")
   // SAA-005 : surcharges de fonctionnalités propres à cet établissement,
   // appliquées par-dessus les valeurs par défaut de son plan
   // (`SubscriptionPlan.features`) — un pilote peut avoir une fonctionnalité
@@ -359,6 +362,9 @@ model StrkInstitution {
   boardingRooms           StrkBoardingRoom[]
   clinicVisits            StrkClinicVisit[]
   hrStaffRecords          StrkHrStaffRecord[]
+  feeTypes                StrkFeeType[]
+  feeSchedules            StrkFeeSchedule[]
+  feePlanTemplates        StrkFeePlanTemplate[]
 
   @@map("strk_institutions")
 }
@@ -431,6 +437,10 @@ model StrkProfile {
   paymentPlansCreated StrkPaymentPlan[] @relation("PaymentPlanCreatedBy")
   paymentsMade        StrkPayment[]     @relation("PaymentPaidBy")
   refundsIssued       StrkRefund[]      @relation("RefundBy")
+  feeSchedulesCreated   StrkFeeSchedule[]     @relation("FeeScheduleCreatedBy")
+  feeSchedulesValidated StrkFeeSchedule[]     @relation("FeeScheduleValidatedBy")
+  feeSchedulesPublished StrkFeeSchedule[]     @relation("FeeSchedulePublishedBy")
+  feePlanTemplatesCreated StrkFeePlanTemplate[] @relation("FeePlanTemplateCreatedBy")
 
   // Communication (chap. 17)
   communicationTemplatesCreated StrkMessageTemplate[]         @relation("MessageTemplateCreatedBy")
@@ -488,6 +498,8 @@ model StrkClass {
   institutionId String    @map("institution_id") @db.Uuid
   campusId      String?   @map("campus_id") @db.Uuid
   teacherId     String?   @map("teacher_id") @db.Uuid
+  /// Mapping manuel vers le référentiel de niveaux (décision §11 Q6).
+  gradeLevelId  String?   @map("grade_level_id") @db.Uuid
   description   String?
   academicYear  String?   @map("academic_year")
   maxStudents   Int?      @map("max_students")
@@ -498,6 +510,7 @@ model StrkClass {
   institution StrkInstitution @relation(fields: [institutionId], references: [id])
   campus      StrkCampus?     @relation(fields: [campusId], references: [id], onDelete: SetNull)
   teacher     StrkProfile?    @relation("ClassTeacher", fields: [teacherId], references: [id])
+  gradeLevel  StrkGradeLevel? @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
 
   courses               StrkCourse[]
   students              StrkStudent[]
@@ -508,6 +521,7 @@ model StrkClass {
   admissionApplications   StrkAdmissionApplication[]
   admissionPacketTemplates StrkAdmissionPacketTemplate[]
 
+  @@index([gradeLevelId])
   @@map("strk_classes")
 }
 
@@ -528,6 +542,8 @@ model StrkCampus {
   classes     StrkClass[]
   admissionApplications StrkAdmissionApplication[]
   admissionPacketTemplates StrkAdmissionPacketTemplate[]
+  feeItems    StrkFeeItem[]
+  feeSchedules StrkFeeSchedule[]
 
   @@unique([institutionId, code])
   @@index([institutionId])
@@ -1891,54 +1907,281 @@ model SubscriptionNotification {
 // (cf. audit §6 Lot 5). Confirmation de paiement uniquement côté serveur
 // après vérification du provider (webhook + appel de contrôle), jamais sur
 // la seule foi du retour navigateur (FIN-005).
+//
+// Grille financière CI (Lot 1+) : catalogues / grilles / templates d'échéancier
+// étendent ce module — ne remplacent pas FeeItem / Invoice / PaymentPlan.
 // ============================================================
 
-model StrkFeeItem {
+/// Cycle scolaire du référentiel (préscolaire → lycée). Catalogue plateforme.
+model StrkEducationCycle {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique
+  label     String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  gradeLevels StrkGradeLevel[]
+
+  @@map("strk_education_cycles")
+}
+
+/// Niveau de classe (PS, CP1, 6e…). Mapping manuel depuis StrkClass (Q6).
+model StrkGradeLevel {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId      String   @map("cycle_id") @db.Uuid
+  code         String   @unique
+  label        String
+  abbreviation String
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  cycle              StrkEducationCycle     @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  classes            StrkClass[]
+  feeScheduleItems   StrkFeeScheduleItem[]
+
+  @@index([cycleId])
+  @@map("strk_grade_levels")
+}
+
+/// Type de frais catalogue (plateforme si institutionId null, sinon custom tenant).
+model StrkFeeType {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  institutionId String   @map("institution_id") @db.Uuid
-  name          String
+  /// null = entrée du catalogue plateforme (seed CI) ; sinon type local.
+  institutionId String?  @map("institution_id") @db.Uuid
+  code          String
+  label         String
+  category      String
+  /// annual | monthly | quarterly | one_time | periodic | configurable
+  frequency     String   @default("configurable")
   description   String?
-  amountCents   Int      @map("amount_cents")
-  currency      String   @default("XOF")
-  academicYear  String?  @map("academic_year")
   isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  institution  StrkInstitution   @relation(fields: [institutionId], references: [id])
+  institution      StrkInstitution?      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  feeItems         StrkFeeItem[]
+  feeScheduleItems StrkFeeScheduleItem[]
+
+  @@index([institutionId, category])
+  @@map("strk_fee_types")
+}
+
+/// Version publiée du référentiel national (données État, pas admin CRUD plateforme).
+model StrkNationalFeeVersion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  countryCode   String   @map("country_code")
+  academicYear  String   @map("academic_year")
+  currency      String   @default("XOF")
+  version       Int      @default(1)
+  /// draft | published | archived
+  status        String   @default("draft")
+  effectiveFrom DateTime @map("effective_from")
+  /// Ex. state_ci — le référentiel n'est pas administré par le super-admin plateforme.
+  managedBy     String   @default("state_ci") @map("managed_by")
+  source        String?
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  rates StrkNationalFeeRate[]
+
+  @@unique([countryCode, academicYear, version])
+  @@index([countryCode, academicYear, status])
+  @@map("strk_national_fee_versions")
+}
+
+model StrkNationalFeeRate {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  versionId     String @map("version_id") @db.Uuid
+  cycleCode     String @map("cycle_code")
+  /// public | private
+  fundingSector String @map("funding_sector")
+  feeTypeCode   String @map("fee_type_code")
+  amountCents   Int    @map("amount_cents")
+  currency      String @default("XOF")
+
+  version StrkNationalFeeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, cycleCode, fundingSector, feeTypeCode])
+  @@index([versionId])
+  @@map("strk_national_fee_rates")
+}
+
+/// Grille tarifaire établissement (versionnable). Workflow DRAFT→VALIDATED→PUBLISHED→ARCHIVED.
+model StrkFeeSchedule {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId      String    @map("institution_id") @db.Uuid
+  campusId           String?   @map("campus_id") @db.Uuid
+  academicYear       String    @map("academic_year")
+  name               String
+  currency           String    @default("XOF")
+  version            Int       @default(1)
+  /// draft | validated | published | archived
+  status             String    @default("draft")
+  effectiveFrom      DateTime? @map("effective_from")
+  validatedAt        DateTime? @map("validated_at")
+  validatedBy        String?   @map("validated_by") @db.Uuid
+  publishedAt        DateTime? @map("published_at")
+  publishedBy        String?   @map("published_by") @db.Uuid
+  previousVersionId  String?   @map("previous_version_id") @db.Uuid
+  createdBy          String    @map("created_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  institution     StrkInstitution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  campus          StrkCampus?          @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  previousVersion StrkFeeSchedule?     @relation("FeeScheduleVersionChain", fields: [previousVersionId], references: [id], onDelete: SetNull)
+  nextVersions    StrkFeeSchedule[]    @relation("FeeScheduleVersionChain")
+  creator         StrkProfile          @relation("FeeScheduleCreatedBy", fields: [createdBy], references: [id])
+  validator       StrkProfile?         @relation("FeeScheduleValidatedBy", fields: [validatedBy], references: [id])
+  publisher       StrkProfile?         @relation("FeeSchedulePublishedBy", fields: [publishedBy], references: [id])
+  items           StrkFeeScheduleItem[]
+  planTemplates   StrkFeePlanTemplate[]
+  invoices        StrkInvoice[]
+  paymentPlans    StrkPaymentPlan[]
+
+  @@index([institutionId, academicYear, status])
+  @@index([campusId])
+  @@map("strk_fee_schedules")
+}
+
+model StrkFeeScheduleItem {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feeScheduleId   String  @map("fee_schedule_id") @db.Uuid
+  feeTypeId       String? @map("fee_type_id") @db.Uuid
+  feeTypeCode     String  @map("fee_type_code")
+  cycleCode       String? @map("cycle_code")
+  gradeLevelId    String? @map("grade_level_id") @db.Uuid
+  /// first | renewal | transfer | any
+  enrollmentType  String? @map("enrollment_type")
+  studentStatus   String? @map("student_status")
+  /// state | institution
+  feeOrigin       String  @default("institution") @map("fee_origin")
+  amountCents     Int     @map("amount_cents")
+  currency        String  @default("XOF")
+  isMandatory     Boolean @default(true) @map("is_mandatory")
+  isRefundable    Boolean @default(false) @map("is_refundable")
+  isDiscountable  Boolean @default(true) @map("is_discountable")
+  frequency       String  @default("annual")
+  sortOrder       Int     @default(0) @map("sort_order")
+
+  feeSchedule  StrkFeeSchedule  @relation(fields: [feeScheduleId], references: [id], onDelete: Cascade)
+  feeType      StrkFeeType?     @relation(fields: [feeTypeId], references: [id], onDelete: SetNull)
+  gradeLevel   StrkGradeLevel?  @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
   invoiceLines StrkInvoiceLine[]
 
+  @@index([feeScheduleId])
+  @@index([feeTypeCode])
+  @@map("strk_fee_schedule_items")
+}
+
+/// Template d'échéancier (≠ StrkPaymentPlan élève). Pourcentage ou montant fixe.
+model StrkFeePlanTemplate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  feeScheduleId String?  @map("fee_schedule_id") @db.Uuid
+  name          String
+  currency      String   @default("XOF")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  institution  StrkInstitution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  feeSchedule  StrkFeeSchedule?         @relation(fields: [feeScheduleId], references: [id], onDelete: SetNull)
+  creator      StrkProfile              @relation("FeePlanTemplateCreatedBy", fields: [createdBy], references: [id])
+  steps        StrkFeePlanTemplateStep[]
+  paymentPlans StrkPaymentPlan[]
+
+  @@index([institutionId])
+  @@index([feeScheduleId])
+  @@map("strk_fee_plan_templates")
+}
+
+model StrkFeePlanTemplateStep {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId    String  @map("template_id") @db.Uuid
+  label         String
+  /// Pourcentage entier 0–100 (null si amountCents renseigné).
+  percent       Int?
+  amountCents   Int?    @map("amount_cents")
+  dueOffsetDays Int?    @map("due_offset_days")
+  sortOrder     Int     @default(0) @map("sort_order")
+
+  template StrkFeePlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("strk_fee_plan_template_steps")
+}
+
+model StrkFeeItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId  String   @map("institution_id") @db.Uuid
+  campusId       String?  @map("campus_id") @db.Uuid
+  feeTypeId      String?  @map("fee_type_id") @db.Uuid
+  feeTypeCode    String?  @map("fee_type_code")
+  /// state | institution
+  feeOrigin      String?  @map("fee_origin")
+  isMandatory    Boolean  @default(true) @map("is_mandatory")
+  isRefundable   Boolean  @default(false) @map("is_refundable")
+  isDiscountable Boolean  @default(true) @map("is_discountable")
+  frequency      String?  @map("frequency")
+  name           String
+  description    String?
+  amountCents    Int      @map("amount_cents")
+  currency       String   @default("XOF")
+  academicYear   String?  @map("academic_year")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  institution  StrkInstitution   @relation(fields: [institutionId], references: [id])
+  campus       StrkCampus?       @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  feeType      StrkFeeType?      @relation(fields: [feeTypeId], references: [id], onDelete: SetNull)
+  invoiceLines StrkInvoiceLine[]
+
+  @@index([institutionId, feeTypeCode])
+  @@index([campusId])
   @@map("strk_fee_items")
 }
 
 model StrkInvoice {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  institutionId String    @map("institution_id") @db.Uuid
-  studentId     String    @map("student_id") @db.Uuid
-  invoiceNumber String    @unique @map("invoice_number")
-  status        String    @default("issued") // draft | issued | partially_paid | paid | overdue | cancelled
-  totalCents    Int       @map("total_cents")
-  paidCents     Int       @default(0) @map("paid_cents")
-  currency      String    @default("XOF")
-  dueDate       DateTime? @map("due_date")
-  issuedAt      DateTime  @default(now()) @map("issued_at")
-  createdBy     String    @map("created_by") @db.Uuid
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId      String    @map("institution_id") @db.Uuid
+  studentId          String    @map("student_id") @db.Uuid
+  invoiceNumber      String    @unique @map("invoice_number")
+  status             String    @default("issued") // draft | issued | partially_paid | paid | overdue | cancelled
+  totalCents         Int       @map("total_cents")
+  paidCents          Int       @default(0) @map("paid_cents")
+  currency           String    @default("XOF")
+  dueDate            DateTime? @map("due_date")
+  issuedAt           DateTime  @default(now()) @map("issued_at")
+  createdBy          String    @map("created_by") @db.Uuid
   // FIN : facture générée depuis un échéancier (plan de paiement).
-  paymentPlanId String?   @map("payment_plan_id") @db.Uuid
+  paymentPlanId      String?   @map("payment_plan_id") @db.Uuid
   // Rang de l'échéance dans le plan (1..N), null si facture hors plan.
-  installmentIndex Int?   @map("installment_index")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  installmentIndex   Int?      @map("installment_index")
+  feeScheduleId      String?   @map("fee_schedule_id") @db.Uuid
+  feeScheduleVersion Int?      @map("fee_schedule_version")
+  /// Instantané tarifaire à l'émission (grille / lignes / devise) — immuable.
+  tariffSnapshot     Json?     @map("tariff_snapshot")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  institution      StrkInstitution @relation(fields: [institutionId], references: [id])
-  student          StrkStudent     @relation(fields: [studentId], references: [id])
-  createdByProfile StrkProfile     @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
+  institution      StrkInstitution  @relation(fields: [institutionId], references: [id])
+  student          StrkStudent      @relation(fields: [studentId], references: [id])
+  createdByProfile StrkProfile      @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
   paymentPlan      StrkPaymentPlan? @relation(fields: [paymentPlanId], references: [id])
+  feeSchedule      StrkFeeSchedule? @relation(fields: [feeScheduleId], references: [id], onDelete: SetNull)
 
   lines    StrkInvoiceLine[]
   payments StrkPayment[]
   canteenSubscription StrkCanteenSubscription?
 
+  @@index([feeScheduleId])
   @@map("strk_invoices")
 }
 
@@ -1954,34 +2197,46 @@ model StrkPaymentPlan {
   academicYear  String?  @map("academic_year")
   status        String   @default("active") // active | cancelled | completed
   createdBy     String   @map("created_by") @db.Uuid
+  feeScheduleId String?  @map("fee_schedule_id") @db.Uuid
+  planTemplateId String? @map("plan_template_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  institution StrkInstitution @relation(fields: [institutionId], references: [id])
-  student     StrkStudent     @relation(fields: [studentId], references: [id])
-  creator     StrkProfile     @relation("PaymentPlanCreatedBy", fields: [createdBy], references: [id])
-  invoices    StrkInvoice[]
+  institution  StrkInstitution     @relation(fields: [institutionId], references: [id])
+  student      StrkStudent         @relation(fields: [studentId], references: [id])
+  creator      StrkProfile         @relation("PaymentPlanCreatedBy", fields: [createdBy], references: [id])
+  feeSchedule  StrkFeeSchedule?    @relation(fields: [feeScheduleId], references: [id], onDelete: SetNull)
+  planTemplate StrkFeePlanTemplate? @relation(fields: [planTemplateId], references: [id], onDelete: SetNull)
+  invoices     StrkInvoice[]
 
+  @@index([feeScheduleId])
+  @@index([planTemplateId])
   @@map("strk_payment_plans")
 }
 
 model StrkInvoiceLine {
-  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  invoiceId   String  @map("invoice_id") @db.Uuid
-  feeItemId   String? @map("fee_item_id") @db.Uuid
-  label       String
-  amountCents Int     @map("amount_cents")
-  quantity    Int     @default(1)
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId         String  @map("invoice_id") @db.Uuid
+  feeItemId         String? @map("fee_item_id") @db.Uuid
+  label             String
+  amountCents       Int     @map("amount_cents")
+  quantity          Int     @default(1)
   // FIN-002 : remise/bourse — `amountCents` reste toujours un montant positif
   // (magnitude), jamais stocké négatif (éviterait de fausser tout code qui
   // suppose des montants positifs ailleurs, ex. Stripe). C'est `lineType`
   // qui détermine si la ligne s'ajoute ou se retranche du total de la
   // facture (POST /finance/invoices).
-  lineType    String  @default("fee") @map("line_type") // "fee" | "discount"
+  lineType          String  @default("fee") @map("line_type") // "fee" | "discount"
+  feeTypeCode       String? @map("fee_type_code")
+  /// state | institution
+  feeOrigin         String? @map("fee_origin")
+  feeScheduleItemId String? @map("fee_schedule_item_id") @db.Uuid
 
-  invoice StrkInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  feeItem StrkFeeItem? @relation(fields: [feeItemId], references: [id])
+  invoice         StrkInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeItem         StrkFeeItem?         @relation(fields: [feeItemId], references: [id])
+  feeScheduleItem StrkFeeScheduleItem? @relation(fields: [feeScheduleItemId], references: [id], onDelete: SetNull)
 
+  @@index([feeScheduleItemId])
   @@map("strk_invoice_lines")
 }
 

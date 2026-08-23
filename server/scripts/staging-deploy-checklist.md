@@ -172,3 +172,24 @@ curl -sS "http://IP_PUBLIQUE:4000/health"
 | ClamAV pull fail ARM | Ne pas activer le profil `antivirus` |
 | Disque VM plein | `docker system prune` périodique |
 | Postgres exposé | Ne **pas** publier 5433 sur Internet |
+
+---
+
+## 9. Grille financière (Lots 1–5) — sur autorisation seulement
+
+Ne pas exécuter `migrate deploy` staging sans go explicite.
+
+Avant migrate :
+
+- [ ] Backup DB staging
+- [ ] Vérifier migrations `20260823100*` présentes dans l’image / le checkout
+- [ ] Feature flag `finance` activé pour l’établissement de smoke
+
+Après migrate (si autorisé) :
+
+- [ ] Smoke `GET /health`
+- [ ] Smoke `GET /finance/national-fees?countryCode=CI&academicYear=2026-2027` (auth finance)
+- [ ] Smoke onglet Finance → Grilles / Soldes
+- [ ] Rapport post-deploy
+- [ ] **Pas** de déploiement prod sans go explicite
+

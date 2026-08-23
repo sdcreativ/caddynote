@@ -25,6 +25,8 @@ export interface StrkInvoiceLine {
   amount_cents: number;
   quantity: number;
   line_type: 'fee' | 'discount';
+  fee_type_code?: string;
+  fee_origin?: 'state' | 'institution' | string;
 }
 
 export interface StrkPayment {
@@ -45,6 +47,7 @@ export interface StrkInvoice {
   currency: string;
   due_date?: string;
   issued_at: string;
+  fee_schedule_id?: string;
   student: { id: string; name: string };
   lines: StrkInvoiceLine[];
   payments: StrkPayment[];
@@ -79,6 +82,8 @@ interface ApiInvoiceLine {
   amountCents: number;
   quantity: number;
   lineType: 'fee' | 'discount';
+  feeTypeCode?: string | null;
+  feeOrigin?: string | null;
 }
 
 interface ApiPayment {
@@ -99,6 +104,7 @@ interface ApiInvoice {
   currency: string;
   dueDate?: string | null;
   issuedAt: string;
+  feeScheduleId?: string | null;
   student: { id: string; profile?: { firstName: string | null; lastName: string | null } | null } | null;
   lines: ApiInvoiceLine[];
   payments: ApiPayment[];
@@ -113,6 +119,7 @@ const mapInvoice = (i: ApiInvoice): StrkInvoice => ({
   currency: i.currency,
   due_date: i.dueDate || undefined,
   issued_at: i.issuedAt,
+  fee_schedule_id: i.feeScheduleId || undefined,
   student: {
     id: i.student?.id || '',
     name: [i.student?.profile?.firstName, i.student?.profile?.lastName].filter(Boolean).join(' ') || 'Élève',
@@ -124,6 +131,8 @@ const mapInvoice = (i: ApiInvoice): StrkInvoice => ({
     amount_cents: l.amountCents,
     quantity: l.quantity,
     line_type: l.lineType,
+    fee_type_code: l.feeTypeCode || undefined,
+    fee_origin: l.feeOrigin || undefined,
   })),
   payments: i.payments.map((p) => ({
     id: p.id,
@@ -332,4 +341,281 @@ export const cancelPaymentPlan = async (id: string): Promise<boolean> => {
   } catch {
     return false;
   }
+};
+
+// --- Grille financière CI (Lots 1–4) ---------------------------------------
+
+export interface StrkFeeType {
+  id: string;
+  institutionId: string | null;
+  code: string;
+  label: string;
+  category: string;
+  frequency: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface StrkFeeScheduleItem {
+  id: string;
+  feeTypeCode: string;
+  cycleCode?: string | null;
+  gradeLevelId?: string | null;
+  feeOrigin: string;
+  amountCents: number;
+  currency: string;
+  isMandatory: boolean;
+  isDiscountable: boolean;
+  frequency: string;
+  sortOrder: number;
+}
+
+export interface StrkFeeSchedule {
+  id: string;
+  institutionId: string;
+  academicYear: string;
+  name: string;
+  currency: string;
+  version: number;
+  status: string;
+  effectiveFrom?: string | null;
+  validatedAt?: string | null;
+  publishedAt?: string | null;
+  items: StrkFeeScheduleItem[];
+}
+
+export interface FeeScheduleItemInput {
+  feeTypeCode: string;
+  cycleCode?: string | null;
+  feeOrigin?: 'state' | 'institution';
+  amountCents: number;
+  currency?: string;
+  isMandatory?: boolean;
+  isDiscountable?: boolean;
+  frequency?: string;
+}
+
+export interface StrkFeePlanTemplate {
+  id: string;
+  name: string;
+  currency: string;
+  feeScheduleId?: string | null;
+  isActive: boolean;
+  steps: { id: string; label: string; percent: number | null; dueOffsetDays?: number | null; sortOrder: number }[];
+}
+
+export interface StrkNationalFeeVersion {
+  id: string;
+  countryCode: string;
+  academicYear: string;
+  currency: string;
+  version: number;
+  status: string;
+  managedBy: string;
+  effectiveFrom: string;
+  source?: string | null;
+  rates: {
+    id: string;
+    cycleCode: string;
+    fundingSector: string;
+    feeTypeCode: string;
+    amountCents: number;
+    currency: string;
+  }[];
+}
+
+export const fetchFeeTypes = async (): Promise<StrkFeeType[]> => {
+  const { feeTypes } = await apiClient.get<{ feeTypes: StrkFeeType[] }>('/finance/fee-types');
+  return feeTypes;
+};
+
+export const createCustomFeeType = async (data: {
+  code: string;
+  label: string;
+  category: string;
+  frequency?: string;
+}): Promise<StrkFeeType> => {
+  const { feeType } = await apiClient.post<{ feeType: StrkFeeType }>('/finance/fee-types', data);
+  return feeType;
+};
+
+export const fetchNationalFees = async (
+  academicYear: string,
+  countryCode = 'CI'
+): Promise<StrkNationalFeeVersion> => {
+  const { version } = await apiClient.get<{ version: StrkNationalFeeVersion }>(
+    `/finance/national-fees?countryCode=${encodeURIComponent(countryCode)}&academicYear=${encodeURIComponent(academicYear)}`
+  );
+  return version;
+};
+
+export const fetchFeeSchedules = async (params?: {
+  status?: string;
+  academicYear?: string;
+}): Promise<StrkFeeSchedule[]> => {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.academicYear) q.set('academicYear', params.academicYear);
+  const qs = q.toString();
+  const { schedules } = await apiClient.get<{ schedules: StrkFeeSchedule[] }>(
+    `/finance/fee-schedules${qs ? `?${qs}` : ''}`
+  );
+  return schedules;
+};
+
+export const createFeeSchedule = async (data: {
+  academicYear: string;
+  name: string;
+  currency?: string;
+  items?: FeeScheduleItemInput[];
+}): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: StrkFeeSchedule }>('/finance/fee-schedules', data);
+  return schedule;
+};
+
+export const replaceFeeScheduleItems = async (
+  scheduleId: string,
+  items: FeeScheduleItemInput[]
+): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.put<{ schedule: StrkFeeSchedule }>(
+    `/finance/fee-schedules/${scheduleId}/items`,
+    { items }
+  );
+  return schedule;
+};
+
+export const validateFeeSchedule = async (scheduleId: string): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: StrkFeeSchedule }>(
+    `/finance/fee-schedules/${scheduleId}/validate`,
+    {}
+  );
+  return schedule;
+};
+
+export const publishFeeSchedule = async (
+  scheduleId: string,
+  idempotencyKey?: string
+): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: StrkFeeSchedule }>(
+    `/finance/fee-schedules/${scheduleId}/publish`,
+    {},
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined
+  );
+  return schedule;
+};
+
+export const archiveFeeSchedule = async (scheduleId: string): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: StrkFeeSchedule }>(
+    `/finance/fee-schedules/${scheduleId}/archive`,
+    {}
+  );
+  return schedule;
+};
+
+export const reviseFeeSchedule = async (scheduleId: string): Promise<StrkFeeSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: StrkFeeSchedule }>(
+    `/finance/fee-schedules/${scheduleId}/revise`,
+    {}
+  );
+  return schedule;
+};
+
+export const generateInvoiceFromSchedule = async (
+  scheduleId: string,
+  data: {
+    studentId: string;
+    cycleCode?: string;
+    optionalFeeTypeCodes?: string[];
+    includeNationalRegistration?: boolean;
+    fundingSector?: 'public' | 'private' | 'mixed';
+  },
+  idempotencyKey?: string
+): Promise<StrkInvoice> => {
+  const { invoice } = await apiClient.post<{ invoice: ApiInvoice }>(
+    `/finance/fee-schedules/${scheduleId}/generate-invoice`,
+    data,
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined
+  );
+  return mapInvoice(invoice);
+};
+
+export const fetchFeePlanTemplates = async (): Promise<StrkFeePlanTemplate[]> => {
+  const { templates } = await apiClient.get<{ templates: StrkFeePlanTemplate[] }>(
+    '/finance/fee-plan-templates'
+  );
+  return templates;
+};
+
+export const createFeePlanTemplate = async (data: {
+  name: string;
+  currency?: string;
+  steps: { label: string; percent: number; dueOffsetDays?: number }[];
+}): Promise<StrkFeePlanTemplate> => {
+  const { template } = await apiClient.post<{ template: StrkFeePlanTemplate }>(
+    '/finance/fee-plan-templates',
+    data
+  );
+  return template;
+};
+
+export const deactivateFeePlanTemplate = async (id: string): Promise<void> => {
+  await apiClient.delete(`/finance/fee-plan-templates/${id}`);
+};
+
+export type FinanceBalanceRow = {
+  studentId: string;
+  studentName: string;
+  invoiceCount: number;
+  scheduleInvoiceCount: number;
+  totalCents: number;
+  paidCents: number;
+  balanceCents: number;
+  currency: string;
+};
+
+export type FinanceBalancesReport = {
+  asOf: string;
+  currency: string;
+  totals: { totalCents: number; paidCents: number; balanceCents: number };
+  unpaidStudentCount: number;
+  scheduleInvoiceCount: number;
+  rows: FinanceBalanceRow[];
+};
+
+export const fetchFinanceBalances = async (asOf: string): Promise<FinanceBalancesReport> => {
+  return apiClient.get<FinanceBalancesReport>(
+    `/finance/balances?asOf=${encodeURIComponent(asOf)}`
+  );
+};
+
+/** Export CSV/XLSX des soldes — journalisé côté serveur. */
+export const downloadFinanceBalancesExport = async (
+  asOf: string,
+  format: 'csv' | 'xlsx' = 'csv'
+): Promise<void> => {
+  const { getToken } = await import('@/lib/apiClient');
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  const token = getToken();
+  const res = await fetch(
+    `${API_BASE_URL}/finance/balances/export?asOf=${encodeURIComponent(asOf)}&format=${format}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error((data as { error?: string } | null)?.error || `Export impossible (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `soldes-${asOf}.${format === 'xlsx' ? 'xlsx' : 'csv'}`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+/** Affiche un montant facture : grille → FCFA entiers ; legacy catalogue → /100. */
+export const formatInvoiceMoney = (invoice: StrkInvoice, amountCents: number): string => {
+  const fromSchedule = Boolean(invoice.fee_schedule_id);
+  const value = fromSchedule ? amountCents : amountCents / 100;
+  return `${value.toLocaleString('fr-FR')} ${invoice.currency}`;
 };

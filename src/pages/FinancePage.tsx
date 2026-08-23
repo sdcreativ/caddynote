@@ -39,6 +39,8 @@ import {
 } from '@/services/strkFinanceService';
 import { refundPayment } from '@/services/strkBankService';
 import { BankReconciliationPanel } from '@/components/finance/BankReconciliationPanel';
+import { FeeGridPanel } from '@/components/finance/FeeGridPanel';
+import { FinanceBalancesPanel } from '@/components/finance/FinanceBalancesPanel';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { ApiError } from '@/lib/apiClient';
 import { generatePaymentReceipt, generateInvoiceDocument, downloadDocument } from '@/services/strkDocumentService';
@@ -296,6 +298,8 @@ const FinancePage = () => {
         <TabsList>
           <TabsTrigger value="invoices">{t('tabs.invoices')}</TabsTrigger>
           <TabsTrigger value="plans">{t('tabs.plans')}</TabsTrigger>
+          <TabsTrigger value="schedules">{t('tabs.schedules')}</TabsTrigger>
+          <TabsTrigger value="balances">{t('tabs.balances')}</TabsTrigger>
           <TabsTrigger value="fees">{t('tabs.fees')}</TabsTrigger>
           <TabsTrigger value="bank">{t('tabs.bank')}</TabsTrigger>
         </TabsList>
@@ -416,6 +420,20 @@ const FinancePage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="schedules" className="space-y-4">
+          {user?.institutionId && user.role ? (
+            <FeeGridPanel
+              students={students}
+              userRole={user.role}
+              onInvoiceCreated={() => void loadData()}
+            />
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="balances" className="space-y-4">
+          <FinanceBalancesPanel />
         </TabsContent>
 
         <TabsContent value="fees" className="space-y-4">

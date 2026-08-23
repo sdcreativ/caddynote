@@ -18,6 +18,11 @@ export const DIRECTION_ROLES: StrkUserRole[] = ['admin', 'school_admin'];
 export const SECRETARIAT_ROLES: StrkUserRole[] = ['admin', 'school_admin', 'secretary'];
 /** Finance / économe. */
 export const FINANCE_ROLES: StrkUserRole[] = ['admin', 'school_admin', 'accountant'];
+/**
+ * Publication d’une grille tarifaire (Lot 3) : direction uniquement.
+ * Workflow §11 — le comptable crée/valide ; la direction publie.
+ */
+export const FEE_SCHEDULE_PUBLISH_ROLES: StrkUserRole[] = ['admin', 'school_admin'];
 /** Enseignement (saisie notes, devoirs, ressources de cours). */
 export const TEACHING_ROLES: StrkUserRole[] = ['admin', 'school_admin', 'teacher', 'head_teacher'];
 /** Vie scolaire (appel, absences, discipline signalée). */
