@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isSameInstitution, TEACHING_ROLES, SECRETARIAT_ROLES } from '../lib/authz.js';
 import { isS3Configured } from '../lib/s3.js';
+import { ensureRoleExtension } from '../lib/roleExtensions.js';
 
 export const coursesRouter = Router();
 coursesRouter.use(requireAuth);
@@ -302,8 +303,27 @@ coursesRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
   if (!(await validateSubject(parsed.data.subjectId, parsed.data.institutionId))) {
     return res.status(400).json({ error: 'Matière invalide pour cet établissement' });
   }
+
+  // Les cours sont créés par la direction/secrétariat et assignés à un enseignant.
+  if (parsed.data.teacherId) {
+    const teacherProfile = await prisma.strkProfile.findUnique({
+      where: { id: parsed.data.teacherId },
+      select: { role: true, institutionId: true },
+    });
+    if (!teacherProfile || !isSameInstitution(req.auth!, teacherProfile.institutionId)) {
+      return res.status(400).json({ error: "L'enseignant indiqué (teacherId) est introuvable" });
+    }
+    if (teacherProfile.role !== 'teacher' && teacherProfile.role !== 'head_teacher') {
+      return res.status(400).json({ error: "L'enseignant indiqué (teacherId) est introuvable" });
+    }
+    await ensureRoleExtension(parsed.data.teacherId, teacherProfile.role, parsed.data.institutionId);
+  }
+
   try {
-    const course = await prisma.strkCourse.create({ data: parsed.data, include: COURSE_INCLUDE });
+    const course = await prisma.strkCourse.create({
+      data: parsed.data,
+      include: COURSE_INCLUDE,
+    });
     res.status(201).json({ course });
   } catch (error) {
     // Défense en profondeur : `teacher_id` référence `strk_teachers`, pas

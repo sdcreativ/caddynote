@@ -12,6 +12,7 @@ import { useStrkCourses } from '@/hooks/useStrkCourses';
 import { useStrkClasses } from '@/hooks/useStrkClasses';
 import { useTranslation } from 'react-i18next';
 import { tCommon } from '@/i18n/config';
+import { ApiError } from '@/lib/apiClient';
 
 interface CreateCourseDialogProps {
   open: boolean;
@@ -98,27 +99,30 @@ const CreateCourseDialog = ({ open, onOpenChange, onCourseCreated }: CreateCours
         status: 'active'
       });
 
-      if (course) {
-        setFormData({
-          name: '',
-          description: '',
-          class_id: 'none',
-          room: '',
-          schedule_day: '',
-          schedule_time: '',
-          duration: 60
-        });
-        onOpenChange(false);
-        onCourseCreated?.();
-        toast({
-          title: t('createCourse.createdTitle'),
-          description: t('createCourse.createdBody')
-        });
+      if (!course) {
+        // useStrkCourses.addCourse already toasts on failure
+        return;
       }
+
+      setFormData({
+        name: '',
+        description: '',
+        class_id: 'none',
+        room: '',
+        schedule_day: '',
+        schedule_time: '',
+        duration: 60
+      });
+      onOpenChange(false);
+      onCourseCreated?.();
+      toast({
+        title: t('createCourse.createdTitle'),
+        description: t('createCourse.createdBody')
+      });
     } catch (error) {
       toast({
         title: tCommon('status.error'),
-        description: t('createCourse.createError'),
+        description: error instanceof ApiError ? error.message : t('createCourse.createError'),
         variant: "destructive"
       });
     } finally {

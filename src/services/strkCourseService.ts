@@ -120,25 +120,20 @@ export const fetchCourseById = async (id: string): Promise<CourseWithDetails | n
   }
 };
 
-export const createCourse = async (courseData: Omit<StrkCourse, "id" | "created_at" | "updated_at">): Promise<StrkCourse | null> => {
-  try {
-    const { course } = await apiClient.post<{ course: ApiCourse }>('/courses', {
-      name: courseData.name,
-      description: courseData.description,
-      teacherId: courseData.teacher_id,
-      classId: courseData.class_id,
-      institutionId: courseData.institution_id,
-      room: courseData.room,
-      scheduleDay: courseData.schedule_day,
-      scheduleTime: courseData.schedule_time,
-      duration: courseData.duration,
-      status: courseData.status,
-    });
-    return mapApiCourse(course);
-  } catch (error) {
-    console.error("Error in createCourse:", error);
-    return null;
-  }
+export const createCourse = async (courseData: Omit<StrkCourse, "id" | "created_at" | "updated_at">): Promise<StrkCourse> => {
+  const { course } = await apiClient.post<{ course: ApiCourse }>('/courses', {
+    name: courseData.name,
+    description: courseData.description,
+    teacherId: courseData.teacher_id,
+    classId: courseData.class_id,
+    institutionId: courseData.institution_id,
+    room: courseData.room,
+    scheduleDay: courseData.schedule_day,
+    scheduleTime: courseData.schedule_time,
+    duration: courseData.duration,
+    status: courseData.status,
+  });
+  return mapApiCourse(course);
 };
 
 export const updateCourse = async (id: string, updates: Partial<StrkCourse>): Promise<StrkCourse | null> => {

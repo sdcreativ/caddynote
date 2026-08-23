@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { CourseWithDetails } from '@/services/strkCourseService';
 import { useToast } from '@/hooks/use-toast';
+import { ApiError } from '@/lib/apiClient';
 import { 
   fetchCoursesByTeacher,
   fetchCoursesByInstitution,
@@ -91,10 +92,11 @@ export const useStrkCourses = () => {
       return null;
     } catch (err) {
       console.error("Error in addCourse:", err);
-      setError('Erreur lors de l\'ajout du cours');
+      const message = err instanceof ApiError ? err.message : "Impossible d'ajouter le cours";
+      setError(message);
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter le cours",
+        description: message,
         variant: "destructive",
       });
       return null;

@@ -83,8 +83,13 @@ schedulesRouter.get('/', async (req, res) => {
         return res.status(403).json({ error: 'Permissions insuffisantes' });
       }
     }
+    // Inclure les créneaux dont le teacherId est renseigné OU hérités du cours
+    // (planning établi sans recopier l'enseignant sur chaque ligne d'EDT).
     const schedules = await prisma.strkSchedule.findMany({
-      where: { teacherId, isActive: true },
+      where: {
+        isActive: true,
+        OR: [{ teacherId }, { course: { teacherId } }],
+      },
       include: SCHEDULE_INCLUDE,
       orderBy: ORDER_BY,
     });
@@ -160,6 +165,18 @@ schedulesRouter.post('/', requireRole('admin', 'school_admin'), async (req, res)
   }
   if (!isSameInstitution(req.auth!, parsed.data.institutionId)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
+  }
+  // Si l'admin omet teacherId, hériter de l'enseignant du cours pour que
+  // l'enseignant retrouve son planning via GET /schedules?teacherId=.
+  if (!parsed.data.teacherId) {
+    const course = await prisma.strkCourse.findUnique({
+      where: { id: parsed.data.courseId },
+      select: { teacherId: true, institutionId: true },
+    });
+    if (!course || course.institutionId !== parsed.data.institutionId) {
+      return res.status(400).json({ error: 'Cours invalide pour cet établissement' });
+    }
+    if (course.teacherId) parsed.data.teacherId = course.teacherId;
   }
   const conflicts = await findScheduleConflicts(toCandidate(parsed.data));
   if (conflicts.length > 0 && !parsed.data.force) {

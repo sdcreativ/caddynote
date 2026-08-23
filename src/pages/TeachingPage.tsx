@@ -1,31 +1,44 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, BookOpen, Users, Calendar } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Search, BookOpen, Users, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkCourses } from '@/hooks/useStrkCourses';
+import { useStrkSchedules } from '@/hooks/useStrkSchedules';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import CreateCourseDialog from '@/components/teaching/CreateCourseDialog';
+import type { CourseWithDetails } from '@/services/strkCourseService';
+
+const DAY_LABELS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'] as const;
 
 const TeachingPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const { toast } = useToast();
   const { t } = useTranslation('teaching');
   const { user } = useStrkAuth();
   const { courses, isLoading, loadCoursesByTeacher } = useStrkCourses();
+  const { schedules, loadSchedulesByTeacher } = useStrkSchedules();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user?.role === 'teacher' || user?.role === 'head_teacher') {
-      loadCoursesByTeacher(user.id);
+      void loadCoursesByTeacher(user.id);
+      void loadSchedulesByTeacher(user.id);
     }
-  }, [user, loadCoursesByTeacher]);
+  }, [user, loadCoursesByTeacher, loadSchedulesByTeacher]);
+
+  const schedulesByCourse = useMemo(() => {
+    const map = new Map<string, typeof schedules>();
+    for (const slot of schedules) {
+      const courseId = slot.course_id;
+      if (!courseId) continue;
+      const list = map.get(courseId) ?? [];
+      list.push(slot);
+      map.set(courseId, list);
+    }
+    return map;
+  }, [schedules]);
 
   // Vérifier si l'utilisateur a le droit d'accéder à cette page
   if (user?.role !== 'teacher' && user?.role !== 'head_teacher') {
@@ -47,7 +60,16 @@ const TeachingPage = () => {
     (course.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getScheduleDisplay = (course: any) => {
+  const getScheduleDisplay = (course: CourseWithDetails) => {
+    const slots = schedulesByCourse.get(course.id) ?? [];
+    if (slots.length > 0) {
+      return slots
+        .map((slot) => {
+          const day = DAY_LABELS[slot.day_of_week] ?? '';
+          return `${day} ${slot.start_time}-${slot.end_time}`;
+        })
+        .join(' · ');
+    }
     if (course.schedule_day && course.schedule_time) {
       const duration = course.duration ? t('durationSuffix', { duration: course.duration }) : '';
       return `${course.schedule_day} ${course.schedule_time}${duration}`;
@@ -55,11 +77,26 @@ const TeachingPage = () => {
     return t('scheduleUndefined');
   };
 
+  const getRoomDisplay = (course: CourseWithDetails) => {
+    const slots = schedulesByCourse.get(course.id) ?? [];
+    const roomFromSlot = slots.find((s) => s.room)?.room;
+    return roomFromSlot || course.room || t('roomUndefined');
+  };
+
   const getTotalStudents = () => {
     return courses.reduce((total, course) => total + (course.student_count || 0), 0);
   };
 
   const getTotalHours = () => {
+    if (schedules.length > 0) {
+      const minutes = schedules.reduce((total, slot) => {
+        const [sh, sm] = slot.start_time.split(':').map(Number);
+        const [eh, em] = slot.end_time.split(':').map(Number);
+        if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return total;
+        return total + (eh * 60 + em - (sh * 60 + sm));
+      }, 0);
+      return minutes / 60;
+    }
     return courses.reduce((total, course) => total + (course.duration || 0), 0) / 60;
   };
 
@@ -85,16 +122,10 @@ const TeachingPage = () => {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePlanningClick}>
-            <Calendar className="mr-2 h-4 w-4" />
-            {t('planning')}
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <PlusCircle className="mr-2 h-5 w-5" />
-            {t('newCourse')}
-          </Button>
-        </div>
+        <Button variant="outline" onClick={handlePlanningClick}>
+          <Calendar className="mr-2 h-4 w-4" />
+          {t('planning')}
+        </Button>
       </div>
 
       {/* Statistiques rapides */}
@@ -182,13 +213,13 @@ const TeachingPage = () => {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {getScheduleDisplay(course)}
+                      <Calendar className="h-4 w-4 mr-2 shrink-0" />
+                      <span>{getScheduleDisplay(course)}</span>
                     </div>
                     
                     <div className="flex items-center text-sm text-gray-600">
                       <BookOpen className="h-4 w-4 mr-2" />
-                      {course.room || t('roomUndefined')}
+                      {getRoomDisplay(course)}
                     </div>
                     
                     {course.class_name && (
@@ -226,13 +257,19 @@ const TeachingPage = () => {
           </div>
         )}
 
-        {filteredCourses.length === 0 && (
+        {filteredCourses.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-semibold text-gray-900">{t('emptyTitle')}</h3>
             <p className="mt-1 text-sm text-gray-500">
               {searchTerm ? t('emptySearch') : t('emptyNone')}
             </p>
+            {!searchTerm && (
+              <Button variant="outline" className="mt-4" onClick={handlePlanningClick}>
+                <Calendar className="mr-2 h-4 w-4" />
+                {t('viewPlanning')}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -278,16 +315,6 @@ const TeachingPage = () => {
           </div>
         </CardContent>
       </Card>
-
-      <CreateCourseDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCourseCreated={() => {
-          if (user?.id) {
-            loadCoursesByTeacher(user.id);
-          }
-        }}
-      />
     </div>
   );
 };

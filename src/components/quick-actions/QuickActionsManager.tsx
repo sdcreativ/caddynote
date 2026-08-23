@@ -62,9 +62,11 @@ export function QuickActionsManager() {
   // de texte libre déconnecté d'une vraie classe). Chargé une fois, comme le
   // fait déjà `TeacherAttendancePage.tsx` pour son propre sélecteur.
   const { courses, loadCoursesByTeacher } = useStrkCourses();
+  const canCreateCourse =
+    !!user && ['admin', 'school_admin', 'secretary'].includes(user.role);
 
   useEffect(() => {
-    if (user?.id && user.role === 'teacher') {
+    if (user?.id && (user.role === 'teacher' || user.role === 'head_teacher')) {
       loadCoursesByTeacher(user.id);
     }
   }, [user?.id, user?.role, loadCoursesByTeacher]);
@@ -113,12 +115,14 @@ export function QuickActionsManager() {
         institutionId={user?.institutionId}
       />
 
-      <CreateCourseDialog
-        open={activeDialog === 'course'}
-        onOpenChange={(open) => {
-          if (!open) closeDialog();
-        }}
-      />
+      {canCreateCourse && (
+        <CreateCourseDialog
+          open={activeDialog === 'course'}
+          onOpenChange={(open) => {
+            if (!open) closeDialog();
+          }}
+        />
+      )}
 
       <JustificationDialog
         open={activeDialog === 'justification'}

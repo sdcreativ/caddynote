@@ -129,7 +129,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'get', path: '/courses/:id/materials', tag: 'Cours', summary: 'Lister les ressources pédagogiques (PED-002)', auth: 'bearer' },
   { method: 'post', path: '/courses/:id/materials', tag: 'Cours', summary: 'Ajouter une ressource de cours', auth: 'bearer', roles: ['admin', 'school_admin', 'teacher', 'head_teacher'], statuses: [201, 501] },
   { method: 'delete', path: '/courses/:id/materials/:materialId', tag: 'Cours', summary: 'Supprimer une ressource de cours', auth: 'bearer', roles: ['admin', 'school_admin', 'teacher', 'head_teacher'] },
-  { method: 'post', path: '/courses', tag: 'Cours', summary: 'Créer un cours', auth: 'bearer', roles: [...direction], statuses: [201] },
+  { method: 'post', path: '/courses', tag: 'Cours', summary: 'Créer un cours (direction / secrétariat)', auth: 'bearer', roles: ['admin', 'school_admin', 'secretary'], statuses: [201] },
   { method: 'patch', path: '/courses/:id', tag: 'Cours', summary: 'Modifier un cours', auth: 'bearer', roles: [...staff] },
   { method: 'delete', path: '/courses/:id', tag: 'Cours', summary: 'Supprimer un cours', auth: 'bearer', roles: [...direction] },
 
