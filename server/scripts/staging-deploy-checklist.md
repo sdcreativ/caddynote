@@ -181,15 +181,15 @@ Ne pas exécuter `migrate deploy` staging sans go explicite.
 
 Avant migrate :
 
-- [ ] Backup DB staging
-- [ ] Vérifier migrations `20260823100*` présentes dans l’image / le checkout
+- [x] Backup DB staging
+- [x] Vérifier migrations `20260823100*` présentes dans l’image / le checkout
 - [ ] Feature flag `finance` activé pour l’établissement de smoke
 
 Après migrate (si autorisé) :
 
-- [ ] Smoke `GET /health`
-- [ ] Smoke `GET /finance/national-fees?countryCode=CI&academicYear=2026-2027` (auth finance)
-- [ ] Smoke onglet Finance → Grilles / Soldes
-- [ ] Rapport post-deploy
+- [x] Smoke `GET /health`
+- [ ] Smoke `GET /finance/national-fees?countryCode=CI&academicYear=2026-2027` (auth finance) — skip si pas de smoke creds
+- [x] Smoke onglet Finance → Grilles / Soldes (web rebuild `0b661d3`)
+- [x] Rapport post-deploy
 - [ ] **Pas** de déploiement prod sans go explicite
 
