@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import { useToast } from '@/hooks/use-toast';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { ApiError } from '@/lib/apiClient';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   confirmAdmissionFee,
   enrollAdmission,
@@ -31,6 +33,7 @@ const AdmissionsAdminPage = () => {
   const { t } = useTranslation('admissions');
   const { t: tc } = useTranslation('common');
   const { user } = useStrkAuth();
+  const { institutions, loadInstitutions } = useStrkInstitutions();
   const { toast } = useToast();
   const prompt = usePromptDialog();
   const [applications, setApplications] = useState<AdmissionApplication[]>([]);
@@ -46,9 +49,23 @@ const AdmissionsAdminPage = () => {
   const [reviewMode, setReviewMode] = useState(false);
   const [rejectionReasons, setRejectionReasons] = useState<Array<{ id: string; code: string; label: string }>>([]);
   const [versionsByItem, setVersionsByItem] = useState<Record<string, Array<{ version: number; status: string; fileName: string | null; isCurrent: boolean }>>>({});
+  const [scopedInstitutionId, setScopedInstitutionId] = useState<string>('');
+
+  const institutionId = user?.institutionId || scopedInstitutionId || null;
+  const isPlatformAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (user?.institutionId) {
+      setScopedInstitutionId(user.institutionId);
+      return;
+    }
+    if (isPlatformAdmin) {
+      void loadInstitutions();
+    }
+  }, [user?.institutionId, isPlatformAdmin, loadInstitutions]);
 
   const load = async () => {
-    if (!user?.institutionId) return;
+    if (!institutionId) return;
     try {
       await ensureAdmissionPackets().catch(() => undefined);
       if (reviewMode || pieceStatus !== 'all') {
@@ -64,7 +81,7 @@ const AdmissionsAdminPage = () => {
         setApplications(
           list.map((a) => ({
             id: a.id,
-            institutionId: user.institutionId!,
+            institutionId,
             classId: a.class?.id ?? null,
             academicYear: a.academicYear,
             applicationKind: a.applicationKind,
@@ -86,7 +103,7 @@ const AdmissionsAdminPage = () => {
           }))
         );
       } else {
-        const { applications: list } = await fetchAdmissionsQueue(user.institutionId, {
+        const { applications: list } = await fetchAdmissionsQueue(institutionId, {
           status: status === 'all' ? undefined : status,
           academicYear: academicYear || undefined,
           level: level || undefined,
@@ -110,7 +127,7 @@ const AdmissionsAdminPage = () => {
     fetchAdmissionRejectionReasons()
       .then(({ reasons }) => setRejectionReasons(reasons))
       .catch(() => undefined);
-  }, [user?.institutionId, status, academicYear, level, applicationKind, pieceStatus, submittedFrom, submittedTo, reviewMode]);
+  }, [institutionId, status, academicYear, level, applicationKind, pieceStatus, submittedFrom, submittedTo, reviewMode]);
 
   const togglePacket = async (id: string) => {
     if (openPacketId === id) {
@@ -259,6 +276,30 @@ const AdmissionsAdminPage = () => {
     <div className="space-y-6 py-6">
       <h1 className="text-3xl font-bold">{t('admin.title')}</h1>
 
+      {!institutionId ? (
+        <Card>
+          <CardContent className="space-y-4 py-8">
+            <EmptyState title={t('admin.noInstitutionTitle')} description={t('admin.noInstitutionBody')} />
+            {isPlatformAdmin && institutions.length > 0 && (
+              <div className="mx-auto max-w-md space-y-2">
+                <p className="text-sm font-medium">{t('admin.pickInstitution')}</p>
+                <Select value={scopedInstitutionId || undefined} onValueChange={setScopedInstitutionId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('admin.pickInstitution')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {institutions.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
       <Tabs defaultValue="queue">
         <TabsList>
           <TabsTrigger value="queue">{t('admin.tabQueue')}</TabsTrigger>
@@ -266,6 +307,23 @@ const AdmissionsAdminPage = () => {
         </TabsList>
 
         <TabsContent value="queue" className="space-y-4">
+          {isPlatformAdmin && !user?.institutionId && (
+            <div className="max-w-md space-y-2">
+              <p className="text-sm font-medium">{t('admin.pickInstitution')}</p>
+              <Select value={institutionId} onValueChange={setScopedInstitutionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('admin.pickInstitution')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutions.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id}>
+                      {inst.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex flex-wrap items-end gap-3">
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-[200px]">
@@ -520,6 +578,7 @@ const AdmissionsAdminPage = () => {
           <AdmissionPacketsConfigPanel />
         </TabsContent>
       </Tabs>
+      )}
     </div>
   );
 };

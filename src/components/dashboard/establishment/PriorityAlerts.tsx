@@ -13,6 +13,7 @@ type Props = {
 const avatarTone = (kind: DashboardAlert['kind']) => {
   if (kind === 'lateness') return 'bg-orange-100 text-orange-700';
   if (kind === 'payment') return 'bg-amber-100 text-amber-800';
+  if (kind === 'admission') return 'bg-sky-100 text-sky-800';
   return 'bg-rose-100 text-rose-700';
 };
 
@@ -35,7 +36,10 @@ export function PriorityAlerts({ alerts, total }: Props) {
             {t('alerts.recent')} <span className="text-slate-400">({total})</span>
           </h2>
         </div>
-        <Link to="/absences" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <Link
+          to={alerts.some((a) => a.kind === 'admission') ? '/admissions/admin' : '/absences'}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
           {t('alerts.seeAll')}
         </Link>
       </div>

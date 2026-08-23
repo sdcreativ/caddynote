@@ -12,7 +12,7 @@ export type DashboardAlert = {
   id: string;
   studentName: string;
   classLabel: string;
-  kind: 'absence' | 'lateness' | 'payment';
+  kind: 'absence' | 'lateness' | 'payment' | 'admission';
   label: string;
   href: string;
   createdAt: string;
@@ -71,6 +71,15 @@ export function useEstablishmentDashboard() {
   const [invoices, setInvoices] = useState<StrkInvoice[]>([]);
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [genderHeadcount, setGenderHeadcount] = useState({ female: 0, male: 0, unknown: 0, total: 0 });
+  const [pendingAdmissions, setPendingAdmissions] = useState<
+    Array<{
+      id: string;
+      studentFirstName: string;
+      studentLastName: string;
+      contactEmail: string;
+      submittedAt: string | null;
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -88,21 +97,33 @@ export function useEstablishmentDashboard() {
     try {
       const jsDow = new Date().getDay();
 
-      const [inst, absenceList, invoiceList, todaySchedules, subRes, studentsRes] = await Promise.all([
-        fetchStrkInstitutionById(institutionId),
-        fetchAbsencesByInstitution(institutionId),
-        fetchInvoicesByInstitution(institutionId).catch(() => [] as StrkInvoice[]),
-        fetchSchedulesByInstitution(institutionId, jsDow),
-        apiClient
-          .get<{ subscription: { status: string } | null }>('/subscriptions/current')
-          .catch(() => ({ subscription: null })),
-        apiClient
-          .get<{ genderHeadcount?: { female: number; male: number; unknown: number; total: number } }>(
-            '/students'
-          )
-          .catch(() => ({ genderHeadcount: undefined })),
-        loadUsersByInstitution(institutionId),
-      ]);
+      const [inst, absenceList, invoiceList, todaySchedules, subRes, studentsRes, admissionsRes] =
+        await Promise.all([
+          fetchStrkInstitutionById(institutionId),
+          fetchAbsencesByInstitution(institutionId),
+          fetchInvoicesByInstitution(institutionId).catch(() => [] as StrkInvoice[]),
+          fetchSchedulesByInstitution(institutionId, jsDow),
+          apiClient
+            .get<{ subscription: { status: string } | null }>('/subscriptions/current')
+            .catch(() => ({ subscription: null })),
+          apiClient
+            .get<{ genderHeadcount?: { female: number; male: number; unknown: number; total: number } }>(
+              '/students'
+            )
+            .catch(() => ({ genderHeadcount: undefined })),
+          apiClient
+            .get<{
+              applications: Array<{
+                id: string;
+                studentFirstName: string;
+                studentLastName: string;
+                contactEmail: string;
+                submittedAt: string | null;
+              }>;
+            }>(`/admissions?institutionId=${encodeURIComponent(institutionId)}&status=submitted`)
+            .catch(() => ({ applications: [] })),
+          loadUsersByInstitution(institutionId),
+        ]);
 
       if (reqId !== requestIdRef.current) return;
 
@@ -112,6 +133,7 @@ export function useEstablishmentDashboard() {
       setSubscriptionStatus(subRes.subscription?.status ?? null);
       setAbsences(absenceList);
       setInvoices(invoiceList);
+      setPendingAdmissions(admissionsRes.applications ?? []);
       setGenderHeadcount(
         studentsRes.genderHeadcount ?? { female: 0, male: 0, unknown: 0, total: 0 }
       );
@@ -244,14 +266,31 @@ export function useEstablishmentDashboard() {
         createdAt: inv.issued_at,
       }));
 
-    return [...fromAbsences, ...fromPayments]
+    const fromAdmissions: DashboardAlert[] = pendingAdmissions.slice(0, 8).map((app) => ({
+      id: `adm-${app.id}`,
+      studentName: `${app.studentFirstName} ${app.studentLastName}`.trim() || 'Candidat',
+      classLabel: app.contactEmail || '',
+      kind: 'admission' as const,
+      label: 'Préinscription à traiter',
+      href: '/admissions/admin',
+      createdAt: app.submittedAt || new Date().toISOString(),
+    }));
+
+    return [...fromAdmissions, ...fromAbsences, ...fromPayments]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 12);
-  }, [absences, invoices, studentNameById]);
+  }, [absences, invoices, studentNameById, pendingAdmissions]);
 
-  const priorityCount = alerts.filter((a) => a.kind === 'absence' || a.kind === 'payment').length;
+  const priorityCount = alerts.filter(
+    (a) => a.kind === 'absence' || a.kind === 'payment' || a.kind === 'admission'
+  ).length;
+  const admissionsPendingCount = pendingAdmissions.length;
   const isEmpty =
-    studentCount === 0 && absences.length === 0 && invoices.length === 0 && agenda.length === 0;
+    studentCount === 0 &&
+    absences.length === 0 &&
+    invoices.length === 0 &&
+    agenda.length === 0 &&
+    admissionsPendingCount === 0;
 
   const tenantStatus: TenantOpsStatus = {
     frozen,
@@ -282,6 +321,7 @@ export function useEstablishmentDashboard() {
     alerts,
     alertCount: alerts.length,
     priorityCount: Math.min(priorityCount, alerts.length),
+    admissionsPendingCount,
     studentsDelta: 0,
     tenantStatus,
   };

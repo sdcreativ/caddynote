@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, UserCheck, Wallet, AlertTriangle, Snowflake, CreditCard } from 'lucide-react';
+import { Users, UserCheck, Wallet, AlertTriangle, Snowflake, CreditCard, School } from 'lucide-react';
 import { useEstablishmentDashboardContext } from '@/hooks/useEstablishmentDashboardContext';
 import { KpiCard } from './KpiCard';
 import { AttendanceWeekChart } from './AttendanceWeekChart';
@@ -98,6 +98,19 @@ export function EstablishmentOverview() {
         </Alert>
       )}
 
+      {data.admissionsPendingCount > 0 && (
+        <Alert>
+          <School className="h-4 w-4" />
+          <AlertTitle>{t('overview.admissionsPendingTitle')}</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            <span>{t('overview.admissionsPendingBody', { count: data.admissionsPendingCount })}</span>
+            <Button asChild size="sm">
+              <Link to="/admissions/admin">{t('overview.openAdmissions')}</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {tenantStatus.isEmpty && !tenantStatus.frozen && (
         <EmptyState
           title={t('overview.emptyTitle')}
@@ -109,7 +122,7 @@ export function EstablishmentOverview() {
         />
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           title={t('overview.enrolledStudents')}
           value={String(data.studentCount)}
@@ -148,6 +161,18 @@ export function EstablishmentOverview() {
           hintTone="neutral"
           icon={<Wallet className="h-5 w-5" />}
           iconClassName="bg-violet-50 text-violet-600"
+        />
+        <KpiCard
+          title={t('overview.admissionsPending')}
+          value={String(data.admissionsPendingCount)}
+          hint={
+            data.admissionsPendingCount === 0
+              ? t('overview.noAdmissionsPending')
+              : t('overview.admissionsPendingHint')
+          }
+          hintTone={data.admissionsPendingCount > 0 ? 'alert' : 'neutral'}
+          icon={<School className="h-5 w-5" />}
+          iconClassName="bg-sky-50 text-sky-600"
         />
         <KpiCard
           title={t('overview.alertsToHandle')}

@@ -84,8 +84,14 @@
     "graceTitle": "Abonnement en période de grâce",
     "graceBody": "Renouvelez bientôt pour éviter le passage en lecture seule.",
     "openSubscription": "Voir l’abonnement",
+    "admissionsPending": "Préinscriptions",
+    "admissionsPendingTitle": "Dossiers de préinscription à traiter",
+    "admissionsPendingBody": "{{count}} dossier(s) soumis en attente d’instruction.",
+    "admissionsPendingHint": "À traiter dans Admissions",
+    "noAdmissionsPending": "Aucun dossier soumis",
+    "openAdmissions": "Ouvrir les admissions",
     "emptyTitle": "Établissement à initialiser",
-    "emptyBody": "Pas encore d’élèves, d’absences ni de factures. Commencez par importer ou créer des élèves.",
+    "emptyBody": "Pas encore d’élèves, d’absences ni de factures. Les préinscriptions en ligne apparaissent aussi ici une fois soumises.",
     "emptyAction": "Gérer les élèves",
     "loadErrorTitle": "Tableau de bord indisponible",
     "retry": "Réessayer"
@@ -106,7 +112,7 @@
     "recent": "Alertes récentes",
     "seeAll": "Tout voir",
     "emptyTitle": "Aucune alerte",
-    "emptyBody": "Les absences et retards à traiter apparaîtront ici."
+    "emptyBody": "Les préinscriptions, absences et paiements à traiter apparaîtront ici."
   },
   "agenda": {
     "today": "Aujourd'hui",
