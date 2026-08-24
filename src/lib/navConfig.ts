@@ -39,6 +39,7 @@ import {
   AlertTriangle,
   CalendarOff,
   ScrollText,
+  MoreHorizontal,
 } from 'lucide-react';
 import i18n from '@/i18n/config';
 
@@ -122,6 +123,150 @@ const ROLE_I18N: Record<string, string> = {
 
 export function roleLabel(role: string | null | undefined): string {
   return i18n.t(ROLE_I18N[role ?? ''] ?? 'roles.user', { ns: 'nav' });
+}
+
+/** Entrée de la barre du bas (mobile) — ≤ 5 slots. */
+export type MobileBottomNavItem =
+  | {
+      kind: 'link';
+      titleKey: string;
+      href: string;
+      icon: LucideIcon;
+    }
+  | {
+      kind: 'more';
+      titleKey: string;
+      icon: LucideIcon;
+    };
+
+/**
+ * Navigation mobile prioritaire par rôle.
+ * Retourne `null` si le rôle n’a pas encore de barre du bas dédiée.
+ */
+export function mobileBottomNavForRole(
+  role: string | null | undefined
+): MobileBottomNavItem[] | null {
+  switch (role) {
+    case 'teacher':
+    case 'head_teacher':
+      // Accueil · Présences · Notes · Messages · Plus (ouvre la sidebar)
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        {
+          kind: 'link',
+          titleKey: 'items.attendance',
+          href: '/teacher-attendance',
+          icon: ClipboardCheck,
+        },
+        { kind: 'link', titleKey: 'items.notes', href: '/grades', icon: GraduationCap },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'school_admin':
+      // Accueil · Élèves · Présences · Messages · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        {
+          kind: 'link',
+          titleKey: 'items.attendance',
+          href: '/attendance',
+          icon: ClipboardCheck,
+        },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'parent':
+      // Enfants · Finances · Calendrier · Messages · Plus (login → /my-children)
+      return [
+        { kind: 'link', titleKey: 'bottomNav.children', href: '/my-children', icon: Home },
+        {
+          kind: 'link',
+          titleKey: 'items.finance',
+          href: '/my-children?tab=finance',
+          icon: CreditCard,
+        },
+        { kind: 'link', titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'student':
+      // Accueil · Notes · Devoirs · Messages · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
+        { kind: 'link', titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
+        { kind: 'link', titleKey: 'items.assignments', href: '/assignments', icon: FileText },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'secretary':
+      // Accueil · Élèves · Présences · Messages · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        {
+          kind: 'link',
+          titleKey: 'items.attendance',
+          href: '/attendance',
+          icon: ClipboardCheck,
+        },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'supervisor':
+      // Accueil · Présences · Absences · Messages · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        {
+          kind: 'link',
+          titleKey: 'items.call',
+          href: '/attendance',
+          icon: ClipboardCheck,
+        },
+        {
+          kind: 'link',
+          titleKey: 'items.absences',
+          href: '/absences',
+          icon: AlertTriangle,
+        },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    default:
+      return null;
+  }
+}
+
+/** Indique si un chemin correspond à une entrée de nav (préfixe inclus). */
+export function isNavHrefActive(pathname: string, href: string, search = ''): boolean {
+  const [pathPart, queryPart] = href.split('?');
+  const base = pathPart;
+  const current = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+
+  if (queryPart) {
+    if (pathname !== base && !pathname.startsWith(`${base}/`)) return false;
+    const required = new URLSearchParams(queryPart);
+    for (const [key, value] of required.entries()) {
+      if (current.get(key) !== value) return false;
+    }
+    return true;
+  }
+
+  if (base === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+
+  // Espace parent : actif hors onglets finance / services (gérés par href avec ?tab=)
+  if (base === '/my-children') {
+    if (pathname !== '/my-children' && !pathname.startsWith('/my-children/')) return false;
+    const tab = current.get('tab');
+    if (tab === 'finance' || tab === 'services') return false;
+    return true;
+  }
+
+  // Hub Présences (appel) — distinct de /absences (justificatifs / suivi)
+  if (base === '/attendance') {
+    return pathname === '/attendance' || pathname.startsWith('/attendance/');
+  }
+  return pathname === base || pathname.startsWith(`${base}/`);
 }
 
 export function navSectionsForRole(role: string | null | undefined): NavSection[] {

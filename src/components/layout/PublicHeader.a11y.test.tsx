@@ -32,6 +32,17 @@ describe('PublicHeader (UX-004)', () => {
     expect(menuButton).toBeInTheDocument();
     expect(menuButton.tagName).toBe('BUTTON'); // focusable/activable au clavier nativement
   });
+
+  it('expose Se connecter hors menu sur mobile', () => {
+    const { getAllByRole } = render(
+      <MemoryRouter>
+        <PublicHeader />
+      </MemoryRouter>
+    );
+    const loginLinks = getAllByRole('link', { name: 'Se connecter' });
+    expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+    expect(loginLinks[0]).toHaveAttribute('href', '/sign');
+  });
 });
 
 describe('PublicFooter (UX-004)', () => {

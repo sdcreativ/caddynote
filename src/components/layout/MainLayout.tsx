@@ -4,6 +4,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { TwoFactorAuthDialog } from '@/components/settings/TwoFactorAuthDialog';
 import StrkNavbar from './StrkNavbar';
 import StrkSidebar from './StrkSidebar';
+import MobileBottomNav from './MobileBottomNav';
 import { OfflineBanner } from './OfflineBanner';
 import SubscriptionNotifications from '@/components/subscription/SubscriptionNotifications';
 import { Toaster } from '@/components/ui/toaster';
@@ -11,7 +12,8 @@ import { QuickActionsManager } from '@/components/quick-actions/QuickActionsMana
 import { RealtimeNotifications } from '@/components/notifications/RealtimeNotifications';
 import { EstablishmentDashboardProvider } from '@/hooks/useEstablishmentDashboardContext';
 import { useTranslation } from 'react-i18next';
-import { isSchoolShellRole } from '@/lib/navConfig';
+import { isSchoolShellRole, mobileBottomNavForRole } from '@/lib/navConfig';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -23,9 +25,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const isSchoolShell = isSchoolShellRole(user?.role);
+  const hasMobileBottomNav = Boolean(mobileBottomNavForRole(user?.role));
 
   const mfaPromptOpen = mfaSetupRequired;
   const toggleSidebar = () => setSidebarOpen((v) => !v);
+  /** « Plus » de la barre mobile : ouvre/ferme le menu latéral. */
+  const toggleMoreMenu = () => setSidebarOpen((v) => !v);
 
   useEffect(() => {
     const handleResize = () => {
@@ -65,7 +70,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-h-[calc(100vh-64px)] flex-1 px-4 pb-10 pt-6 sm:px-6 md:px-8 lg:px-10"
+          className={cn(
+            'min-h-[calc(100vh-64px)] flex-1 px-4 pt-6 sm:px-6 md:px-8 lg:px-10',
+            hasMobileBottomNav ? 'pb-28 lg:pb-10' : 'pb-10'
+          )}
         >
           <div className="mx-auto w-full max-w-[1400px]">
             {!isSchoolShell && (
@@ -85,6 +93,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           onEnabled={markMfaEnabled}
         />
       </div>
+
+      {hasMobileBottomNav && (
+        <div className="print-hidden">
+          <MobileBottomNav role={user.role} onOpenMore={toggleMoreMenu} />
+        </div>
+      )}
 
       <Toaster />
       <QuickActionsManager />

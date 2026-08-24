@@ -9,8 +9,8 @@ export function PublicFooter() {
 
   return (
     <footer className="relative z-10 mt-auto w-full bg-[#001A3D] text-white">
-      <div className="mx-auto max-w-6xl px-6 py-14 sm:px-8 lg:px-10 lg:py-16">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14 lg:px-10 lg:py-16">
+        <div className="grid gap-8 sm:gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <CaddyNoteLogo to="/" inverted size={32} className="[&_.font-display]:text-lg" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/80">

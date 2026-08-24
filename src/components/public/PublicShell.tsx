@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { PublicAmbient } from '@/components/public/PublicAmbient';
+import { PublicMobileCtaBar } from '@/components/public/PublicMobileCtaBar';
 import { cn } from '@/lib/utils';
 
 type PublicShellProps = {
@@ -25,10 +26,15 @@ export function PublicShell({ children, className, footer = true }: PublicShellP
         </a>
         <PublicAmbient />
         <PublicHeader />
-        <div id="main-content" tabIndex={-1} className="relative z-10 flex flex-1 flex-col outline-none">
+        <div
+          id="main-content"
+          tabIndex={-1}
+          className="relative z-10 flex flex-1 flex-col pb-24 outline-none lg:pb-0"
+        >
           {children}
         </div>
         {footer ? <PublicFooter /> : null}
+        <PublicMobileCtaBar />
       </div>
     </MotionConfig>
   );

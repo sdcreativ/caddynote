@@ -39,6 +39,12 @@
   },
   "advancedToggle": "Afficher les modules avancés",
   "advancedToggleHide": "Masquer les modules avancés",
+  "bottomNav": {
+    "label": "Navigation principale",
+    "home": "Accueil",
+    "more": "Plus",
+    "children": "Enfants"
+  },
   "items": {
     "overview": "Vue d'ensemble",
     "dashboard": "Tableau de bord",

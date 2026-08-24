@@ -12,12 +12,15 @@ import {
   UserCheck,
   AlertCircle,
   FileText,
-  GraduationCap,
-  BookOpen,
   Shield,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { EstablishmentOverview } from '@/components/dashboard/establishment/EstablishmentOverview';
+import TeacherDashboardHome from '@/components/dashboard/TeacherDashboardHome';
+import ParentDashboardHome from '@/components/dashboard/ParentDashboardHome';
+import StudentDashboardHome from '@/components/dashboard/StudentDashboardHome';
+import SecretaryDashboardHome from '@/components/dashboard/SecretaryDashboardHome';
+import SupervisorDashboardHome from '@/components/dashboard/SupervisorDashboardHome';
 import { StrkAnalyticsService, type DashboardMetrics } from '@/services/strkAnalyticsService';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { fetchGradesByStudent } from '@/services/strkGradeService';
@@ -202,6 +205,65 @@ const Dashboard = () => {
     return <EstablishmentOverview />;
   }
 
+  if (user?.role === 'teacher' || user?.role === 'head_teacher') {
+    return (
+      <TeacherDashboardHome
+        userName={user.name?.split(' ')[0] ?? ''}
+        role={user.role}
+        metrics={metrics}
+        metricsState={metricsState}
+        totalStudents={totalStudents}
+      />
+    );
+  }
+
+  if (user?.role === 'parent') {
+    return (
+      <ParentDashboardHome
+        userName={user.name?.split(' ')[0] ?? ''}
+        childrenCount={guardian.children.length}
+        invoicesOpen={parentKpis?.invoicesOpen ?? null}
+        unpaidCents={parentKpis?.unpaidCents ?? null}
+        state={guardian.isLoading ? 'loading' : parentState}
+        loadError={guardian.error}
+      />
+    );
+  }
+
+  if (user?.role === 'student') {
+    return (
+      <StudentDashboardHome
+        userName={user.name?.split(' ')[0] ?? ''}
+        grades={studentKpis?.grades ?? null}
+        absences={studentKpis?.absences ?? null}
+        homework={studentKpis?.homework ?? null}
+        state={studentState}
+      />
+    );
+  }
+
+  if (user?.role === 'secretary') {
+    return (
+      <SecretaryDashboardHome
+        userName={user.name?.split(' ')[0] ?? ''}
+        metrics={metrics}
+        metricsState={metricsState}
+        totalStudents={totalStudents}
+      />
+    );
+  }
+
+  if (user?.role === 'supervisor') {
+    return (
+      <SupervisorDashboardHome
+        userName={user.name?.split(' ')[0] ?? ''}
+        metrics={metrics}
+        metricsState={metricsState}
+        totalStudents={totalStudents}
+      />
+    );
+  }
+
   const kpiValue = (state: LoadState, value: string | number | null | undefined, emptyLabel = '0') => {
     if (state === 'loading' || state === 'idle') return '…';
     if (state === 'error') return '—';
@@ -210,17 +272,13 @@ const Dashboard = () => {
   };
 
   const roleHint =
-    user?.role === 'student'
-      ? t('roleHints.student')
-      : user?.role === 'parent'
-        ? t('roleHints.parent')
-        : user?.role === 'accountant'
-          ? t('roleHints.accountant')
-          : user?.role === 'admin'
-            ? t('roleHints.admin')
-            : (STAFF_ROLES as readonly string[]).includes(user?.role || '')
-              ? t('roleHints.staff')
-              : null;
+    user?.role === 'accountant'
+      ? t('roleHints.accountant')
+      : user?.role === 'admin'
+        ? t('roleHints.admin')
+        : (STAFF_ROLES as readonly string[]).includes(user?.role || '')
+          ? t('roleHints.staff')
+          : null;
 
   return (
     <div className="space-y-6 py-6 animate-fade-in">
@@ -257,23 +315,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {user?.role === 'parent' && parentState === 'empty' && (
-        <EmptyState
-          title={t('empty.parentNoChildrenTitle')}
-          description={t('empty.parentNoChildrenBody')}
-          actionLabel={t('quickActions.myChildren')}
-          onAction={() => navigate('/my-children')}
-        />
-      )}
-
-      {user?.role === 'parent' && parentState === 'error' && (
-        <EmptyState title={t('empty.loadErrorTitle')} description={guardian.error || t('empty.loadErrorBody')} />
-      )}
-
-      {user?.role === 'student' && studentState === 'error' && (
-        <EmptyState title={t('empty.loadErrorTitle')} description={t('empty.loadErrorBody')} />
-      )}
-
       {user?.role === 'accountant' && accountantState === 'error' && (
         <EmptyState title={t('empty.loadErrorTitle')} description={t('empty.loadErrorBody')} />
       )}
@@ -289,11 +330,7 @@ const Dashboard = () => {
           />
         )}
 
-        {(user?.role === 'teacher' ||
-          user?.role === 'head_teacher' ||
-          user?.role === 'admin' ||
-          user?.role === 'secretary' ||
-          user?.role === 'supervisor') && (
+        {user?.role === 'admin' && (
           <>
             <StatCard
               title={t('stats.students')}
@@ -323,63 +360,6 @@ const Dashboard = () => {
               value={kpiValue(metricsState, metrics?.absences ?? '—', '—')}
               icon={<AlertCircle className="h-5 w-5" />}
               color="red"
-            />
-          </>
-        )}
-
-        {user?.role === 'student' && (
-          <>
-            <StatCard
-              title={t('stats.grades')}
-              value={kpiValue(studentState, studentKpis?.grades)}
-              description={studentState === 'empty' ? t('empty.studentNoGrades') : undefined}
-              icon={<GraduationCap className="h-5 w-5" />}
-            />
-            <StatCard
-              title={t('stats.absences30d')}
-              value={kpiValue(studentState, studentKpis?.absences)}
-              icon={<AlertCircle className="h-5 w-5" />}
-              color="red"
-            />
-            <StatCard
-              title={t('stats.homework')}
-              value={kpiValue(studentState, studentKpis?.homework)}
-              description={studentState === 'empty' ? t('empty.studentNoHomework') : undefined}
-              icon={<BookOpen className="h-5 w-5" />}
-            />
-          </>
-        )}
-
-        {user?.role === 'parent' && parentState !== 'empty' && parentState !== 'error' && (
-          <>
-            <StatCard
-              title={t('stats.children')}
-              value={guardian.isLoading ? '…' : guardian.children.length}
-              icon={<Users className="h-5 w-5" />}
-            />
-            <StatCard
-              title={t('stats.openInvoices')}
-              value={kpiValue(parentState, parentKpis?.invoicesOpen)}
-              description={
-                guardian.children.some((c) => c.canViewBilling)
-                  ? t('stats.allChildrenBilling', {
-                      defaultValue: 'Tous les enfants avec accès facturation',
-                    })
-                  : t('empty.parentNoBilling')
-              }
-              icon={<FileText className="h-5 w-5" />}
-            />
-            <StatCard
-              title={t('stats.remainingToPay')}
-              value={
-                parentState === 'loading' || parentState === 'idle'
-                  ? '…'
-                  : parentKpis
-                    ? formatCentsFr(parentKpis.unpaidCents)
-                    : '—'
-              }
-              icon={<Award className="h-5 w-5" />}
-              color="purple"
             />
           </>
         )}
@@ -434,84 +414,6 @@ const Dashboard = () => {
                 <span className="text-sm font-medium">{t('quickActions.institutions')}</span>
               </button>
             )}
-            {(user?.role === 'teacher' || user?.role === 'head_teacher') && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/teacher-attendance')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <UserCheck className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.takeAttendance')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/grades')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <GraduationCap className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.grades')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/teaching')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <BookOpen className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.teaching')}</span>
-                </button>
-              </>
-            )}
-            {user?.role === 'student' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/my-grades')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <GraduationCap className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.myGrades')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/assignments')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <BookOpen className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.homework')}</span>
-                </button>
-              </>
-            )}
-            {user?.role === 'parent' && (
-              <button
-                type="button"
-                onClick={() => navigate('/my-children')}
-                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-              >
-                <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                <span className="text-sm font-medium">{t('quickActions.myChildren')}</span>
-              </button>
-            )}
-            {user?.role === 'secretary' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/students')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.students')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/admissions/admin')}
-                  className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-                >
-                  <School className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.admissions')}</span>
-                </button>
-              </>
-            )}
             {user?.role === 'accountant' && (
               <button
                 type="button"
@@ -520,16 +422,6 @@ const Dashboard = () => {
               >
                 <FileText className="mx-auto mb-2 h-6 w-6 text-blue-600" />
                 <span className="text-sm font-medium">{t('quickActions.finance')}</span>
-              </button>
-            )}
-            {user?.role === 'supervisor' && (
-              <button
-                type="button"
-                onClick={() => navigate('/absences')}
-                className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
-              >
-                <AlertCircle className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                <span className="text-sm font-medium">{t('quickActions.absences')}</span>
               </button>
             )}
             <button

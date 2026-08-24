@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,6 @@ import {
   fetchMyAdmissionApplications,
   type AdmissionApplication,
 } from '@/services/strkAdmissionService';
-import { Link } from 'react-router-dom';
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
   father: 'Père',
@@ -55,13 +54,8 @@ type ParentServicesChild = {
 
 const MyChildrenPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const initialTab =
-    searchParams.get('tab') === 'finance'
-      ? 'finance'
-      : searchParams.get('tab') === 'services'
-        ? 'services'
-        : undefined;
   const { children, isLoading, selectedChildId, selectedChild, setSelectedChildId } = useGuardianChildren();
   const { absences, loadAbsencesByStudent, isLoading: absencesLoading } = useStrkAbsences();
   const [gradeSummary, setGradeSummary] = useState<StudentGradeSummary | null>(null);
@@ -77,6 +71,32 @@ const MyChildrenPage = () => {
   const [selectedAbsenceId, setSelectedAbsenceId] = useState<string | undefined>();
   const [justificationDialogOpen, setJustificationDialogOpen] = useState(false);
   const [myAdmissions, setMyAdmissions] = useState<AdmissionApplication[]>([]);
+  const [activeTab, setActiveTab] = useState('attendance');
+
+  const resolveDefaultTab = useCallback(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'finance' && selectedChild?.canViewBilling) return 'finance';
+    if (tabParam === 'services') return 'services';
+    if (selectedChild?.canViewAttendance) return 'attendance';
+    if (selectedChild?.canViewGrades) return 'grades';
+    return 'services';
+  }, [searchParams, selectedChild]);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    setActiveTab(resolveDefaultTab());
+  }, [selectedChild, resolveDefaultTab]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === 'finance') {
+      navigate('/my-children?tab=finance', { replace: true });
+    } else if (value === 'services') {
+      navigate('/my-children?tab=services', { replace: true });
+    } else if (searchParams.get('tab')) {
+      navigate('/my-children', { replace: true });
+    }
+  };
 
   useEffect(() => {
     fetchMyAdmissionApplications()
@@ -254,7 +274,7 @@ const MyChildrenPage = () => {
   }
 
   return (
-    <div className="space-y-6 py-6 animate-fade-in">
+    <div className="space-y-5 py-4 animate-fade-in md:space-y-6 md:py-6">
       {myAdmissions.length > 0 && (
         <Card>
           <CardHeader>
@@ -276,10 +296,12 @@ const MyChildrenPage = () => {
           </CardContent>
         </Card>
       )}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Mes enfants</h1>
-          <p className="text-gray-500 mt-1">Suivez la présence et les résultats de vos enfants</p>
+          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight md:text-3xl">Mes enfants</h1>
+          <p className="mt-1 text-base text-slate-600 md:text-base md:text-slate-500">
+            Suivez la présence et les résultats de vos enfants
+          </p>
         </div>
 
         {children.length > 1 && (
@@ -301,48 +323,45 @@ const MyChildrenPage = () => {
       {selectedChild && (
         <>
           <Card>
-            <CardContent className="p-4 flex flex-wrap items-center gap-3">
+            <CardContent className="flex flex-wrap items-center gap-3 p-4">
               <div className="rounded-full bg-blue-100 p-3">
                 <GraduationCap className="h-6 w-6 text-blue-600" />
               </div>
-              <div className="flex-1 min-w-[180px]">
-                <p className="font-semibold">{selectedChild.firstName} {selectedChild.lastName}</p>
+              <div className="min-w-[180px] flex-1">
+                <p className="font-semibold">
+                  {selectedChild.firstName} {selectedChild.lastName}
+                </p>
                 <p className="text-sm text-gray-500">{selectedChild.className || 'Classe non assignée'}</p>
               </div>
-              <Badge variant="secondary">{RELATIONSHIP_LABELS[selectedChild.relationship] || selectedChild.relationship}</Badge>
+              <Badge variant="secondary">
+                {RELATIONSHIP_LABELS[selectedChild.relationship] || selectedChild.relationship}
+              </Badge>
               {selectedChild.isPrimaryContact && (
                 <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Contact principal</Badge>
               )}
             </CardContent>
           </Card>
 
-          <Tabs
-            defaultValue={
-              initialTab === 'finance' && selectedChild.canViewBilling
-                ? 'finance'
-                : initialTab === 'services'
-                  ? 'services'
-                  : selectedChild.canViewAttendance
-                    ? 'attendance'
-                    : 'grades'
-            }
-            className="w-full"
-          >
-            <TabsList>
-              <TabsTrigger value="attendance" disabled={!selectedChild.canViewAttendance}>
-                Absences
-              </TabsTrigger>
-              <TabsTrigger value="grades" disabled={!selectedChild.canViewGrades}>
-                Notes
-              </TabsTrigger>
-              <TabsTrigger value="health" disabled={!selectedChild.canViewHealth}>
-                Santé
-              </TabsTrigger>
-              <TabsTrigger value="finance" disabled={!selectedChild.canViewBilling}>
-                Finances
-              </TabsTrigger>
-              <TabsTrigger value="services">Services</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <div className="-mx-1 overflow-x-auto pb-1">
+              <TabsList className="inline-flex h-auto min-w-full w-max justify-start gap-1.5 p-1.5 sm:min-w-0 sm:w-full">
+                <TabsTrigger value="attendance" disabled={!selectedChild.canViewAttendance} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
+                  Absences
+                </TabsTrigger>
+                <TabsTrigger value="grades" disabled={!selectedChild.canViewGrades} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
+                  Notes
+                </TabsTrigger>
+                <TabsTrigger value="health" disabled={!selectedChild.canViewHealth} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
+                  Santé
+                </TabsTrigger>
+                <TabsTrigger value="finance" disabled={!selectedChild.canViewBilling} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
+                  Finances
+                </TabsTrigger>
+                <TabsTrigger value="services" className="shrink-0 px-4 py-2.5 text-sm font-semibold">
+                  Services
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="attendance" className="space-y-4 pt-4">
               {!selectedChild.canViewAttendance ? (

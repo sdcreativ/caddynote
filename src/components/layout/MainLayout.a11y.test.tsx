@@ -40,6 +40,7 @@ vi.mock('@/components/settings/TwoFactorAuthDialog', () => ({
 vi.mock('@/components/ui/toaster', () => ({ Toaster: () => null }));
 vi.mock('./StrkNavbar', () => ({ default: () => <div>navbar</div> }));
 vi.mock('./StrkSidebar', () => ({ default: () => <nav aria-label="sidebar">sidebar</nav> }));
+vi.mock('./MobileBottomNav', () => ({ default: () => null }));
 vi.mock('./OfflineBanner', () => ({ OfflineBanner: () => null }));
 
 import MainLayout from './MainLayout';

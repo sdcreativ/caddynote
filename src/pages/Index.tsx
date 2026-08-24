@@ -187,14 +187,14 @@ const Index = () => {
       <PresentationVideoModal open={videoOpen} onOpenChange={setVideoOpen} />
       <main className="flex-1">
         {/* 1. Hero — maquette header/hero */}
-        <section className="relative isolate overflow-hidden px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16">
+        <section className="relative isolate overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-16">
           <div className="pointer-events-none absolute inset-0" aria-hidden>
             <div className="absolute -left-24 top-0 h-80 w-80 rounded-full bg-[#1D70D8]/12 blur-3xl" />
             <div className="absolute right-[-5%] top-20 h-72 w-72 rounded-full bg-pink-200/30 blur-3xl" />
             <div className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-sky-200/35 blur-3xl" />
           </div>
 
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-10">
+          <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-10 lg:gap-y-12">
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -205,7 +205,7 @@ const Index = () => {
                 {t('hero.badge')}
               </p>
 
-              <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-[#0B1F3A] sm:text-5xl lg:text-[3.4rem] lg:leading-[1.08]">
+              <h1 className="mt-4 font-display text-[2.1rem] font-bold leading-[1.15] tracking-tight text-[#0B1F3A] sm:mt-5 sm:text-5xl sm:leading-tight lg:text-[3.4rem] lg:leading-[1.08]">
                 {t('hero.titleLine1')}
                 <br />
                 <span className="bg-gradient-to-r from-[#1D70D8] to-[#7C3AED] bg-clip-text text-transparent">
@@ -216,15 +216,15 @@ const Index = () => {
                 </span>
               </h1>
 
-              <p className="mt-5 max-w-lg text-lg leading-relaxed text-slate-600">
+              <p className="mt-4 max-w-lg text-[1.05rem] leading-relaxed text-slate-600 sm:mt-5 sm:text-lg">
                 {t('hero.subtitle')}
               </p>
 
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-4">
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 rounded-full bg-[#1D70D8] px-6 text-base font-semibold text-white hover:bg-[#185CB4]"
+                  className="h-12 w-full rounded-full bg-[#1D70D8] px-6 text-base font-semibold text-white hover:bg-[#185CB4] sm:w-auto"
                 >
                   <Link to="/contact">
                     {t('hero.ctaStart')}
@@ -234,7 +234,7 @@ const Index = () => {
                 <button
                   type="button"
                   onClick={() => setVideoOpen(true)}
-                  className="inline-flex items-center gap-2.5 text-sm font-semibold text-slate-800 transition hover:text-[#1D70D8]"
+                  className="inline-flex h-11 items-center justify-center gap-2.5 text-sm font-semibold text-slate-800 transition hover:text-[#1D70D8] sm:h-auto sm:justify-start"
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E8F1FF] text-[#1D70D8] shadow-[0_0_0_4px_rgba(29,112,216,0.12)] transition group-hover:scale-105">
                     <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
@@ -243,14 +243,14 @@ const Index = () => {
                 </button>
               </div>
 
-              <ul className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-7">
+              <ul className="mt-7 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-x-7 sm:gap-y-3">
                 {[
                   { icon: CheckCircle2, label: t('hero.trustSetup') },
                   { icon: Shield, label: t('hero.trustSecure') },
                   { icon: Landmark, label: t('hero.trustMoney') },
                 ].map((item) => (
                   <li key={item.label} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <item.icon className="h-4 w-4 text-emerald-500" aria-hidden />
+                    <item.icon className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
                     {item.label}
                   </li>
                 ))}
@@ -359,7 +359,7 @@ const Index = () => {
             </FadeIn>
 
             <div
-              className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-3"
+              className="-mx-4 mt-10 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 pb-1 sm:mx-auto sm:mt-10 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
               role="tablist"
               aria-label={t('roles.tablist')}
             >
@@ -373,7 +373,7 @@ const Index = () => {
                     aria-selected={active}
                     onClick={() => setRole(tab.id)}
                     className={cn(
-                      'inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors',
+                      'inline-flex shrink-0 snap-start items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors',
                       active
                         ? 'border-transparent bg-[#1D70D8] text-white shadow-[0_12px_32px_-8px_rgba(29,112,216,0.65)]'
                         : 'border-white/25 bg-transparent text-white/90 hover:border-white/45 hover:bg-white/5'
@@ -394,7 +394,7 @@ const Index = () => {
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="mt-10 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-[#132A4A] via-[#0F2340] to-[#0B1F3A]"
             >
-              <div className="grid items-center gap-10 p-8 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:p-12">
+              <div className="grid items-center gap-8 p-6 sm:gap-10 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:p-12">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7EB6FF]">
                     {t(`roles.${activeRole.id}.label`)}
@@ -509,7 +509,7 @@ const Index = () => {
 
         {/* 4. Terrain — maquette offline / mobile */}
         <section className="bg-[#F4F6F9] px-4 py-16 sm:px-6 sm:py-20">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 rounded-[2rem] bg-white px-6 py-12 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.18)] sm:px-10 lg:grid-cols-2 lg:gap-16 lg:px-14 lg:py-16">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 rounded-[1.5rem] bg-white px-5 py-10 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.18)] sm:gap-12 sm:rounded-[2rem] sm:px-10 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-14 lg:py-16">
             <FadeIn>
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#05335C]">
                 {t('field.eyebrow')}
@@ -635,17 +635,17 @@ const Index = () => {
               {t('cta.body')}
             </p>
 
-            <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
+            <div className="mt-9 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-10">
               <Link
                 to="/contact?subject=Demande%20de%20d%C3%A9monstration"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-[#09275D] transition hover:bg-white/95"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-[#09275D] transition hover:bg-white/95 sm:w-auto"
               >
                 {t('cta.demo')}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link
                 to="/sign"
-                className="text-[15px] font-semibold text-white transition hover:text-white/85"
+                className="inline-flex h-11 items-center justify-center text-[15px] font-semibold text-white transition hover:text-white/85"
               >
                 {t('cta.explore')}
               </Link>

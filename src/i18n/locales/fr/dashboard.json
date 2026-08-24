@@ -47,6 +47,7 @@
     "grades": "Notes",
     "availability": "Disponibilités",
     "teaching": "Mes cours",
+    "calendar": "Calendrier",
     "myGrades": "Mes notes",
     "homework": "Devoirs",
     "myChildren": "Mes enfants",
@@ -54,7 +55,34 @@
     "admissions": "Admissions",
     "finance": "Finances",
     "absences": "Absences",
-    "messages": "Messages"
+    "attendance": "Présences",
+    "messages": "Messages",
+    "services": "Services",
+    "documents": "Documents",
+    "followUp": "Suivi"
+  },
+  "teacherMobile": {
+    "primaryCtaHint": "Action principale du jour"
+  },
+  "directionMobile": {
+    "primaryCta": "Gérer les élèves",
+    "primaryCtaHint": "Point d’entrée principal de la direction"
+  },
+  "parentMobile": {
+    "primaryCta": "Voir mes enfants",
+    "primaryCtaHint": "Suivi famille, absences et paiements"
+  },
+  "studentMobile": {
+    "primaryCta": "Mes notes",
+    "primaryCtaHint": "Consulter vos résultats scolaires"
+  },
+  "secretaryMobile": {
+    "primaryCta": "Gérer les élèves",
+    "primaryCtaHint": "Point d’entrée principal du secrétariat"
+  },
+  "supervisorMobile": {
+    "primaryCta": "Gérer les absences",
+    "primaryCtaHint": "Suivi des absences et justificatifs"
   },
   "statCard": {
     "vsLastMonth": "par rapport au mois dernier"

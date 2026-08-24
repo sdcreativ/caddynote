@@ -118,8 +118,9 @@ export function PublicHeader() {
       {/* Annonce */}
       <div className="text-white" style={{ backgroundColor: ANNOUNCE_BG }}>
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 px-4 py-2 text-center text-xs sm:flex-row sm:gap-5 sm:px-6 sm:text-[13px]">
-          <p className="font-medium text-white/90">
-            {t('announce')}
+          <p className="line-clamp-2 font-medium text-white/90 sm:line-clamp-none">
+            <span className="sm:hidden">{t('announceShort')}</span>
+            <span className="hidden sm:inline">{t('announce')}</span>
           </p>
           <Link
             to="/contact?subject=Demande%20de%20pr%C3%A9sentation"
@@ -172,7 +173,7 @@ export function PublicHeader() {
               to="/sign"
               className={({ isActive }) =>
                 cn(
-                  'hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold transition sm:inline-flex',
+                  'inline-flex h-10 items-center rounded-full px-3 text-sm font-semibold transition sm:px-3.5',
                   isActive
                     ? 'bg-slate-100 text-[#0B1F3A]'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-[#0B1F3A]'

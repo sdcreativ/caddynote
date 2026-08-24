@@ -113,19 +113,19 @@ export function ContactFormContent() {
         <div className="absolute bottom-20 left-1/3 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16 lg:py-20">
         <FadeIn className="mx-auto max-w-2xl text-center lg:mx-0 lg:max-w-3xl lg:text-left">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#05335C]">{t('eyebrow')}</p>
-          <h1 className="mt-3 font-display text-4xl font-bold tracking-tight text-[#0B1F3A] sm:text-5xl sm:leading-[1.1]">
+          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-[#0B1F3A] sm:text-5xl sm:leading-[1.1]">
             {t('title')}
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600 lg:mx-0">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:mt-5 sm:text-lg lg:mx-0">
             {t('subtitle')}
           </p>
         </FadeIn>
 
-        <div className="mt-14 grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-          <FadeIn className="space-y-4">
+        <div className="mt-10 grid items-start gap-8 sm:mt-14 sm:gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+          <FadeIn className="order-2 space-y-4 lg:order-1">
             {[
               {
                 icon: Mail,
@@ -184,10 +184,10 @@ export function ContactFormContent() {
             </div>
           </FadeIn>
 
-          <FadeIn delay={0.06}>
+          <FadeIn delay={0.06} className="order-1 lg:order-2">
             <section
               id="contact"
-              className="rounded-[1.5rem] border border-slate-200/80 bg-white p-6 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)] sm:p-8 lg:p-10"
+              className="rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)] sm:p-8 lg:p-10"
             >
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F1FF] text-[#1D70D8]">
