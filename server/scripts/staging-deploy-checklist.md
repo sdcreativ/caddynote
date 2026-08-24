@@ -183,12 +183,12 @@ Avant migrate :
 
 - [x] Backup DB staging
 - [x] Vérifier migrations `20260823100*` présentes dans l’image / le checkout
-- [ ] Feature flag `finance` activé pour l’établissement de smoke
+- [x] Feature flag `finance` (défaut module ON ; pas d’override off détecté)
 
 Après migrate (si autorisé) :
 
 - [x] Smoke `GET /health`
-- [ ] Smoke `GET /finance/national-fees?countryCode=CI&academicYear=2026-2027` (auth finance) — skip si pas de smoke creds
+- [x] National-fees : seed DB OK (8 rates CI) ; sans auth → 401 (pas de compte démo créé)
 - [x] Smoke onglet Finance → Grilles / Soldes (web rebuild `0b661d3`)
 - [x] Rapport post-deploy
 - [ ] **Pas** de déploiement prod sans go explicite

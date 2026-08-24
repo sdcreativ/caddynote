@@ -32,10 +32,15 @@ import {
   createFeePlanTemplate,
   deactivateFeePlanTemplate,
   fetchNationalFees,
+  fetchStudentFeeAssignments,
+  upsertStudentFeeAssignment,
+  patchStudentFeeAssignment,
+  generateInvoiceFromAssignment,
   type StrkFeeType,
   type StrkFeeSchedule,
   type StrkFeePlanTemplate,
   type StrkNationalFeeVersion,
+  type StrkStudentFeeAssignment,
   type FeeScheduleItemInput,
 } from '@/services/strkFinanceService';
 
@@ -73,6 +78,13 @@ export function FeeGridPanel({ students, userRole, onInvoiceCreated }: Props) {
   const [templates, setTemplates] = useState<StrkFeePlanTemplate[]>([]);
   const [national, setNational] = useState<StrkNationalFeeVersion | null>(null);
   const [nationalYear, setNationalYear] = useState('2026-2027');
+  const [assignments, setAssignments] = useState<StrkStudentFeeAssignment[]>([]);
+  const [assignStudentId, setAssignStudentId] = useState('');
+  const [assignScheduleId, setAssignScheduleId] = useState('');
+  const [assignYear, setAssignYear] = useState('2026-2027');
+  const [assignCycle, setAssignCycle] = useState('COLLEGE');
+  const [assignCanteen, setAssignCanteen] = useState(false);
+  const [showCreateAssign, setShowCreateAssign] = useState(false);
 
   const [showCreateSchedule, setShowCreateSchedule] = useState(false);
   const [scheduleName, setScheduleName] = useState('');
@@ -121,14 +133,16 @@ export function FeeGridPanel({ students, userRole, onInvoiceCreated }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [types, scheds, tmpls] = await Promise.all([
+      const [types, scheds, tmpls, assigns] = await Promise.all([
         fetchFeeTypes(),
         fetchFeeSchedules(),
         fetchFeePlanTemplates().catch(() => [] as StrkFeePlanTemplate[]),
+        fetchStudentFeeAssignments().catch(() => [] as StrkStudentFeeAssignment[]),
       ]);
       setFeeTypes(types);
       setSchedules(scheds);
       setTemplates(tmpls);
+      setAssignments(assigns);
     } catch (e) {
       toast({
         title: t('toasts.loadImpossible'),
@@ -429,10 +443,232 @@ export function FeeGridPanel({ students, userRole, onInvoiceCreated }: Props) {
       <Tabs defaultValue="schedules">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="schedules">{t('grid.tabs.schedules')}</TabsTrigger>
+          <TabsTrigger value="assignments">{t('grid.tabs.assignments')}</TabsTrigger>
           <TabsTrigger value="types">{t('grid.tabs.types')}</TabsTrigger>
           <TabsTrigger value="templates">{t('grid.tabs.templates')}</TabsTrigger>
           <TabsTrigger value="national">{t('grid.tabs.national')}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="assignments" className="space-y-4">
+          <div className="flex justify-between gap-2">
+            <Button variant="outline" size="sm" onClick={() => void load()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('reconciliation.refresh')}
+            </Button>
+            <Button onClick={() => setShowCreateAssign(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('grid.newAssignment')}
+            </Button>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('grid.assignmentsTitle')}</CardTitle>
+              <CardDescription>{t('grid.assignmentsHint')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {assignments.length === 0 ? (
+                <EmptyState
+                  title={t('grid.emptyAssignmentsTitle')}
+                  description={t('grid.emptyAssignmentsBody')}
+                  actionLabel={t('grid.newAssignment')}
+                  onAction={() => setShowCreateAssign(true)}
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('grid.student')}</TableHead>
+                      <TableHead>{t('grid.year')}</TableHead>
+                      <TableHead>{t('grid.name')}</TableHead>
+                      <TableHead>{t('grid.cycle')}</TableHead>
+                      <TableHead>{t('grid.options')}</TableHead>
+                      <TableHead>{t('grid.statusLabel')}</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignments.map((a) => {
+                      const name = a.student?.profile
+                        ? `${a.student.profile.firstName ?? ''} ${a.student.profile.lastName ?? ''}`.trim()
+                        : a.studentId.slice(0, 8);
+                      const opts = Array.isArray(a.optionalFeeTypeCodes)
+                        ? (a.optionalFeeTypeCodes as string[])
+                        : [];
+                      return (
+                        <TableRow key={a.id}>
+                          <TableCell>{name || a.studentId.slice(0, 8)}</TableCell>
+                          <TableCell>{a.academicYear}</TableCell>
+                          <TableCell>
+                            {a.feeSchedule?.name ?? a.feeScheduleId.slice(0, 8)}
+                            {a.feeSchedule ? ` v${a.feeSchedule.version}` : ''}
+                          </TableCell>
+                          <TableCell>{a.cycleCode ?? '—'}</TableCell>
+                          <TableCell>{opts.length ? opts.join(', ') : '—'}</TableCell>
+                          <TableCell>
+                            <Badge variant={a.status === 'active' ? 'default' : 'secondary'}>
+                              {a.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="space-x-2 text-right">
+                            {a.status === 'active' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    try {
+                                      await generateInvoiceFromAssignment(
+                                        a.id,
+                                        `assign-inv-${a.id}-${Date.now()}`
+                                      );
+                                      toast({ title: t('grid.toasts.invoiceFromAssignment') });
+                                      onInvoiceCreated?.();
+                                    } catch (e) {
+                                      toast({
+                                        title: t('grid.toasts.invoiceError'),
+                                        description: e instanceof ApiError ? e.message : tc('status.error'),
+                                        variant: 'destructive',
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {t('grid.generateInvoice')}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={async () => {
+                                    const ok = await confirm({
+                                      title: t('grid.endAssignmentTitle'),
+                                      description: t('grid.endAssignmentBody'),
+                                    });
+                                    if (!ok) return;
+                                    try {
+                                      await patchStudentFeeAssignment(a.id, { status: 'ended' });
+                                      toast({ title: t('grid.toasts.assignmentEnded') });
+                                      void load();
+                                    } catch (e) {
+                                      toast({
+                                        title: t('grid.toasts.assignmentError'),
+                                        description: e instanceof ApiError ? e.message : tc('status.error'),
+                                        variant: 'destructive',
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {t('grid.endAssignment')}
+                                </Button>
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog open={showCreateAssign} onOpenChange={setShowCreateAssign}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('grid.newAssignment')}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <Label>{t('grid.student')}</Label>
+                  <Select value={assignStudentId} onValueChange={setAssignStudentId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('grid.pickStudent')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{t('grid.name')}</Label>
+                  <Select value={assignScheduleId} onValueChange={setAssignScheduleId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('grid.pickSchedule')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {schedules
+                        .filter((s) => s.status === 'published')
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} ({s.academicYear} v{s.version})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{t('grid.year')}</Label>
+                  <Input value={assignYear} onChange={(e) => setAssignYear(e.target.value)} />
+                </div>
+                <div>
+                  <Label>{t('grid.cycle')}</Label>
+                  <Select value={assignCycle} onValueChange={setAssignCycle}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CYCLES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {t(`grid.cycles.${c}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={assignCanteen}
+                    onCheckedChange={(v) => setAssignCanteen(v === true)}
+                    id="assign-canteen"
+                  />
+                  <Label htmlFor="assign-canteen">{t('grid.includeCanteen')}</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowCreateAssign(false)}>
+                  {tc('actions.cancel')}
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!assignStudentId || !assignScheduleId) return;
+                    try {
+                      await upsertStudentFeeAssignment({
+                        studentId: assignStudentId,
+                        feeScheduleId: assignScheduleId,
+                        academicYear: assignYear,
+                        cycleCode: assignCycle,
+                        optionalFeeTypeCodes: assignCanteen ? ['CANTEEN'] : [],
+                      });
+                      toast({ title: t('grid.toasts.assignmentSaved') });
+                      setShowCreateAssign(false);
+                      void load();
+                    } catch (e) {
+                      toast({
+                        title: t('grid.toasts.assignmentError'),
+                        description: e instanceof ApiError ? e.message : tc('status.error'),
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                >
+                  {tc('actions.save')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
 
         <TabsContent value="schedules" className="space-y-4">
           <div className="flex justify-between gap-2">

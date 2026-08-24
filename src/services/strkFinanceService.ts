@@ -619,3 +619,84 @@ export const formatInvoiceMoney = (invoice: StrkInvoice, amountCents: number): s
   const value = fromSchedule ? amountCents : amountCents / 100;
   return `${value.toLocaleString('fr-FR')} ${invoice.currency}`;
 };
+
+export interface StrkStudentFeeAssignment {
+  id: string;
+  institutionId: string;
+  studentId: string;
+  feeScheduleId: string;
+  academicYear: string;
+  cycleCode?: string | null;
+  gradeLevelId?: string | null;
+  optionalFeeTypeCodes: string[] | unknown;
+  status: string;
+  createdAt: string;
+  student?: {
+    id: string;
+    profile?: { firstName?: string | null; lastName?: string | null } | null;
+  };
+  feeSchedule?: {
+    id: string;
+    name: string;
+    version: number;
+    status: string;
+    academicYear: string;
+  };
+}
+
+export const fetchStudentFeeAssignments = async (params?: {
+  studentId?: string;
+  academicYear?: string;
+  status?: string;
+}): Promise<StrkStudentFeeAssignment[]> => {
+  const q = new URLSearchParams();
+  if (params?.studentId) q.set('studentId', params.studentId);
+  if (params?.academicYear) q.set('academicYear', params.academicYear);
+  if (params?.status) q.set('status', params.status);
+  const qs = q.toString();
+  const { assignments } = await apiClient.get<{ assignments: StrkStudentFeeAssignment[] }>(
+    `/finance/student-fee-assignments${qs ? `?${qs}` : ''}`
+  );
+  return assignments;
+};
+
+export const upsertStudentFeeAssignment = async (data: {
+  studentId: string;
+  feeScheduleId: string;
+  academicYear: string;
+  cycleCode?: string | null;
+  optionalFeeTypeCodes?: string[];
+}): Promise<StrkStudentFeeAssignment> => {
+  const { assignment } = await apiClient.post<{ assignment: StrkStudentFeeAssignment }>(
+    '/finance/student-fee-assignments',
+    data
+  );
+  return assignment;
+};
+
+export const patchStudentFeeAssignment = async (
+  id: string,
+  data: {
+    optionalFeeTypeCodes?: string[];
+    cycleCode?: string | null;
+    status?: 'active' | 'ended';
+  }
+): Promise<StrkStudentFeeAssignment> => {
+  const { assignment } = await apiClient.patch<{ assignment: StrkStudentFeeAssignment }>(
+    `/finance/student-fee-assignments/${id}`,
+    data
+  );
+  return assignment;
+};
+
+export const generateInvoiceFromAssignment = async (
+  assignmentId: string,
+  idempotencyKey?: string
+): Promise<StrkInvoice> => {
+  const { invoice } = await apiClient.post<{ invoice: ApiInvoice }>(
+    `/finance/student-fee-assignments/${assignmentId}/generate-invoice`,
+    {},
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined
+  );
+  return mapInvoice(invoice);
+};

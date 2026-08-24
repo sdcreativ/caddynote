@@ -973,16 +973,43 @@ admissionsRouter.post('/:id/enroll', requireRole(...SECRETARIAT_ROLES), async (r
       code: 'payment_required',
     });
   }
-  const result = await enrollApplication(application.id, req.auth!.sub);
+
+  const enrollBodySchema = z.object({
+    generateFeeInvoice: z.boolean().optional(),
+    optionalFeeTypeCodes: z.array(z.string()).optional(),
+    cycleCode: z.string().optional().nullable(),
+    feeScheduleId: z.string().uuid().optional(),
+  });
+  const feeParsed = enrollBodySchema.safeParse(req.body ?? {});
+  const feeOptions = feeParsed.success ? feeParsed.data : {};
+
+  const result = await enrollApplication(application.id, req.auth!.sub, feeOptions);
   await logAudit({
     institutionId: application.institutionId,
     actorId: req.auth!.sub,
     action: 'admission.enrolled',
     targetType: 'admission_application',
     targetId: application.id,
-    metadata: { studentId: result.studentId, studentNumber: result.studentNumber },
+    metadata: {
+      studentId: result.studentId,
+      studentNumber: result.studentNumber,
+      feeAssignmentId: result.feeAssignmentId ?? null,
+      feeInvoiceId: result.feeInvoiceId ?? null,
+      feeSkippedReason: result.feeSkippedReason ?? null,
+    },
     ipAddress: req.ip,
   });
+  if (result.feeSkippedReason === 'no_published_schedule') {
+    await logAudit({
+      institutionId: application.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.assignment.skipped_no_schedule',
+      targetType: 'student',
+      targetId: result.studentId,
+      metadata: { academicYear: application.academicYear, admissionId: application.id },
+      ipAddress: req.ip,
+    });
+  }
   await notifyAdmissionContact({
     to: application.contactEmail,
     studentFirstName: application.studentFirstName,

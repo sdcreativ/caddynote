@@ -365,6 +365,7 @@ model StrkInstitution {
   feeTypes                StrkFeeType[]
   feeSchedules            StrkFeeSchedule[]
   feePlanTemplates        StrkFeePlanTemplate[]
+  studentFeeAssignments   StrkStudentFeeAssignment[]
 
   @@map("strk_institutions")
 }
@@ -441,6 +442,7 @@ model StrkProfile {
   feeSchedulesValidated StrkFeeSchedule[]     @relation("FeeScheduleValidatedBy")
   feeSchedulesPublished StrkFeeSchedule[]     @relation("FeeSchedulePublishedBy")
   feePlanTemplatesCreated StrkFeePlanTemplate[] @relation("FeePlanTemplateCreatedBy")
+  studentFeeAssignmentsCreated StrkStudentFeeAssignment[] @relation("StudentFeeAssignmentCreatedBy")
 
   // Communication (chap. 17)
   communicationTemplatesCreated StrkMessageTemplate[]         @relation("MessageTemplateCreatedBy")
@@ -625,6 +627,7 @@ model StrkStudent {
   thresholdAlerts         StrkThresholdAlert[]
   assignmentReminders     StrkAssignmentReminder[]
   healthInfo              StrkStudentHealthInfo?
+  feeAssignments          StrkStudentFeeAssignment[]
 
   @@map("strk_students")
 }
@@ -1940,6 +1943,7 @@ model StrkGradeLevel {
   cycle              StrkEducationCycle     @relation(fields: [cycleId], references: [id], onDelete: Restrict)
   classes            StrkClass[]
   feeScheduleItems   StrkFeeScheduleItem[]
+  studentFeeAssignments StrkStudentFeeAssignment[]
 
   @@index([cycleId])
   @@map("strk_grade_levels")
@@ -2042,10 +2046,41 @@ model StrkFeeSchedule {
   planTemplates   StrkFeePlanTemplate[]
   invoices        StrkInvoice[]
   paymentPlans    StrkPaymentPlan[]
+  studentAssignments StrkStudentFeeAssignment[]
 
   @@index([institutionId, academicYear, status])
   @@index([campusId])
   @@map("strk_fee_schedules")
+}
+
+/// Affectation élève → grille publiée (+ options facultatives souscrites).
+model StrkStudentFeeAssignment {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId        String    @map("institution_id") @db.Uuid
+  studentId            String    @map("student_id") @db.Uuid
+  feeScheduleId        String    @map("fee_schedule_id") @db.Uuid
+  academicYear         String    @map("academic_year")
+  cycleCode            String?   @map("cycle_code")
+  gradeLevelId         String?   @map("grade_level_id") @db.Uuid
+  /// Codes types facultatifs souscrits (ex. CANTEEN) — JSON string[].
+  optionalFeeTypeCodes Json      @default("[]") @map("optional_fee_type_codes")
+  /// active | ended
+  status               String    @default("active")
+  createdBy            String    @map("created_by") @db.Uuid
+  endedAt              DateTime? @map("ended_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  institution StrkInstitution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student     StrkStudent     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeSchedule StrkFeeSchedule @relation(fields: [feeScheduleId], references: [id], onDelete: Restrict)
+  gradeLevel  StrkGradeLevel? @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
+  creator     StrkProfile     @relation("StudentFeeAssignmentCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([institutionId, academicYear, status])
+  @@index([studentId, status])
+  @@index([feeScheduleId])
+  @@map("strk_student_fee_assignments")
 }
 
 model StrkFeeScheduleItem {

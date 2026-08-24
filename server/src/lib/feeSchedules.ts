@@ -562,3 +562,262 @@ export async function createPaymentPlanFromTemplate(params: {
     });
   });
 }
+
+// --- Affectations élève → grille (Tranche A) ---------------------------------
+
+function parseOptionalCodes(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === 'string' && v.length > 0);
+}
+
+/** Résout un code cycle à partir d’un libellé admission / niveau libre. */
+export function resolveCycleCodeFromLabel(level?: string | null): string | null {
+  if (!level?.trim()) return null;
+  const up = level.trim().toUpperCase();
+  if (['PRESCHOOL', 'PRIMARY', 'COLLEGE', 'LYCEE'].includes(up)) return up;
+  const low = level.toLowerCase();
+  if (low.includes('préscol') || low.includes('prescol') || low.includes('matern')) return 'PRESCHOOL';
+  if (low.includes('prim')) return 'PRIMARY';
+  if (low.includes('coll')) return 'COLLEGE';
+  if (low.includes('lyc')) return 'LYCEE';
+  return null;
+}
+
+export async function findPublishedScheduleForYear(params: {
+  institutionId: string;
+  academicYear: string;
+  scheduleId?: string;
+}) {
+  if (params.scheduleId) {
+    const schedule = await prisma.strkFeeSchedule.findFirst({
+      where: {
+        id: params.scheduleId,
+        institutionId: params.institutionId,
+        status: 'published',
+      },
+    });
+    if (!schedule) throw new Error('SCHEDULE_NOT_PUBLISHED');
+    return schedule;
+  }
+  return prisma.strkFeeSchedule.findFirst({
+    where: {
+      institutionId: params.institutionId,
+      academicYear: params.academicYear,
+      status: 'published',
+    },
+    orderBy: { version: 'desc' },
+  });
+}
+
+export async function upsertStudentFeeAssignment(params: {
+  institutionId: string;
+  studentId: string;
+  feeScheduleId: string;
+  academicYear: string;
+  cycleCode?: string | null;
+  gradeLevelId?: string | null;
+  optionalFeeTypeCodes?: string[];
+  createdBy: string;
+}) {
+  const schedule = await prisma.strkFeeSchedule.findFirst({
+    where: { id: params.feeScheduleId, institutionId: params.institutionId },
+  });
+  if (!schedule) throw new Error('SCHEDULE_NOT_FOUND');
+  if (schedule.status !== 'published') throw new Error('SCHEDULE_NOT_PUBLISHED');
+
+  const student = await prisma.strkStudent.findFirst({
+    where: { id: params.studentId, institutionId: params.institutionId },
+  });
+  if (!student) throw new Error('STUDENT_NOT_FOUND');
+
+  const existing = await prisma.strkStudentFeeAssignment.findFirst({
+    where: {
+      studentId: params.studentId,
+      academicYear: params.academicYear,
+      status: 'active',
+    },
+  });
+
+  const optionalFeeTypeCodes = params.optionalFeeTypeCodes ?? [];
+
+  if (existing) {
+    return prisma.strkStudentFeeAssignment.update({
+      where: { id: existing.id },
+      data: {
+        feeScheduleId: params.feeScheduleId,
+        cycleCode: params.cycleCode ?? existing.cycleCode,
+        gradeLevelId: params.gradeLevelId === undefined ? existing.gradeLevelId : params.gradeLevelId,
+        optionalFeeTypeCodes,
+      },
+    });
+  }
+
+  return prisma.strkStudentFeeAssignment.create({
+    data: {
+      institutionId: params.institutionId,
+      studentId: params.studentId,
+      feeScheduleId: params.feeScheduleId,
+      academicYear: params.academicYear,
+      cycleCode: params.cycleCode ?? null,
+      gradeLevelId: params.gradeLevelId ?? null,
+      optionalFeeTypeCodes,
+      status: 'active',
+      createdBy: params.createdBy,
+    },
+  });
+}
+
+export async function endStudentFeeAssignment(params: {
+  assignmentId: string;
+  institutionId: string;
+}) {
+  const assignment = await prisma.strkStudentFeeAssignment.findFirst({
+    where: { id: params.assignmentId, institutionId: params.institutionId },
+  });
+  if (!assignment) throw new Error('ASSIGNMENT_NOT_FOUND');
+  if (assignment.status !== 'active') throw new Error('ASSIGNMENT_NOT_ACTIVE');
+  return prisma.strkStudentFeeAssignment.update({
+    where: { id: assignment.id },
+    data: { status: 'ended', endedAt: new Date() },
+  });
+}
+
+export async function updateStudentFeeAssignmentOptions(params: {
+  assignmentId: string;
+  institutionId: string;
+  optionalFeeTypeCodes?: string[];
+  cycleCode?: string | null;
+  gradeLevelId?: string | null;
+  status?: 'active' | 'ended';
+}) {
+  const assignment = await prisma.strkStudentFeeAssignment.findFirst({
+    where: { id: params.assignmentId, institutionId: params.institutionId },
+  });
+  if (!assignment) throw new Error('ASSIGNMENT_NOT_FOUND');
+
+  if (params.status === 'ended') {
+    return endStudentFeeAssignment({
+      assignmentId: params.assignmentId,
+      institutionId: params.institutionId,
+    });
+  }
+
+  if (assignment.status !== 'active') throw new Error('ASSIGNMENT_NOT_ACTIVE');
+
+  return prisma.strkStudentFeeAssignment.update({
+    where: { id: assignment.id },
+    data: {
+      optionalFeeTypeCodes:
+        params.optionalFeeTypeCodes !== undefined
+          ? params.optionalFeeTypeCodes
+          : undefined,
+      cycleCode: params.cycleCode === undefined ? undefined : params.cycleCode,
+      gradeLevelId: params.gradeLevelId === undefined ? undefined : params.gradeLevelId,
+    },
+  });
+}
+
+export async function issueInvoiceForAssignment(params: {
+  assignmentId: string;
+  institutionId: string;
+  createdBy: string;
+  dueDate?: Date;
+  adjustments?: Adjustment[];
+  includeNationalRegistration?: boolean;
+  countryCode?: string;
+}) {
+  const assignment = await prisma.strkStudentFeeAssignment.findFirst({
+    where: { id: params.assignmentId, institutionId: params.institutionId },
+  });
+  if (!assignment) throw new Error('ASSIGNMENT_NOT_FOUND');
+  if (assignment.status !== 'active') throw new Error('ASSIGNMENT_NOT_ACTIVE');
+
+  const institution = await prisma.strkInstitution.findUniqueOrThrow({
+    where: { id: params.institutionId },
+    select: { fundingSector: true },
+  });
+
+  const fundingSector = institution.fundingSector;
+  const includeNational =
+    params.includeNationalRegistration ??
+    (fundingSector === 'public' || fundingSector === 'private');
+
+  return issueInvoiceFromSchedule({
+    scheduleId: assignment.feeScheduleId,
+    institutionId: params.institutionId,
+    studentId: assignment.studentId,
+    createdBy: params.createdBy,
+    dueDate: params.dueDate,
+    cycleCode: assignment.cycleCode,
+    gradeLevelId: assignment.gradeLevelId,
+    optionalFeeTypeCodes: parseOptionalCodes(assignment.optionalFeeTypeCodes),
+    adjustments: params.adjustments,
+    includeNationalRegistration: includeNational,
+    fundingSector,
+    countryCode: params.countryCode ?? 'CI',
+  });
+}
+
+/**
+ * Après enroll admissions : crée l’affectation si grille publiée, facture si demandé.
+ * Ne fait jamais échouer l’inscription si aucune grille.
+ */
+export async function maybeAssignAndInvoiceAfterEnroll(params: {
+  institutionId: string;
+  studentId: string;
+  academicYear: string;
+  createdBy: string;
+  cycleCode?: string | null;
+  gradeLevelId?: string | null;
+  feeScheduleId?: string;
+  optionalFeeTypeCodes?: string[];
+  generateFeeInvoice?: boolean;
+}): Promise<{
+  assignmentId: string | null;
+  invoiceId: string | null;
+  skippedReason: string | null;
+}> {
+  const schedule = await findPublishedScheduleForYear({
+    institutionId: params.institutionId,
+    academicYear: params.academicYear,
+    scheduleId: params.feeScheduleId,
+  }).catch((err: unknown) => {
+    if (err instanceof Error && err.message === 'SCHEDULE_NOT_PUBLISHED') return null;
+    throw err;
+  });
+
+  if (!schedule) {
+    return { assignmentId: null, invoiceId: null, skippedReason: 'no_published_schedule' };
+  }
+
+  const assignment = await upsertStudentFeeAssignment({
+    institutionId: params.institutionId,
+    studentId: params.studentId,
+    feeScheduleId: schedule.id,
+    academicYear: params.academicYear,
+    cycleCode: params.cycleCode ?? null,
+    gradeLevelId: params.gradeLevelId ?? null,
+    optionalFeeTypeCodes: params.optionalFeeTypeCodes ?? [],
+    createdBy: params.createdBy,
+  });
+
+  const generate = params.generateFeeInvoice !== false;
+  if (!generate) {
+    return { assignmentId: assignment.id, invoiceId: null, skippedReason: 'invoice_disabled' };
+  }
+
+  try {
+    const invoice = await issueInvoiceForAssignment({
+      assignmentId: assignment.id,
+      institutionId: params.institutionId,
+      createdBy: params.createdBy,
+    });
+    return { assignmentId: assignment.id, invoiceId: invoice.id, skippedReason: null };
+  } catch (err) {
+    if (err instanceof Error && err.message === 'INVOICE_EMPTY') {
+      return { assignmentId: assignment.id, invoiceId: null, skippedReason: 'invoice_empty' };
+    }
+    throw err;
+  }
+}
+

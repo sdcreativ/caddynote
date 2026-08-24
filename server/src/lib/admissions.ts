@@ -5,6 +5,10 @@ import { generateTempPassword } from './tempPassword.js';
 import { sendAccountInvite } from './accountInvite.js';
 import { generateDocument } from '../routes/documents.routes.js';
 import type { StrkAdmissionStatus } from '@prisma/client';
+import {
+  maybeAssignAndInvoiceAfterEnroll,
+  resolveCycleCodeFromLabel,
+} from './feeSchedules.js';
 
 /**
  * Chap. 8.1/8.2 : préinscription publique et admission.
@@ -174,7 +178,17 @@ export interface EnrollResult {
   studentNumber: string;
   guardianAccounts: { email: string; created: boolean; tempPassword?: string }[];
   documentId: string;
+  feeAssignmentId?: string | null;
+  feeInvoiceId?: string | null;
+  feeSkippedReason?: string | null;
 }
+
+export type EnrollFeeOptions = {
+  generateFeeInvoice?: boolean;
+  optionalFeeTypeCodes?: string[];
+  cycleCode?: string | null;
+  feeScheduleId?: string;
+};
 
 /**
  * Finalise un dossier accepté : crée le compte élève (profil + extension
@@ -184,10 +198,14 @@ export interface EnrollResult {
  * `enrolled`, terminal. N'écrit rien tant que le dossier n'est pas dans un
  * état autorisant l'inscription (vérifié par l'appelant via
  * `ALLOWED_TRANSITIONS`).
+ *
+ * Tranche A : si une grille publiée existe pour l’année, crée une affectation
+ * et (par défaut) une facture — sans faire échouer l’enroll si aucune grille.
  */
 export const enrollApplication = async (
   applicationId: string,
-  performedBy: string
+  performedBy: string,
+  feeOptions?: EnrollFeeOptions
 ): Promise<EnrollResult> => {
   const application = await prisma.strkAdmissionApplication.findUniqueOrThrow({ where: { id: applicationId } });
 
@@ -231,9 +249,20 @@ export const enrollApplication = async (
   }
 
   let className: string | null = null;
+  let gradeLevelId: string | null = null;
+  let cycleFromGrade: string | null = null;
   if (application.classId) {
-    const klass = await prisma.strkClass.findUnique({ where: { id: application.classId }, select: { name: true } });
+    const klass = await prisma.strkClass.findUnique({
+      where: { id: application.classId },
+      select: {
+        name: true,
+        gradeLevelId: true,
+        gradeLevel: { select: { cycle: { select: { code: true } } } },
+      },
+    });
     className = klass?.name ?? null;
+    gradeLevelId = klass?.gradeLevelId ?? null;
+    cycleFromGrade = klass?.gradeLevel?.cycle?.code ?? null;
   }
   const document = await generateDocument({
     institutionId: application.institutionId,
@@ -253,5 +282,41 @@ export const enrollApplication = async (
     data: { status: 'enrolled', enrolledStudentId: studentProfile.id },
   });
 
-  return { studentId: studentProfile.id, studentNumber, guardianAccounts, documentId: document.id };
+  const cycleCode =
+    feeOptions?.cycleCode ??
+    cycleFromGrade ??
+    resolveCycleCodeFromLabel(application.level);
+
+  let feeAssignmentId: string | null = null;
+  let feeInvoiceId: string | null = null;
+  let feeSkippedReason: string | null = null;
+  try {
+    const fee = await maybeAssignAndInvoiceAfterEnroll({
+      institutionId: application.institutionId,
+      studentId: studentProfile.id,
+      academicYear: application.academicYear,
+      createdBy: performedBy,
+      cycleCode,
+      gradeLevelId,
+      feeScheduleId: feeOptions?.feeScheduleId,
+      optionalFeeTypeCodes: feeOptions?.optionalFeeTypeCodes ?? [],
+      generateFeeInvoice: feeOptions?.generateFeeInvoice,
+    });
+    feeAssignmentId = fee.assignmentId;
+    feeInvoiceId = fee.invoiceId;
+    feeSkippedReason = fee.skippedReason;
+  } catch {
+    // L’inscription reste valide même si la facturation grille échoue.
+    feeSkippedReason = 'fee_bridge_error';
+  }
+
+  return {
+    studentId: studentProfile.id,
+    studentNumber,
+    guardianAccounts,
+    documentId: document.id,
+    feeAssignmentId,
+    feeInvoiceId,
+    feeSkippedReason,
+  };
 };

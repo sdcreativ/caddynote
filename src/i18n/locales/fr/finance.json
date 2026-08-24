@@ -144,10 +144,24 @@
     "loading": "Chargement des grilles…",
     "tabs": {
       "schedules": "Grilles",
+      "assignments": "Affectations",
       "types": "Types de frais",
       "templates": "Modèles d’échéancier",
       "national": "Référentiel national"
     },
+    "assignmentsTitle": "Affectations élève → grille",
+    "assignmentsHint": "Lie un élève à une grille publiée et aux options facultatives souscrites (ex. cantine).",
+    "newAssignment": "Nouvelle affectation",
+    "emptyAssignmentsTitle": "Aucune affectation",
+    "emptyAssignmentsBody": "Affectez un élève à une grille publiée pour facturer (y compris à l’inscription).",
+    "student": "Élève",
+    "options": "Options",
+    "statusLabel": "Statut",
+    "pickStudent": "Choisir un élève",
+    "pickSchedule": "Choisir une grille publiée",
+    "endAssignment": "Clôturer",
+    "endAssignmentTitle": "Clôturer cette affectation ?",
+    "endAssignmentBody": "L’élève ne sera plus lié à cette grille pour de nouvelles factures.",
     "status": {
       "draft": "Brouillon",
       "validated": "Validée",
@@ -217,7 +231,12 @@
       "archived": "Grille archivée",
       "typeCreated": "Type de frais créé",
       "templateCreated": "Modèle créé",
-      "templateDeactivated": "Modèle désactivé"
+      "templateDeactivated": "Modèle désactivé",
+      "assignmentSaved": "Affectation enregistrée",
+      "assignmentEnded": "Affectation clôturée",
+      "assignmentError": "Affectation impossible",
+      "invoiceFromAssignment": "Facture générée depuis l’affectation",
+      "invoiceError": "Génération de facture impossible"
     }
   },
   "balances": {

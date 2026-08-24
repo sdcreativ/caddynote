@@ -23,6 +23,10 @@ import {
   createRevisedDraft,
   issueInvoiceFromSchedule,
   createPaymentPlanFromTemplate,
+  upsertStudentFeeAssignment,
+  updateStudentFeeAssignmentOptions,
+  endStudentFeeAssignment,
+  issueInvoiceForAssignment,
   type FeeScheduleItemInput,
 } from '../lib/feeSchedules.js';
 import type { Adjustment } from '../lib/feeScheduleEngine.js';
@@ -74,6 +78,9 @@ const mapError = (err: unknown): { status: number; error: string; code: string }
     INSTALLMENT_PERCENT_SUM: { status: 422, error: 'La somme des pourcentages doit être 100' },
     FEE_TYPE_NOT_FOUND: { status: 404, error: 'Type de frais introuvable' },
     FEE_TYPE_PLATFORM_READONLY: { status: 403, error: 'Le catalogue plateforme n’est pas modifiable' },
+    STUDENT_NOT_FOUND: { status: 404, error: 'Élève introuvable' },
+    ASSIGNMENT_NOT_FOUND: { status: 404, error: 'Affectation introuvable' },
+    ASSIGNMENT_NOT_ACTIVE: { status: 409, error: 'Affectation inactive' },
   };
   const mapped = table[code];
   if (!mapped) return null;
@@ -663,6 +670,181 @@ feeGridRouter.post(
         ipAddress: req.ip,
       });
       res.status(201).json({ plan });
+    } catch (err) {
+      const mapped = mapError(err);
+      if (mapped) return res.status(mapped.status).json({ error: mapped.error, code: mapped.code });
+      throw err;
+    }
+  }
+);
+
+// --- Affectations élève → grille (Tranche A) --------------------------------
+
+const assignmentCreateSchema = z.object({
+  studentId: z.string().uuid(),
+  feeScheduleId: z.string().uuid(),
+  academicYear: z.string().min(1),
+  cycleCode: z.string().optional().nullable(),
+  gradeLevelId: z.string().uuid().optional().nullable(),
+  optionalFeeTypeCodes: z.array(z.string()).optional(),
+});
+
+const assignmentPatchSchema = z.object({
+  optionalFeeTypeCodes: z.array(z.string()).optional(),
+  cycleCode: z.string().optional().nullable(),
+  gradeLevelId: z.string().uuid().optional().nullable(),
+  status: z.enum(['active', 'ended']).optional(),
+});
+
+feeGridRouter.get('/student-fee-assignments', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const tenant = requireTenant(req.auth!);
+  if ('error' in tenant) return res.status(400).json({ error: tenant.error });
+
+  const studentId = typeof req.query.studentId === 'string' ? req.query.studentId : undefined;
+  const academicYear = typeof req.query.academicYear === 'string' ? req.query.academicYear : undefined;
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+
+  const assignments = await prisma.strkStudentFeeAssignment.findMany({
+    where: {
+      institutionId: tenant.institutionId,
+      ...(studentId ? { studentId } : {}),
+      ...(academicYear ? { academicYear } : {}),
+      ...(status ? { status } : {}),
+    },
+    orderBy: [{ academicYear: 'desc' }, { createdAt: 'desc' }],
+    include: {
+      student: { select: { id: true, profile: { select: { firstName: true, lastName: true } } } },
+      feeSchedule: { select: { id: true, name: true, version: true, status: true, academicYear: true } },
+    },
+  });
+  res.json({ assignments });
+});
+
+feeGridRouter.post('/student-fee-assignments', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const tenant = requireTenant(req.auth!);
+  if ('error' in tenant) return res.status(400).json({ error: tenant.error });
+  const parsed = assignmentCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+
+  try {
+    const assignment = await upsertStudentFeeAssignment({
+      institutionId: tenant.institutionId,
+      studentId: parsed.data.studentId,
+      feeScheduleId: parsed.data.feeScheduleId,
+      academicYear: parsed.data.academicYear,
+      cycleCode: parsed.data.cycleCode,
+      gradeLevelId: parsed.data.gradeLevelId,
+      optionalFeeTypeCodes: parsed.data.optionalFeeTypeCodes,
+      createdBy: req.auth!.sub,
+    });
+    await logAudit({
+      institutionId: tenant.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.student_fee_assignment.upserted',
+      targetType: 'student_fee_assignment',
+      targetId: assignment.id,
+      metadata: {
+        studentId: assignment.studentId,
+        feeScheduleId: assignment.feeScheduleId,
+        academicYear: assignment.academicYear,
+      },
+      ipAddress: req.ip,
+    });
+    res.status(201).json({ assignment });
+  } catch (err) {
+    const mapped = mapError(err);
+    if (mapped) return res.status(mapped.status).json({ error: mapped.error, code: mapped.code });
+    throw err;
+  }
+});
+
+feeGridRouter.patch('/student-fee-assignments/:id', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const tenant = requireTenant(req.auth!);
+  if ('error' in tenant) return res.status(400).json({ error: tenant.error });
+  const parsed = assignmentPatchSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+
+  try {
+    const assignment =
+      parsed.data.status === 'ended' && Object.keys(parsed.data).length === 1
+        ? await endStudentFeeAssignment({
+            assignmentId: req.params.id,
+            institutionId: tenant.institutionId,
+          })
+        : await updateStudentFeeAssignmentOptions({
+            assignmentId: req.params.id,
+            institutionId: tenant.institutionId,
+            optionalFeeTypeCodes: parsed.data.optionalFeeTypeCodes,
+            cycleCode: parsed.data.cycleCode,
+            gradeLevelId: parsed.data.gradeLevelId,
+            status: parsed.data.status,
+          });
+    await logAudit({
+      institutionId: tenant.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.student_fee_assignment.updated',
+      targetType: 'student_fee_assignment',
+      targetId: assignment.id,
+      metadata: parsed.data,
+      ipAddress: req.ip,
+    });
+    res.json({ assignment });
+  } catch (err) {
+    const mapped = mapError(err);
+    if (mapped) return res.status(mapped.status).json({ error: mapped.error, code: mapped.code });
+    throw err;
+  }
+});
+
+feeGridRouter.post(
+  '/student-fee-assignments/:id/generate-invoice',
+  requireRole(...FINANCE_ROLES),
+  async (req, res) => {
+    const tenant = requireTenant(req.auth!);
+    if ('error' in tenant) return res.status(400).json({ error: tenant.error });
+
+    const idempotencyKey = readIdempotencyKey(req.header('Idempotency-Key'));
+    if (idempotencyKey) {
+      const prev = await findIdempotentAudit({
+        institutionId: tenant.institutionId,
+        action: 'finance.student_fee_assignment.invoice_generated',
+        idempotencyKey,
+      });
+      if (prev?.targetId) {
+        const invoice = await prisma.strkInvoice.findFirst({
+          where: { id: prev.targetId, institutionId: tenant.institutionId },
+          include: { lines: true },
+        });
+        if (invoice) {
+          return res.status(200).json({ invoice, idempotentReplay: true });
+        }
+      }
+    }
+
+    try {
+      const invoice = await issueInvoiceForAssignment({
+        assignmentId: req.params.id,
+        institutionId: tenant.institutionId,
+        createdBy: req.auth!.sub,
+      });
+      await logAudit({
+        institutionId: tenant.institutionId,
+        actorId: req.auth!.sub,
+        action: 'finance.student_fee_assignment.invoice_generated',
+        targetType: 'invoice',
+        targetId: invoice.id,
+        metadata: {
+          assignmentId: req.params.id,
+          totalCents: invoice.totalCents,
+          ...(idempotencyKey ? { idempotencyKey } : {}),
+        },
+        ipAddress: req.ip,
+      });
+      res.status(201).json({ invoice });
     } catch (err) {
       const mapped = mapError(err);
       if (mapped) return res.status(mapped.status).json({ error: mapped.error, code: mapped.code });
