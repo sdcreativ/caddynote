@@ -67,13 +67,19 @@ describe('navConfig (NFR-009)', () => {
       expect(hrefs).not.toContain('/teacher-assignments');
       expect(hrefs).not.toContain('/teacher-exercises');
       expect(hrefs).not.toContain('/teacher-availability');
-      expect(advanced?.items.map((i) => i.href)).toEqual(
+      const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
+      expect(advancedHrefs).toEqual(
         expect.arrayContaining([
           '/teacher-assignments',
           '/teacher-exercises',
-          '/teacher-availability',
+          '/follow-up',
         ])
       );
+      expect(advancedHrefs).not.toContain('/teacher-availability');
+      expect(advancedHrefs).not.toContain('/communications');
+      expect(advancedHrefs).not.toContain('/documents');
+      expect(advancedHrefs).not.toContain('/exports');
+      expect(advancedHrefs).not.toContain('/support');
     }
   });
 

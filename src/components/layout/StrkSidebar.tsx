@@ -289,9 +289,14 @@ function SchoolRoleNav({
   onNavigate: (href: string) => void;
   institutionName: string;
 }) {
+  const { user } = useStrkAuth();
   const { plan } = useSubscription();
   const dash = useEstablishmentDashboardContext();
-  const showProUpsell = !plan || /free|essai|trial|starter/i.test(plan.name || '') || plan.is_trial;
+  // Upsell abonnement : réservé à la direction (pas enseignant / vie scolaire).
+  const isDirection = user?.role === 'admin' || user?.role === 'school_admin';
+  const showProUpsell =
+    isDirection &&
+    (!plan || /free|essai|trial|starter/i.test(plan.name || '') || plan.is_trial);
   return (
     <RoleNavBody
       onNavigate={onNavigate}

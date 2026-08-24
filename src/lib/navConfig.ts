@@ -199,12 +199,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.assignments', href: '/teacher-assignments', icon: BookOpen },
             { titleKey: 'items.exercises', href: '/teacher-exercises', icon: PenTool },
-            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
             { titleKey: 'items.studentFollowUp', href: '/follow-up', icon: HeartHandshake },
-            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
-            { titleKey: 'items.documents', href: '/documents', icon: FileText },
-            { titleKey: 'items.exports', href: '/exports', icon: Download },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
       ];
@@ -331,7 +326,6 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           labelKey: 'sections.account',
           items: [
             { titleKey: 'items.profile', href: '/profile', icon: User },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
         },
