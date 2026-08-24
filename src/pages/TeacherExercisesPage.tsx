@@ -30,10 +30,33 @@ const TeacherExercisesPage = () => {
   const { user } = useStrkAuth();
   const { toast } = useToast();
   const { t } = useTranslation("exercises");
-  const { exercises, loading, createExercise, addQuestion, fetchExercises } = useExercises();
+  const { exercises, loading, createExercise, addQuestion, fetchExercises, publishExercise, updateExercise } = useExercises();
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  const handleTogglePublish = async (exercise: StrkExercise) => {
+    setPublishingId(exercise.id);
+    try {
+      if (exercise.is_published) {
+        await updateExercise(exercise.id, { is_published: false });
+        toast({ title: t("teacher.unpublishedSuccess") });
+      } else {
+        await publishExercise(exercise.id);
+        toast({ title: t("teacher.publishedSuccess") });
+      }
+    } catch (error) {
+      console.error("Erreur publication exercice:", error);
+      toast({
+        title: tCommon("status.error"),
+        description: t("teacher.publishError"),
+        variant: "destructive",
+      });
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   // Filtrer les exercices créés par l'enseignant
   const teacherExercises = exercises.filter(exercise => exercise.teacher_id === user?.id);
@@ -216,7 +239,12 @@ const TeacherExercisesPage = () => {
       <div className="grid gap-4">
         {filteredExercises.length > 0 ? (
           filteredExercises.map((exercise) => (
-            <ExerciseCard key={exercise.id} exercise={exercise} />
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              publishing={publishingId === exercise.id}
+              onTogglePublish={() => handleTogglePublish(exercise)}
+            />
           ))
         ) : (
           <Card>
@@ -254,9 +282,11 @@ const TeacherExercisesPage = () => {
 
 interface ExerciseCardProps {
   exercise: StrkExercise;
+  publishing?: boolean;
+  onTogglePublish: () => void;
 }
 
-const ExerciseCard = ({ exercise }: ExerciseCardProps) => {
+const ExerciseCard = ({ exercise, publishing = false, onTogglePublish }: ExerciseCardProps) => {
   const { t } = useTranslation("exercises");
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -346,12 +376,12 @@ const ExerciseCard = ({ exercise }: ExerciseCardProps) => {
               {t("teacher.results")}
             </Button>
             {!exercise.is_published ? (
-              <Button size="sm">
-                {t("teacher.publish")}
+              <Button size="sm" disabled={publishing} onClick={onTogglePublish}>
+                {publishing ? t("teacher.publishing") : t("teacher.publish")}
               </Button>
             ) : (
-              <Button variant="secondary" size="sm">
-                {t("teacher.unpublish")}
+              <Button variant="secondary" size="sm" disabled={publishing} onClick={onTogglePublish}>
+                {publishing ? t("teacher.unpublishing") : t("teacher.unpublish")}
               </Button>
             )}
           </div>

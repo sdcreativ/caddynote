@@ -53,6 +53,11 @@
     "created": "Créé le {{date}}",
     "results": "Voir les résultats",
     "publish": "Publier",
-    "unpublish": "Dépublier"
+    "publishing": "Publication…",
+    "unpublish": "Dépublier",
+    "unpublishing": "Dépublication…",
+    "publishedSuccess": "Exercice publié",
+    "unpublishedSuccess": "Exercice dépublié",
+    "publishError": "Impossible de modifier la publication. Réessayez."
   }
 }

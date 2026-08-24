@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Wand2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAIExerciseHelper } from "@/hooks/useAIExerciseHelper";
+import { ApiError } from "@/lib/apiClient";
 
 interface AIExerciseGeneratorProps {
   onExerciseGenerated: (
@@ -48,9 +49,13 @@ export const AIExerciseGenerator = ({ onExerciseGenerated }: AIExerciseGenerator
         description: `${result.questions?.length || 0} questions créées par l'IA`,
       });
     } catch (error) {
+      const description =
+        error instanceof ApiError && error.message
+          ? error.message
+          : "Impossible de générer l'exercice. Réessayez.";
       toast({
         title: "Erreur de génération",
-        description: "Impossible de générer l'exercice. Réessayez.",
+        description,
         variant: "destructive"
       });
     }

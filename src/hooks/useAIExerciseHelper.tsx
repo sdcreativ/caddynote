@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { apiClient, ApiError } from '@/lib/apiClient';
 
-// Remplace l'edge function Supabase `ai-exercise-helper` (OpenAI) par les
-// routes /exercises/ai/* du nouveau backend (Claude). Si l'IA n'est pas
-// configurée côté serveur (clé ANTHROPIC_API_KEY absente), ces routes
-// répondent 501 — les fallbacks ci-dessous reproduisent le comportement
-// gracieux du hook d'origine.
+// Routes /exercises/ai/* (Anthropic et/ou OpenAI). Sans clé → 501.
+// Flag établissement `exercises_ai` (opt-in) désactivé → 403.
 
 export const useAIExerciseHelper = () => {
   const [loading, setLoading] = useState(false);
