@@ -146,6 +146,7 @@ const CreateCourseDialog = ({
         return;
       }
 
+      const publishedToCalendar = Boolean(formData.schedule_day && formData.schedule_time);
       setFormData({
         name: '',
         description: '',
@@ -160,7 +161,9 @@ const CreateCourseDialog = ({
       onCourseCreated?.();
       toast({
         title: t('createCourse.createdTitle'),
-        description: t('createCourse.createdBody'),
+        description: publishedToCalendar
+          ? t('createCourse.createdWithScheduleBody')
+          : t('createCourse.createdBody'),
       });
     } catch (error) {
       toast({
@@ -190,7 +193,13 @@ const CreateCourseDialog = ({
   const canSubmit =
     Boolean(formData.name.trim()) &&
     !isSubmitting &&
-    (!needsTeacherSelect || Boolean(formData.teacher_id));
+    (!needsTeacherSelect || Boolean(formData.teacher_id)) &&
+    (!(formData.schedule_day || formData.schedule_time) ||
+      (Boolean(formData.schedule_day) &&
+        Boolean(formData.schedule_time) &&
+        formData.class_id !== 'none'));
+
+  const scheduleHintVisible = Boolean(formData.schedule_day && formData.schedule_time);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -400,6 +409,13 @@ const CreateCourseDialog = ({
                 onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 60)}
               />
             </div>
+
+            {scheduleHintVisible && (
+              <p className="text-sm text-muted-foreground">{t('createCourse.scheduleHint')}</p>
+            )}
+            {(formData.schedule_day || formData.schedule_time) && formData.class_id === 'none' && (
+              <p className="text-sm text-destructive">{t('createCourse.scheduleNeedsClass')}</p>
+            )}
           </div>
 
           <DialogFooter>

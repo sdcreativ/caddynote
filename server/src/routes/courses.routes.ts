@@ -6,6 +6,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isSameInstitution, TEACHING_ROLES, SECRETARIAT_ROLES } from '../lib/authz.js';
 import { isS3Configured } from '../lib/s3.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
+import { deriveScheduleFromCourseFields } from '../lib/courseSchedule.js';
+import { findScheduleConflicts } from '../lib/scheduling.js';
 
 export const coursesRouter = Router();
 coursesRouter.use(requireAuth);
@@ -320,12 +322,70 @@ coursesRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
     await ensureRoleExtension(parsed.data.teacherId, teacherProfile.role, parsed.data.institutionId);
   }
 
+  // Créneau calendrier dérivé (jour + heure) — publié aux emplois du temps
+  // direction / enseignant / élèves de la classe / parents liés.
+  let derivedSchedule: ReturnType<typeof deriveScheduleFromCourseFields> = null;
   try {
-    const course = await prisma.strkCourse.create({
-      data: parsed.data,
-      include: COURSE_INCLUDE,
+    derivedSchedule = deriveScheduleFromCourseFields({
+      scheduleDay: parsed.data.scheduleDay,
+      scheduleTime: parsed.data.scheduleTime,
+      duration: parsed.data.duration,
     });
-    res.status(201).json({ course });
+  } catch (err) {
+    return res.status(400).json({
+      error: err instanceof Error ? err.message : 'Créneau calendrier invalide',
+    });
+  }
+
+  if (derivedSchedule && !parsed.data.classId) {
+    return res.status(400).json({
+      error: 'Une classe est requise pour publier le cours au calendrier (élèves / parents)',
+    });
+  }
+
+  if (derivedSchedule) {
+    const conflicts = await findScheduleConflicts({
+      institutionId: parsed.data.institutionId,
+      dayOfWeek: derivedSchedule.dayOfWeek,
+      startTime: derivedSchedule.startTime,
+      endTime: derivedSchedule.endTime,
+      teacherId: parsed.data.teacherId,
+      room: parsed.data.room,
+      classId: parsed.data.classId,
+    });
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        error: 'Conflit d’emploi du temps détecté',
+        conflicts,
+      });
+    }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const course = await tx.strkCourse.create({
+        data: parsed.data,
+        include: COURSE_INCLUDE,
+      });
+      if (!derivedSchedule) {
+        return { course, schedule: null as null };
+      }
+      const schedule = await tx.strkSchedule.create({
+        data: {
+          courseId: course.id,
+          classId: parsed.data.classId,
+          institutionId: parsed.data.institutionId,
+          teacherId: parsed.data.teacherId,
+          dayOfWeek: derivedSchedule.dayOfWeek,
+          startTime: derivedSchedule.startTime,
+          endTime: derivedSchedule.endTime,
+          room: parsed.data.room,
+          isActive: true,
+        },
+      });
+      return { course, schedule };
+    });
+    res.status(201).json(result);
   } catch (error) {
     // Défense en profondeur : `teacher_id` référence `strk_teachers`, pas
     // `strk_profiles` (voir lib/roleExtensions.ts) — un id qui ne correspond
@@ -366,12 +426,18 @@ coursesRouter.patch('/:id', requireRole(...TEACHING_ROLES), async (req, res) => 
   }
 });
 
-// Suppression logique (status='inactive').
+// Suppression logique (status='inactive') + retrait des créneaux calendrier.
 coursesRouter.delete('/:id', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
   const course = await prisma.strkCourse.findUnique({ where: { id: req.params.id } });
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  await prisma.strkCourse.update({ where: { id: req.params.id }, data: { status: 'inactive' } });
+  await prisma.$transaction([
+    prisma.strkCourse.update({ where: { id: req.params.id }, data: { status: 'inactive' } }),
+    prisma.strkSchedule.updateMany({
+      where: { courseId: req.params.id, isActive: true },
+      data: { isActive: false },
+    }),
+  ]);
   res.json({ success: true });
 });

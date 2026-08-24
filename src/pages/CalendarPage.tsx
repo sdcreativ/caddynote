@@ -97,40 +97,33 @@ const CalendarPage = () => {
     }
   }, [schedules]);
 
-  // Convertir les emplois du temps en événements de calendrier
-  const events = schedules.map((schedule) => {
-    // Calculer la vraie date selon day_of_week
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+  // Créneaux hebdomadaires → une occurrence par jour du mois affiché
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Trouver le premier jour du mois
-    const firstDayOfMonth = new Date(year, month, 1);
-
-    // Calculer le nombre de jours à ajouter pour atteindre le jour de la semaine souhaité
-    let daysToAdd = schedule.day_of_week - firstDayOfMonth.getDay();
-    if (daysToAdd < 0) daysToAdd += 7;
-
-    // Créer la date pour ce jour de la semaine
-    const eventDate = new Date(year, month, 1 + daysToAdd);
-
-    // Si la date est dans le passé, prendre la semaine suivante
-    const today = new Date();
-    if (eventDate < today && eventDate.getMonth() === today.getMonth()) {
-      eventDate.setDate(eventDate.getDate() + 7);
-    }
-
-    // Récupérer le nombre d'étudiants à partir de la base de données
+  const events = schedules.flatMap((schedule) => {
     const studentCount = schedule.class_id ? studentCounts[schedule.class_id] || 0 : 0;
-
-    return {
+    const base = {
       id: schedule.id,
       title: schedule.course?.name || t('courseFallback'),
-      type: 'course',
-      date: eventDate.toISOString().split('T')[0],
+      type: 'course' as const,
       time: `${schedule.start_time}-${schedule.end_time}`,
       room: schedule.room || schedule.course?.room || t('roomUndefined'),
-      students: studentCount
+      students: studentCount,
     };
+    const occurrences: Array<typeof base & { date: string }> = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayDate = new Date(year, month, day);
+      if (dayDate.getDay() !== schedule.day_of_week) continue;
+      const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      occurrences.push({
+        ...base,
+        id: `${schedule.id}-${day}`,
+        date,
+      });
+    }
+    return occurrences;
   });
 
   const monthNames = t('months', { returnObjects: true }) as string[];
