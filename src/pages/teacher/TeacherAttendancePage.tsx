@@ -9,6 +9,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkCourses } from '@/hooks/useStrkCourses';
 import { fetchAttendanceByClass } from '@/services/strkAttendanceService';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
+import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useSearchParams } from 'react-router-dom';
 
 interface AttendanceRecord {
@@ -110,6 +111,7 @@ export default function TeacherAttendancePage() {
 
   return (
     <div className="space-y-6 py-6 animate-fade-in">
+      <PresenceHubTabs />
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">Gestion des Présences</h1>

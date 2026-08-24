@@ -396,7 +396,14 @@ export const ensureApplicationPacketItems = async (applicationId: string) => {
     where: { applicationId },
     include: { documentType: true, requirement: true },
   });
-  const byRequirement = new Map(existing.filter((e) => e.requirementId).map((e) => [e.requirementId!, e]));
+  const supersededIds = new Set(
+    existing.map((e) => e.previousItemId).filter((id): id is string => Boolean(id))
+  );
+  const byRequirement = new Map(
+    existing
+      .filter((e) => e.requirementId && !supersededIds.has(e.id) && !e.waived)
+      .map((e) => [e.requirementId!, e])
+  );
 
   for (const req of template.requirements) {
     const applicable = isRequirementApplicable(req, ctx);

@@ -98,6 +98,21 @@ function RoleNavBody({
   const { user, logout } = useStrkAuth();
   const { t } = useTranslation('nav');
   const sections = filterNavSectionsForUser(navSectionsForRole(user?.role), user?.institutionId);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Auto-expand « Plus » when the current route lives in an advanced section.
+  useEffect(() => {
+    const path = location.pathname;
+    const advanced = sections.find((section) => section.collapsible);
+    if (!advanced) return;
+    const advancedHasActive = advanced.items.some((item) => {
+      const href = item.href.split('?')[0];
+      return path === href || path.startsWith(`${href}/`);
+    });
+    if (advancedHasActive) setAdvancedOpen(true);
+    // Intentionally only react to path; sections are role-stable for a session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid loop on new sections[] each render
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -114,6 +129,24 @@ function RoleNavBody({
 
   const isActive = (href: string) => {
     const path = href.split('?')[0];
+    // Hub Présences Direction/secrétariat : /attendance + /absences
+    if (path === '/attendance') {
+      return (
+        location.pathname === '/attendance' ||
+        location.pathname.startsWith('/attendance/') ||
+        location.pathname === '/absences' ||
+        location.pathname.startsWith('/absences/')
+      );
+    }
+    // Hub Présences enseignant : /teacher-attendance + /absences
+    if (path === '/teacher-attendance') {
+      return (
+        location.pathname === '/teacher-attendance' ||
+        location.pathname.startsWith('/teacher-attendance/') ||
+        location.pathname === '/absences' ||
+        location.pathname.startsWith('/absences/')
+      );
+    }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
@@ -139,25 +172,48 @@ function RoleNavBody({
       )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label={t('sidebarNav')}>
-        {sections.map((section) => (
-          <div key={section.labelKey} className="mb-5">
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              {t(section.labelKey)}
-            </p>
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavButton
-                  key={`${item.href}-${item.titleKey}`}
-                  item={item}
-                  label={t(item.titleKey)}
-                  active={isActive(item.href)}
-                  badge={badgeFor(item)}
-                  onNavigate={onNavigate}
-                />
-              ))}
+        {sections.map((section) => {
+          const collapsed = Boolean(section.collapsible) && !advancedOpen;
+          return (
+            <div key={section.labelKey} className="mb-5">
+              {section.collapsible ? (
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  aria-expanded={advancedOpen}
+                  className="mb-2 flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 hover:text-slate-600"
+                >
+                  <span>{t(section.labelKey)}</span>
+                  <ChevronDown
+                    className={cn('h-3.5 w-3.5 transition-transform', advancedOpen && 'rotate-180')}
+                    aria-hidden
+                  />
+                </button>
+              ) : (
+                <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {t(section.labelKey)}
+                </p>
+              )}
+              {!collapsed && (
+                <div className="space-y-0.5">
+                  {section.items.map((item) => (
+                    <NavButton
+                      key={`${item.href}-${item.titleKey}`}
+                      item={item}
+                      label={t(item.titleKey)}
+                      active={isActive(item.href)}
+                      badge={badgeFor(item)}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
+              )}
+              {section.collapsible && collapsed && (
+                <p className="px-3 text-xs text-slate-400">{t('advancedToggle')}</p>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="mt-auto space-y-3 border-t border-slate-100 p-4">

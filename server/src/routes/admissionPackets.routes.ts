@@ -44,6 +44,9 @@ const conditionRuleSchema = z
 
 const serializePacket = async (applicationId: string) => {
   const { items, completeness, template, instructionStatus } = await ensureApplicationPacketItems(applicationId);
+  const supersededIds = new Set(
+    items.map((x) => x.previousItemId).filter((id): id is string => Boolean(id))
+  );
   return {
     template: template
       ? {
@@ -60,7 +63,7 @@ const serializePacket = async (applicationId: string) => {
     instructionStatus,
     storageMode: getFileStorageMode(),
     items: items
-      .filter((i) => !i.waived)
+      .filter((i) => !i.waived && !supersededIds.has(i.id))
       .map((i) => ({
         id: i.id,
         status: i.status,
@@ -232,7 +235,8 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
         data: {
           applicationId: application.id,
           documentTypeId: item.documentTypeId,
-          requirementId: item.requirementId,
+          // Pas de requirementId : version historique, hors slots actifs du dossier.
+          requirementId: null,
           status: item.status,
           fileKey: item.fileKey,
           fileName: item.fileName,
@@ -243,6 +247,7 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
           previousItemId: item.previousItemId,
           issuedAt: item.issuedAt,
           expiresAt: item.expiresAt,
+          waived: true,
         },
       });
       await prisma.strkAdmissionDocumentItem.update({
@@ -294,6 +299,105 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
           itemId: d.id,
         })),
       },
+    });
+
+    res.json(await serializePacket(application.id));
+  });
+
+  /** Retire le fichier d’une pièce (brouillon / needs_info) — permet de supprimer puis recharger. */
+  router.delete('/status/:token/packet/items/:itemId/file', submitLimiter, async (req, res) => {
+    const application = await prisma.strkAdmissionApplication.findUnique({
+      where: { publicToken: req.params.token },
+    });
+    if (!application) return res.status(404).json({ error: 'Dossier introuvable' });
+    if (!['draft', 'needs_info'].includes(application.status)) {
+      return res.status(409).json({ error: 'Ce dossier ne peut plus modifier ses pièces' });
+    }
+
+    const item = await prisma.strkAdmissionDocumentItem.findFirst({
+      where: { id: req.params.itemId, applicationId: application.id, waived: false },
+      include: { documentType: true, requirement: true },
+    });
+    if (!item) return res.status(404).json({ error: 'Pièce introuvable' });
+    if (!item.fileKey && item.status === 'missing') {
+      return res.json(await serializePacket(application.id));
+    }
+
+    const oldKey = item.fileKey;
+    let archivedId: string | null = null;
+    if (oldKey) {
+      const archived = await prisma.strkAdmissionDocumentItem.create({
+        data: {
+          applicationId: application.id,
+          documentTypeId: item.documentTypeId,
+          requirementId: null,
+          status: item.status,
+          fileKey: item.fileKey,
+          fileName: item.fileName,
+          contentType: item.contentType,
+          sizeBytes: item.sizeBytes,
+          rejectionReason: item.rejectionReason,
+          version: item.version,
+          previousItemId: item.previousItemId,
+          issuedAt: item.issuedAt,
+          expiresAt: item.expiresAt,
+          waived: true,
+        },
+      });
+      archivedId = archived.id;
+    }
+
+    const clearedStatus =
+      item.requirement?.originalMode === 'physical_only' ? 'original_pending' : 'missing';
+
+    await prisma.strkAdmissionDocumentItem.update({
+      where: { id: item.id },
+      data: {
+        status: clearedStatus,
+        fileKey: null,
+        fileName: null,
+        contentType: null,
+        sizeBytes: null,
+        rejectionReason: null,
+        reviewNotes: null,
+        reviewedBy: null,
+        reviewedAt: null,
+        originalSeenAt: null,
+        issuedAt: null,
+        expiresAt: null,
+        reusedFromItemId: null,
+        version: oldKey ? item.version + 1 : item.version,
+        previousItemId: archivedId,
+      },
+    });
+
+    // Best-effort : ne pas bloquer si le stockage local/S3 échoue.
+    if (oldKey) {
+      await deleteStoredObject(oldKey).catch(() => {});
+    }
+
+    const all = await prisma.strkAdmissionDocumentItem.findMany({
+      where: { applicationId: application.id, fileKey: { not: null }, waived: false },
+      include: { documentType: true },
+    });
+    await prisma.strkAdmissionApplication.update({
+      where: { id: application.id },
+      data: {
+        documents: all.map((d) => ({
+          label: d.documentType.label,
+          fileKey: d.fileKey,
+          itemId: d.id,
+        })),
+      },
+    });
+
+    await logAudit({
+      institutionId: application.institutionId,
+      action: 'admission.document_cleared',
+      targetType: 'admission_document_item',
+      targetId: item.id,
+      metadata: { applicationId: application.id, documentTypeId: item.documentTypeId },
+      ipAddress: req.ip,
     });
 
     res.json(await serializePacket(application.id));

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Check, CheckCircle2, Circle, Clock3, Loader2, School } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, Circle, Clock3, Loader2, School, Trash2, Replace } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { BRAND } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import {
   attachAdmissionPacketItem,
+  clearAdmissionPacketItem,
   createAdmission,
   fetchAdmissionByToken,
   fetchAdmissionCampuses,
@@ -287,6 +288,7 @@ const AdmissionApplyPage = () => {
   const [followEmailSent, setFollowEmailSent] = useState<boolean | null>(null);
   const [packet, setPacket] = useState<AdmissionPacket | null>(null);
   const [busy, setBusy] = useState(false);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [storageMode, setStorageMode] = useState<'s3' | 'local' | null>(null);
   const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -471,7 +473,7 @@ const AdmissionApplyPage = () => {
     }
   };
 
-  const handlePacketFile = async (itemId: string, file: File | undefined) => {
+  const handlePacketFile = async (itemId: string, file: File | undefined, inputEl?: HTMLInputElement | null) => {
     if (!file || !token) return;
     setUploadingItemId(itemId);
     setBusy(true);
@@ -483,6 +485,28 @@ const AdmissionApplyPage = () => {
       toast({
         title: tc('status.error'),
         description: error instanceof ApiError ? error.message : t('apply.docError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+      setUploadingItemId(null);
+      // Permet de re-sélectionner le même fichier pour un remplacement.
+      if (inputEl) inputEl.value = '';
+    }
+  };
+
+  const handleClearPacketFile = async (itemId: string) => {
+    if (!token) return;
+    setUploadingItemId(itemId);
+    setBusy(true);
+    try {
+      const pkt = await clearAdmissionPacketItem(token, itemId);
+      setPacket(pkt);
+      toast({ title: t('apply.docRemoved') });
+    } catch (error) {
+      toast({
+        title: tc('status.error'),
+        description: error instanceof ApiError ? error.message : t('apply.docRemoveError'),
         variant: 'destructive',
       });
     } finally {
@@ -991,26 +1015,62 @@ const AdmissionApplyPage = () => {
                                   </div>
 
                                   {!physicalOnly && (
-                                    <div className="flex flex-col items-end gap-1">
-                                      <Input
+                                    <div className="flex shrink-0 flex-col items-end gap-2">
+                                      <input
+                                        ref={(el) => {
+                                          fileInputRefs.current[item.id] = el;
+                                        }}
                                         type="file"
                                         accept={item.documentType.allowedMime.join(',')}
                                         disabled={busy}
+                                        className="sr-only"
                                         aria-label={
                                           done
-                                            ? `${item.documentType.label} — ${t('apply.docReplaceHint')}`
-                                            : item.documentType.label
+                                            ? `${item.documentType.label} — ${t('apply.docReplace')}`
+                                            : `${item.documentType.label} — ${t('apply.docChoose')}`
                                         }
-                                        onChange={(e) => void handlePacketFile(item.id, e.target.files?.[0])}
-                                        className={cn(
-                                          'h-10 max-w-[14rem] cursor-pointer text-xs file:mr-2 file:rounded-md file:border-0 file:px-2 file:py-1',
-                                          done
-                                            ? 'file:bg-emerald-100 file:text-emerald-800'
-                                            : 'file:bg-slate-100 file:text-slate-700'
-                                        )}
+                                        onChange={(e) =>
+                                          void handlePacketFile(
+                                            item.id,
+                                            e.target.files?.[0],
+                                            e.currentTarget
+                                          )
+                                        }
                                       />
-                                      {done && !isUploading && (
-                                        <span className="text-[11px] text-slate-400">{t('apply.docReplaceHint')}</span>
+                                      {!done ? (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          disabled={busy}
+                                          onClick={() => fileInputRefs.current[item.id]?.click()}
+                                        >
+                                          {t('apply.docChoose')}
+                                        </Button>
+                                      ) : (
+                                        <div className="flex flex-wrap justify-end gap-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={busy || isUploading}
+                                            onClick={() => fileInputRefs.current[item.id]?.click()}
+                                          >
+                                            <Replace className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                                            {t('apply.docReplace')}
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                            disabled={busy || isUploading}
+                                            onClick={() => void handleClearPacketFile(item.id)}
+                                          >
+                                            <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                                            {t('apply.docRemove')}
+                                          </Button>
+                                        </div>
                                       )}
                                     </div>
                                   )}

@@ -26,6 +26,7 @@
   "sections": {
     "workspace": "Espace de travail",
     "management": "Gestion",
+    "advanced": "Plus",
     "secretariat": "Secrétariat",
     "account": "Compte",
     "accounting": "Comptabilité",
@@ -36,6 +37,8 @@
     "spaces": "Espaces",
     "navigation": "Navigation"
   },
+  "advancedToggle": "Afficher les modules avancés",
+  "advancedToggleHide": "Masquer les modules avancés",
   "items": {
     "overview": "Vue d'ensemble",
     "dashboard": "Tableau de bord",

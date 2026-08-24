@@ -286,6 +286,67 @@ describe('Admissions — moteur de pièces (spec complète)', () => {
     }
   });
 
+  it('permet de remplacer puis supprimer une pièce téléversée', async () => {
+    const created = await request(app).post('/admissions').send(payload());
+    expect(created.status).toBe(201);
+    const token = created.body.application.publicToken as string;
+
+    const packet = await request(app).get(`/admissions/status/${token}/packet`);
+    expect(packet.status).toBe(200);
+    const item = (packet.body.items as Array<{ id: string; originalMode?: string; obligation: string }>).find(
+      (i) => i.originalMode !== 'physical_only' && (i.obligation === 'required' || i.obligation === 'optional')
+    );
+    expect(item).toBeTruthy();
+    if (!item) return;
+
+    const uploadOnce = async (name: string) => {
+      const presign = await request(app)
+        .post(`/admissions/status/${token}/packet/items/${item.id}/presign-upload`)
+        .send({ filename: name, contentType: 'application/pdf' });
+      expect(presign.status).toBe(200);
+      if (presign.body.mode === 'local') {
+        await request(app)
+          .put(`/admissions/status/${token}/documents/direct-upload`)
+          .set('Content-Type', 'application/pdf')
+          .set('X-Object-Key', presign.body.key)
+          .send(Buffer.from(`%PDF-1.4 ${name}`));
+      }
+      return request(app)
+        .post(`/admissions/status/${token}/packet/items/${item.id}/attach`)
+        .send({
+          fileKey: presign.body.key,
+          fileName: name,
+          contentType: 'application/pdf',
+          sizeBytes: 24,
+        });
+    };
+
+    const first = await uploadOnce('piece-v1.pdf');
+    expect(first.status).toBe(200);
+    const afterFirst = first.body.items.find((i: { id: string }) => i.id === item.id);
+    expect(afterFirst?.fileName).toBe('piece-v1.pdf');
+    expect(['uploaded', 'original_pending']).toContain(afterFirst?.status);
+
+    const replaced = await uploadOnce('piece-v2.pdf');
+    expect(replaced.status).toBe(200);
+    const afterReplace = replaced.body.items.find((i: { id: string }) => i.id === item.id);
+    expect(afterReplace?.fileName).toBe('piece-v2.pdf');
+    // Une seule ligne active pour ce slot (pas de doublon historique dans la liste).
+    const sameType = (replaced.body.items as Array<{ documentType: { id: string } }>).filter(
+      (i) => i.documentType.id === afterReplace.documentType.id
+    );
+    expect(sameType).toHaveLength(1);
+
+    const cleared = await request(app).delete(
+      `/admissions/status/${token}/packet/items/${item.id}/file`
+    );
+    expect(cleared.status).toBe(200);
+    const afterClear = cleared.body.items.find((i: { id: string }) => i.id === item.id);
+    expect(afterClear?.fileKey).toBeNull();
+    expect(afterClear?.fileName).toBeNull();
+    expect(['missing', 'original_pending']).toContain(afterClear?.status);
+  });
+
   it('crée un campus natif et lie un compte parent dès la création', async () => {
     const headers = auth(fx.a.schoolAdmin.token);
     const campus = await request(app)

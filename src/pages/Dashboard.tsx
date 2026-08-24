@@ -454,11 +454,11 @@ const Dashboard = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/teacher-availability')}
+                  onClick={() => navigate('/teaching')}
                   className="rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
                 >
                   <BookOpen className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-medium">{t('quickActions.availability')}</span>
+                  <span className="text-sm font-medium">{t('quickActions.teaching')}</span>
                 </button>
               </>
             )}

@@ -20,7 +20,8 @@
     "historyForClass": "Consultez l'historique complet des présences pour {{className}}",
     "historySelectClass": "Sélectionnez une classe pour voir l'historique",
     "historySoon": "Fonctionnalité d'historique en cours de développement",
-    "historySoonHint": "Sera disponible dans la prochaine version"
+    "historySoonHint": "Sera disponible dans la prochaine version",
+    "justificationsTab": "Justificatifs"
   },
   "quick": {
     "title": "Appel rapide",

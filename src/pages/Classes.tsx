@@ -1,18 +1,16 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, GraduationCap, Search, Eye, Edit, Trash, Download, Upload } from 'lucide-react';
+import { PlusCircle, Users, GraduationCap, Search, Eye, Trash, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStrkClasses } from '@/hooks/useStrkClasses';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { CreateClassDialog } from '@/components/admin/CreateClassDialog';
+import { ClassStudentsDialog } from '@/components/admin/ClassStudentsDialog';
+import CreateCourseDialog from '@/components/teaching/CreateCourseDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { apiClient, ApiError } from '@/lib/apiClient';
@@ -20,17 +18,15 @@ import { previewCsvRows } from '@/lib/csvPreview';
 import { hasAnyRole, SECRETARIAT_ROLES } from '@/lib/roles';
 import { useTranslation } from 'react-i18next';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  fetchCoursesByClass,
+  deleteCourse,
+  type CourseWithDetails,
+} from '@/services/strkCourseService';
+import type { ClassWithDetails } from '@/services/strkClassService';
 
 const CLASS_CSV_TEMPLATE =
   'name,academicYear,description,maxStudents,teacherEmail\n6ème A,2025-2026,Classe de 6ème,30,jean.dupont@ecole.fr\n5ème B,2025-2026,,,marie.martin@ecole.fr\n';
-
-// Modèle pour un cours
-interface Course {
-  id: string;
-  name: string;
-  teacher: string;
-  schedule: string;
-}
 
 const Classes = () => {
   const { t } = useTranslation('classes');
@@ -40,12 +36,13 @@ const Classes = () => {
   const { classes, isLoading, loadClassesByInstitution, removeClass } = useStrkClasses();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddClassDialog, setShowAddClassDialog] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<any | null>(null);
+  const [selectedClass, setSelectedClass] = useState<ClassWithDetails | null>(null);
   const [showManageCourses, setShowManageCourses] = useState(false);
-  const [coursesList, setCoursesList] = useState<Course[]>([]);
+  const [courseClass, setCourseClass] = useState<ClassWithDetails | null>(null);
+  const [classCourses, setClassCourses] = useState<CourseWithDetails[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [newCourse, setNewCourse] = useState<Course>({ id: '', name: '', teacher: '', schedule: '' });
+  const [studentsClass, setStudentsClass] = useState<ClassWithDetails | null>(null);
   const [importPreview, setImportPreview] = useState<{ csv: string; rows: string[][] } | null>(null);
   const [importing, setImporting] = useState(false);
   const { toast } = useToast();
@@ -56,6 +53,23 @@ const Classes = () => {
       loadClassesByInstitution(user.institutionId);
     }
   }, [user?.institutionId, loadClassesByInstitution]);
+
+  const reloadClassCourses = useCallback(async (classId: string) => {
+    setCoursesLoading(true);
+    try {
+      const list = await fetchCoursesByClass(classId);
+      setClassCourses(list);
+    } catch {
+      setClassCourses([]);
+      toast({
+        title: tc('status.error'),
+        description: t('courses.loadError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setCoursesLoading(false);
+    }
+  }, [t, tc, toast]);
 
   const handleAddClass = () => {
     setShowAddClassDialog(true);
@@ -79,79 +93,44 @@ const Classes = () => {
     }
   };
 
-  const handleViewDetails = (classItem: any) => {
+  const handleViewDetails = (classItem: ClassWithDetails) => {
     setSelectedClass(classItem);
   };
 
-  const handleManageCourses = () => {
+  const handleManageCourses = async (classItem?: ClassWithDetails) => {
+    const target = classItem || selectedClass;
+    if (!target?.id) return;
+    setCourseClass(target);
+    setSelectedClass(null);
     setShowManageCourses(true);
-    setSelectedClass(null); // Ferme la boîte de dialogue des détails
+    await reloadClassCourses(target.id);
   };
 
-  // Gérer l'ajout d'un nouveau cours
-  const handleAddCourse = () => {
-    setEditingCourse(null);
-    setNewCourse({ id: Date.now().toString(), name: '', teacher: '', schedule: '' });
-    setShowAddCourseDialog(true);
-  };
-
-  // Gérer la modification d'un cours existant
-  const handleEditCourse = (course: Course) => {
-    setEditingCourse(course);
-    setNewCourse(course);
-    setShowAddCourseDialog(true);
-  };
-
-  // Gérer la suppression d'un cours
-  const handleDeleteCourse = (courseId: string) => {
-    setCoursesList(coursesList.filter(course => course.id !== courseId));
-    
-    toast({
-      title: t('courses.deletedTitle'),
-      description: t('courses.deletedBody'),
+  const handleDeleteCourse = async (courseId: string) => {
+    const ok = await confirm({
+      title: tc('actions.confirm'),
+      description: t('courses.deleteConfirm'),
+      variant: 'destructive',
+      confirmLabel: tc('actions.delete'),
     });
-  };
-
-  // Sauvegarder un nouveau cours ou mettre à jour un cours existant
-  const handleSaveCourse = () => {
-    if (editingCourse) {
-      // Mettre à jour un cours existant
-      setCoursesList(coursesList.map(course => 
-        course.id === editingCourse.id ? newCourse : course
-      ));
-      
+    if (!ok) return;
+    const success = await deleteCourse(courseId);
+    if (success) {
+      setClassCourses((prev) => prev.filter((c) => c.id !== courseId));
       toast({
-        title: t('courses.updatedTitle'),
-        description: t('courses.updatedBody'),
+        title: t('courses.deletedTitle'),
+        description: t('courses.deletedBody'),
       });
+      if (user?.institutionId) {
+        void loadClassesByInstitution(user.institutionId);
+      }
     } else {
-      // Ajouter un nouveau cours
-      setCoursesList([...coursesList, newCourse]);
-      
       toast({
-        title: t('courses.addedTitle'),
-        description: t('courses.addedBody'),
+        title: tc('status.error'),
+        description: t('courses.deleteError'),
+        variant: 'destructive',
       });
     }
-    
-    setShowAddCourseDialog(false);
-  };
-
-  // Gérer les modifications du formulaire de cours
-  const handleCourseInputChange = (field: keyof Course, value: string) => {
-    setNewCourse({
-      ...newCourse,
-      [field]: value
-    });
-  };
-
-  // Sauvegarder les modifications des cours
-  const handleSaveAllCourses = () => {
-    setShowManageCourses(false);
-    toast({
-      title: t('courses.savedTitle'),
-      description: t('courses.savedBody'),
-    });
   };
 
   // Filtrer les classes en fonction du terme de recherche
@@ -311,10 +290,8 @@ const Classes = () => {
                   </div>
                 </CardContent>
                 <CardFooter className="pt-2 pb-4 flex justify-between">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/students?class=${cls.name}`}>
-                      {t('viewStudents')}
-                    </Link>
+                  <Button variant="outline" size="sm" onClick={() => setStudentsClass(cls)}>
+                    {t('viewStudents')}
                   </Button>
                   <div className="flex gap-2">
                     <Button 
@@ -455,16 +432,16 @@ const Classes = () => {
               </div>
 
               <div className="pt-4 flex flex-col gap-2">
-                <Button asChild>
-                  <Link to={`/students?class=${selectedClass.name}`}>
-                    <Users className="mr-2 h-5 w-5" />
-                    {t('detailsDialog.viewAllStudents')}
-                  </Link>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleManageCourses}
+                <Button
+                  onClick={() => {
+                    setStudentsClass(selectedClass);
+                    setSelectedClass(null);
+                  }}
                 >
+                  <Users className="mr-2 h-5 w-5" />
+                  {t('detailsDialog.viewAllStudents')}
+                </Button>
+                <Button variant="outline" onClick={() => void handleManageCourses()}>
                   <GraduationCap className="mr-2 h-5 w-5" />
                   {t('detailsDialog.manageCourses')}
                 </Button>
@@ -474,115 +451,98 @@ const Classes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue pour gérer les cours */}
-      <Dialog open={showManageCourses} onOpenChange={setShowManageCourses}>
+      <ClassStudentsDialog
+        open={!!studentsClass}
+        onOpenChange={(open) => {
+          if (!open) setStudentsClass(null);
+        }}
+        classData={studentsClass}
+        onChanged={() => {
+          if (user?.institutionId) void loadClassesByInstitution(user.institutionId);
+        }}
+      />
+
+      <Dialog
+        open={showManageCourses}
+        onOpenChange={(open) => {
+          setShowManageCourses(open);
+          if (!open) {
+            setCourseClass(null);
+            setClassCourses([]);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>{t('courses.manageTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('courses.manageDescription')}
-            </DialogDescription>
+            <DialogTitle>
+              {t('courses.manageTitle')}
+              {courseClass?.name ? ` — ${courseClass.name}` : ''}
+            </DialogTitle>
+            <DialogDescription>{t('courses.manageDescription')}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">{t('courses.list')}</h3>
-              <Button size="sm" onClick={handleAddCourse}>
+              <Button size="sm" onClick={() => setShowAddCourseDialog(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 {t('courses.add')}
               </Button>
             </div>
-            
+
             <div className="border rounded-md">
-              {coursesList.map((course) => (
-                <div key={course.id} className="flex justify-between items-center border-b last:border-b-0 p-4">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{course.name}</h4>
-                    <p className="text-sm text-gray-500">{course.teacher} - {course.schedule}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCourse(course)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteCourse(course.id)}>
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              
-              {coursesList.length === 0 && (
-                <div className="p-4 text-center text-gray-500">
-                  {t('courses.empty')}
-                </div>
+              {coursesLoading ? (
+                <div className="p-4 text-center text-gray-500">{tc('actions.loading')}</div>
+              ) : (
+                <>
+                  {classCourses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="flex justify-between items-center border-b last:border-b-0 p-4"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium">{course.name}</h4>
+                        <p className="text-sm text-gray-500">
+                          {[course.teacher_name, course.schedule_day, course.schedule_time]
+                            .filter(Boolean)
+                            .join(' · ') || '—'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500"
+                        onClick={() => void handleDeleteCourse(course.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {classCourses.length === 0 && (
+                    <div className="p-4 text-center text-gray-500">{t('courses.empty')}</div>
+                  )}
+                </>
               )}
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowManageCourses(false)}>
                 {tc('actions.close')}
-              </Button>
-              <Button onClick={handleSaveAllCourses}>
-                {tc('actions.save')}
               </Button>
             </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue pour ajouter/modifier un cours */}
-      <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>{editingCourse ? t('courses.editTitle') : t('courses.addTitle')}</DialogTitle>
-            <DialogDescription>
-              {editingCourse ? t('courses.editDescription') : t('courses.addDescription')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="courseName">{t('courses.name')}</Label>
-              <Input 
-                id="courseName" 
-                placeholder={t('courses.namePlaceholder')} 
-                value={newCourse.name}
-                onChange={(e) => handleCourseInputChange('name', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="courseTeacher">{t('courses.teacher')}</Label>
-              <Select value={newCourse.teacher} onValueChange={(value) => handleCourseInputChange('teacher', value)}>
-                <SelectTrigger id="courseTeacher">
-                  <SelectValue placeholder={t('courses.teacherPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dr. Konaté">Dr. Konaté</SelectItem>
-                  <SelectItem value="Dr. Diallo">Dr. Diallo</SelectItem>
-                  <SelectItem value="Dr. Touré">Dr. Touré</SelectItem>
-                  <SelectItem value="Dr. Camara">Dr. Camara</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="courseSchedule">{t('courses.schedule')}</Label>
-              <Input 
-                id="courseSchedule" 
-                placeholder={t('courses.schedulePlaceholder')} 
-                value={newCourse.schedule}
-                onChange={(e) => handleCourseInputChange('schedule', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddCourseDialog(false)}>{tc('actions.cancel')}</Button>
-            <Button onClick={handleSaveCourse}>{editingCourse ? t('courses.update') : tc('actions.add')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateCourseDialog
+        open={showAddCourseDialog}
+        onOpenChange={setShowAddCourseDialog}
+        defaultClassId={courseClass?.id}
+        onCourseCreated={() => {
+          if (courseClass?.id) void reloadClassCourses(courseClass.id);
+          if (user?.institutionId) void loadClassesByInstitution(user.institutionId);
+        }}
+      />
     </div>
   );
 };

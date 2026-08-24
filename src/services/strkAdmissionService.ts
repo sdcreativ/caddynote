@@ -317,6 +317,12 @@ export const attachAdmissionPacketItem = async (token: string, itemId: string, f
   );
 };
 
+/** Supprime le fichier d’une pièce du dossier (statut → missing). */
+export const clearAdmissionPacketItem = (token: string, itemId: string) =>
+  apiClient.delete<AdmissionPacket>(`/admissions/status/${token}/packet/items/${itemId}/file`, {
+    skipAuth: true,
+  });
+
 export const attachAdmissionDocument = async (token: string, label: string, file: File) => {
   const contentType = file.type || 'application/pdf';
   const presign = await apiClient.post<{

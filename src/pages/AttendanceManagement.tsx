@@ -15,6 +15,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { fetchStudentsByClass, type ClassRosterStudent } from '@/services/strkAttendanceService';
 import { getCachedRoster } from '@/lib/offlineDb';
 import { downloadReportExport } from '@/services/strkReportService';
+import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 
 const AttendanceManagement = () => {
   const { t } = useTranslation('attendance');
@@ -103,6 +104,7 @@ const AttendanceManagement = () => {
 
   return (
     <div className="space-y-6 py-6">
+      <PresenceHubTabs />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold">{t('page.title')}</h1>

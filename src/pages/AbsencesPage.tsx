@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, Filter, Calendar, Download, Check, X } from 'lucide-react';
+import { PlusCircle, Search, Calendar, Download, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,11 +16,14 @@ import { useQuickActions } from '@/components/quick-actions/QuickActionsManager'
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { trackProductEvent } from '@/lib/productTelemetry';
-import { hasAnyRole, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
+import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
+import { useNavigate } from 'react-router-dom';
+import { hasAnyRole, ATTENDANCE_HUB_ROLES } from '@/lib/roles';
 
 const AbsencesPage = () => {
   const { t } = useTranslation('absences');
   const { t: tc } = useTranslation('common');
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -138,6 +141,7 @@ const AbsencesPage = () => {
 
   return (
     <div className="space-y-6 py-6 animate-fade-in">
+      <PresenceHubTabs />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold">
@@ -265,6 +269,20 @@ const AbsencesPage = () => {
           <EmptyState
             title={t('page.emptyTitle')}
             description={t('page.emptyBody')}
+            actionLabel={
+              hasAnyRole(user?.role, ATTENDANCE_HUB_ROLES) ||
+              user?.role === 'teacher' ||
+              user?.role === 'head_teacher'
+                ? t('page.emptyActionCall')
+                : undefined
+            }
+            onAction={
+              hasAnyRole(user?.role, ATTENDANCE_HUB_ROLES)
+                ? () => navigate('/attendance')
+                : user?.role === 'teacher' || user?.role === 'head_teacher'
+                  ? () => navigate('/teacher-attendance')
+                  : undefined
+            }
           />
         ) : (
           <Table>

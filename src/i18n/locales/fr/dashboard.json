@@ -46,6 +46,7 @@
     "takeAttendance": "Faire l'appel",
     "grades": "Notes",
     "availability": "Disponibilités",
+    "teaching": "Mes cours",
     "myGrades": "Mes notes",
     "homework": "Devoirs",
     "myChildren": "Mes enfants",
@@ -95,6 +96,16 @@
     "emptyAction": "Gérer les élèves",
     "loadErrorTitle": "Tableau de bord indisponible",
     "retry": "Réessayer"
+  },
+  "setup": {
+    "title": "Démarrage — lier enseignants, classes et cours",
+    "body": "Les absences et l’appel n’apparaissent qu’après cette chaîne : enseignants → classes → élèves dans les classes → cours (enseignant + classe) → appel.",
+    "stepTeachers": "Créer au moins un enseignant",
+    "stepClasses": "Créer au moins une classe",
+    "stepStudents": "Inscrire des élèves (puis les affecter à une classe)",
+    "stepCourses": "Créer un cours lié à un enseignant et une classe",
+    "stepCall": "Faire un premier appel",
+    "nextAction": "Continuer : {{step}}"
   },
   "finance": {
     "section": "Finances",

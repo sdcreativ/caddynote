@@ -71,6 +71,12 @@ export type NavItemConfig = {
 export type NavSection = {
   labelKey: string;
   items: NavItemConfig[];
+  /**
+   * Section repliée par défaut (« Plus » / avancé) — disclosure progressive
+   * pour alléger le menu Direction jour 1 sans supprimer les routes.
+   */
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 };
 
 /** Rôles qui utilisent le shell établissement (provider dashboard). */
@@ -121,57 +127,61 @@ export function roleLabel(role: string | null | undefined): string {
 export function navSectionsForRole(role: string | null | undefined): NavSection[] {
   switch (role) {
     case 'school_admin':
+      // Jour 1 : ≤ ~10 entrées visibles. Modules métier conservés sous « Plus ».
       return [
         {
           labelKey: 'sections.workspace',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
             { titleKey: 'items.students', href: '/students', icon: Users, badgeKey: 'students' },
-            { titleKey: 'items.call', href: '/attendance', icon: ClipboardCheck },
-            { titleKey: 'items.absences', href: '/absences', icon: AlertTriangle, badgeKey: 'alerts' },
+            // Hub Présences (Appel | Justificatifs) — routes /attendance + /absences
+            { titleKey: 'items.attendance', href: '/attendance', icon: ClipboardCheck, badgeKey: 'alerts' },
             { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
-            { titleKey: 'items.documents', href: '/documents', icon: FileText },
-            { titleKey: 'items.finance', href: '/finance', icon: Receipt },
-            { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
-            { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
-            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
-            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
           ],
         },
         {
           labelKey: 'sections.management',
           items: [
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
-            { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.teachers', href: '/teachers', icon: Users },
             { titleKey: 'items.users', href: '/users', icon: UserCog },
-            { titleKey: 'items.exports', href: '/exports', icon: Download },
-            { titleKey: 'items.services', href: '/services', icon: Bus },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
-            { titleKey: 'items.auditLog', href: '/audit-log', icon: ScrollText },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
+          ],
+        },
+        {
+          labelKey: 'sections.advanced',
+          collapsible: true,
+          defaultCollapsed: true,
+          items: [
+            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
+            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
+            { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
+            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
+            { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
+            { titleKey: 'items.finance', href: '/finance', icon: Receipt },
+            { titleKey: 'items.documents', href: '/documents', icon: FileText },
+            { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
+            { titleKey: 'items.services', href: '/services', icon: Bus },
+            { titleKey: 'items.exports', href: '/exports', icon: Download },
+            { titleKey: 'items.auditLog', href: '/audit-log', icon: ScrollText },
+            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
       ];
 
     case 'teacher':
     case 'head_teacher':
+      // Jour 1 : boucle métier (appel, notes, cours, messages). Le reste sous « Plus ».
       return [
         {
           labelKey: 'sections.workspace',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
-            { titleKey: 'items.call', href: '/teacher-attendance', icon: ClipboardCheck },
-            { titleKey: 'items.absences', href: '/absences', icon: AlertTriangle },
+            // Hub Présences enseignant : Appel | Justificatifs
+            { titleKey: 'items.attendance', href: '/teacher-attendance', icon: ClipboardCheck },
             { titleKey: 'items.notes', href: '/grades', icon: GraduationCap },
-            { titleKey: 'items.assignments', href: '/teacher-assignments', icon: BookOpen },
-            { titleKey: 'items.exercises', href: '/teacher-exercises', icon: PenTool },
             { titleKey: 'items.teaching', href: '/teaching', icon: School },
-            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
-            { titleKey: 'items.studentFollowUp', href: '/follow-up', icon: HeartHandshake },
-            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
           ],
         },
@@ -179,10 +189,22 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           labelKey: 'sections.management',
           items: [
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
+            { titleKey: 'items.settings', href: '/settings', icon: Settings },
+          ],
+        },
+        {
+          labelKey: 'sections.advanced',
+          collapsible: true,
+          defaultCollapsed: true,
+          items: [
+            { titleKey: 'items.assignments', href: '/teacher-assignments', icon: BookOpen },
+            { titleKey: 'items.exercises', href: '/teacher-exercises', icon: PenTool },
+            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
+            { titleKey: 'items.studentFollowUp', href: '/follow-up', icon: HeartHandshake },
+            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
             { titleKey: 'items.exports', href: '/exports', icon: Download },
             { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
-            { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
         },
       ];

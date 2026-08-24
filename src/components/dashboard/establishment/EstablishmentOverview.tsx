@@ -9,9 +9,12 @@ import { AttendanceWeekChart } from './AttendanceWeekChart';
 import { TodayAgenda } from './TodayAgenda';
 import { PriorityAlerts } from './PriorityAlerts';
 import { FinanceCollecte } from './FinanceCollecte';
+import { SetupChecklist } from './SetupChecklist';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { hasAnyRole, DIRECTION_ROLES } from '@/lib/roles';
+import { useStrkAuth } from '@/hooks/useStrkAuth';
 
 const formatMoneyShort = (cents: number, currency: string) => {
   const amount = cents / 100;
@@ -29,8 +32,10 @@ const formatMoneyShort = (cents: number, currency: string) => {
 export function EstablishmentOverview() {
   const { t } = useTranslation('dashboard');
   const data = useEstablishmentDashboardContext();
+  const { user } = useStrkAuth();
   const dateLabel = format(new Date(), 'EEEE d MMMM yyyy', { locale: fr });
   const { tenantStatus } = data;
+  const showSetup = hasAnyRole(user?.role, DIRECTION_ROLES);
 
   if (data.loading) {
     return (
@@ -110,6 +115,8 @@ export function EstablishmentOverview() {
           </AlertDescription>
         </Alert>
       )}
+
+      {showSetup && <SetupChecklist />}
 
       {tenantStatus.isEmpty && !tenantStatus.frozen && (
         <EmptyState
