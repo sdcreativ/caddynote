@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Filter, Printer } from 'lucide-react';
@@ -17,6 +16,7 @@ import { useStrkSchedules } from '@/hooks/useStrkSchedules';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { useQuickActions } from '@/components/quick-actions/QuickActionsManager';
 import { fetchStudentCountByClass } from '@/services/strkClassService';
+import type { StrkSchedule } from '@/types/strk';
 
 const STAFF_INSTITUTION_ROLES = new Set([
   'school_admin',
@@ -24,6 +24,44 @@ const STAFF_INSTITUTION_ROLES = new Set([
   'supervisor',
   'admin',
 ]);
+
+const parseLocalYmd = (ymd: string): Date => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+
+const formatLocalYmd = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+type CalendarEvent = {
+  id: string;
+  title: string;
+  type: 'course';
+  time: string;
+  room: string;
+  students: number;
+  date: string;
+};
+
+const scheduleToEvent = (
+  schedule: StrkSchedule,
+  date: string,
+  studentCounts: Record<string, number>,
+  courseFallback: string,
+  roomFallback: string
+): CalendarEvent => ({
+  id: `${schedule.id}-${date}`,
+  title: schedule.course?.name || courseFallback,
+  type: 'course',
+  time: `${schedule.start_time}-${schedule.end_time}`,
+  room: schedule.room || schedule.course?.room || roomFallback,
+  students: schedule.class_id ? studentCounts[schedule.class_id] || 0 : 0,
+  date,
+});
 
 const CalendarPage = () => {
   const { t } = useTranslation('calendar');
@@ -48,163 +86,168 @@ const CalendarPage = () => {
     isLoading: childrenLoading,
   } = useGuardianChildren();
 
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.role === 'student') {
-      loadSchedulesByStudent(user.id);
-      return;
-    }
-    if (user.role === 'teacher' || user.role === 'head_teacher') {
-      loadSchedulesByTeacher(user.id);
-      return;
-    }
-    if (user.role === 'parent') {
-      if (selectedChildId) loadSchedulesByStudent(selectedChildId);
-      return;
-    }
-    if (user.institutionId && STAFF_INSTITUTION_ROLES.has(user.role)) {
-      loadSchedulesByInstitution(user.institutionId);
-    }
-  }, [
-    user,
-    selectedChildId,
+  // Refs : le chargement ne doit se relancer que si l’identité / le rôle change,
+  // pas à chaque re-render (sinon isLoading reste vrai → section « à venir » bloquée).
+  const loadersRef = useRef({
     loadSchedulesByStudent,
     loadSchedulesByTeacher,
     loadSchedulesByInstitution,
-  ]);
+  });
+  loadersRef.current = {
+    loadSchedulesByStudent,
+    loadSchedulesByTeacher,
+    loadSchedulesByInstitution,
+  };
 
-  // Fetch student counts for each class when schedules change
   useEffect(() => {
-    const fetchStudentCounts = async () => {
-      const counts: Record<string, number> = {};
+    if (!user) return;
+    const loaders = loadersRef.current;
 
-      // Get unique class IDs from schedules
-      const classIds = [...new Set(schedules
-        .filter(schedule => schedule.class_id)
-        .map(schedule => schedule.class_id))];
-
-      // Fetch student count for each class
-      for (const classId of classIds) {
-        counts[classId] = await fetchStudentCountByClass(classId);
-      }
-
-      setStudentCounts(counts);
-    };
-
-    if (schedules.length > 0) {
-      fetchStudentCounts();
+    if (user.role === 'student') {
+      void loaders.loadSchedulesByStudent(user.id);
+      return;
     }
-  }, [schedules]);
+    if (user.role === 'teacher' || user.role === 'head_teacher') {
+      void loaders.loadSchedulesByTeacher(user.id);
+      return;
+    }
+    if (user.role === 'parent') {
+      if (selectedChildId) void loaders.loadSchedulesByStudent(selectedChildId);
+      return;
+    }
+    if (user.institutionId && STAFF_INSTITUTION_ROLES.has(user.role)) {
+      void loaders.loadSchedulesByInstitution(user.institutionId);
+    }
+  }, [user?.id, user?.role, user?.institutionId, selectedChildId]);
 
-  // Créneaux hebdomadaires → une occurrence par jour du mois affiché
+  const classIdsKey = useMemo(
+    () =>
+      [...new Set(schedules.map((s) => s.class_id).filter(Boolean))]
+        .sort()
+        .join(','),
+    [schedules]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const classIds = classIdsKey ? classIdsKey.split(',') : [];
+    if (classIds.length === 0) {
+      setStudentCounts({});
+      return;
+    }
+    void (async () => {
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        classIds.map(async (classId) => {
+          counts[classId] = await fetchStudentCountByClass(classId);
+        })
+      );
+      if (!cancelled) setStudentCounts(counts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [classIdsKey]);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const courseFallback = t('courseFallback');
+  const roomFallback = t('roomUndefined');
 
-  const events = schedules.flatMap((schedule) => {
-    const studentCount = schedule.class_id ? studentCounts[schedule.class_id] || 0 : 0;
-    const base = {
-      id: schedule.id,
-      title: schedule.course?.name || t('courseFallback'),
-      type: 'course' as const,
-      time: `${schedule.start_time}-${schedule.end_time}`,
-      room: schedule.room || schedule.course?.room || t('roomUndefined'),
-      students: studentCount,
-    };
-    const occurrences: Array<typeof base & { date: string }> = [];
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayDate = new Date(year, month, day);
-      if (dayDate.getDay() !== schedule.day_of_week) continue;
-      const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      occurrences.push({
-        ...base,
-        id: `${schedule.id}-${day}`,
-        date,
-      });
+  const monthEvents = useMemo(() => {
+    const list: CalendarEvent[] = [];
+    for (const schedule of schedules) {
+      const dow = Number(schedule.day_of_week);
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(year, month, day);
+        if (dayDate.getDay() !== dow) continue;
+        list.push(
+          scheduleToEvent(schedule, formatLocalYmd(dayDate), studentCounts, courseFallback, roomFallback)
+        );
+      }
     }
-    return occurrences;
-  });
+    return list;
+  }, [schedules, studentCounts, year, month, daysInMonth, courseFallback, roomFallback]);
+
+  const today = new Date();
+  const todayYmd = formatLocalYmd(today);
+
+  // Indépendant du mois affiché : 4 prochaines semaines (tous rôles).
+  const upcomingEvents = useMemo(() => {
+    const list: CalendarEvent[] = [];
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    for (let offset = 0; offset < 28; offset++) {
+      const dayDate = new Date(start);
+      dayDate.setDate(start.getDate() + offset);
+      const dow = dayDate.getDay();
+      const ymd = formatLocalYmd(dayDate);
+      for (const schedule of schedules) {
+        if (Number(schedule.day_of_week) !== dow) continue;
+        list.push(scheduleToEvent(schedule, ymd, studentCounts, courseFallback, roomFallback));
+      }
+    }
+    return list
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+      .slice(0, 8);
+  }, [schedules, studentCounts, todayYmd, courseFallback, roomFallback]);
 
   const monthNames = t('months', { returnObjects: true }) as string[];
-  const daysOfWeek = t('daysOfWeek', { returnObjects: true }) as string[];
+  const daysOfWeekLabels = t('daysOfWeek', { returnObjects: true }) as string[];
 
   const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    const firstDay = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0);
+    const dim = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
+    const days: Array<{ date: Date; isCurrentMonth: boolean; events: CalendarEvent[] }> = [];
 
-    const days = [];
-
-    // Jours du mois précédent
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-      const prevMonthDay = new Date(year, month, -i);
-      days.push({
-        date: prevMonthDay,
-        isCurrentMonth: false,
-        events: []
-      });
+      days.push({ date: new Date(y, m, -i), isCurrentMonth: false, events: [] });
     }
 
-    // Jours du mois actuel
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayDate = new Date(year, month, day);
-      const dayEvents = events.filter(event => {
-        const eventDate = new Date(event.date);
-        return eventDate.toDateString() === dayDate.toDateString();
-      });
-
+    for (let day = 1; day <= dim; day++) {
+      const dayDate = new Date(y, m, day);
+      const ymd = formatLocalYmd(dayDate);
       days.push({
         date: dayDate,
         isCurrentMonth: true,
-        events: dayEvents
+        events: monthEvents.filter((event) => event.date === ymd),
       });
     }
 
-    // Jours du mois suivant pour compléter la grille
-    const remainingDays = 42 - days.length; // 6 semaines * 7 jours
+    const remainingDays = 42 - days.length;
     for (let day = 1; day <= remainingDays; day++) {
-      const nextMonthDay = new Date(year, month + 1, day);
-      days.push({
-        date: nextMonthDay,
-        isCurrentMonth: false,
-        events: []
-      });
+      days.push({ date: new Date(y, m + 1, day), isCurrentMonth: false, events: [] });
     }
 
     return days;
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prevDate => {
+    setCurrentDate((prevDate) => {
       const newDate = new Date(prevDate);
-      if (direction === 'prev') {
-        newDate.setMonth(newDate.getMonth() - 1);
-      } else {
-        newDate.setMonth(newDate.getMonth() + 1);
-      }
+      newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
       return newDate;
     });
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   const getEventTypeColor = (type: string) => {
     switch (type) {
-      case 'course': return 'bg-blue-500 text-white';
-      case 'meeting': return 'bg-green-500 text-white';
-      case 'event': return 'bg-purple-500 text-white';
-      default: return 'bg-gray-500 text-white';
+      case 'course':
+        return 'bg-blue-500 text-white';
+      case 'meeting':
+        return 'bg-green-500 text-white';
+      case 'event':
+        return 'bg-purple-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
     }
   };
 
   const days = getDaysInMonth(currentDate);
-  const today = new Date();
   const canManageEvents = !!user && STAFF_INSTITUTION_ROLES.has(user.role);
   const subtitle =
     isParent && selectedChild
@@ -213,14 +256,17 @@ const CalendarPage = () => {
         })
       : t('subtitle');
 
+  // Ne bloquer l’UI que sur le tout premier chargement (sinon la grille a des
+  // données mais « Événements à venir » reste figé sur « Chargement… »).
+  const showInitialLoading =
+    (isLoading && schedules.length === 0) || (isParent && childrenLoading && !selectedChildId);
+
   return (
     <div className="space-y-6 py-6 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 print-hidden">
         <div>
           <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-gray-500 mt-1">
-            {subtitle}
-          </p>
+          <p className="text-gray-500 mt-1">{subtitle}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -242,15 +288,13 @@ const CalendarPage = () => {
               </SelectContent>
             </Select>
           )}
-          <Button variant="outline" onClick={goToToday}>
+          <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
             {t('today')}
           </Button>
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
             {tc('actions.filter')}
           </Button>
-          {/* ACA-003 : impression — l'affichage à l'écran (grille + événements
-              à venir) sert directement de support, pas de vue dédiée séparée. */}
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
             {t('print')}
@@ -264,7 +308,6 @@ const CalendarPage = () => {
         </div>
       </div>
 
-      {/* Navigation du calendrier */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -272,32 +315,38 @@ const CalendarPage = () => {
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </CardTitle>
             <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={() => navigateMonth('prev')} aria-label={t('prevMonth')}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth('prev')}
+                aria-label={t('prevMonth')}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => navigateMonth('next')} aria-label={t('nextMonth')}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth('next')}
+                aria-label={t('nextMonth')}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading || (isParent && childrenLoading) ? (
+          {showInitialLoading ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{t('loading')}</p>
           ) : null}
-          {/* Grille du calendrier */}
           <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
-            {/* En-têtes des jours */}
-            {daysOfWeek.map(day => (
+            {daysOfWeekLabels.map((day) => (
               <div key={day} className="bg-gray-50 p-3 text-center text-sm font-medium text-gray-700">
                 {day}
               </div>
             ))}
 
-            {/* Jours du calendrier */}
             {days.map((day, index) => {
               const isToday = day.date.toDateString() === today.toDateString();
-
               return (
                 <div
                   key={index}
@@ -308,15 +357,17 @@ const CalendarPage = () => {
                   }`}
                   onClick={() => day.isCurrentMonth && canManageEvents && openEventDialog(day.date)}
                 >
-                  <div className={`text-sm font-medium mb-1 ${
-                    isToday ? 'text-blue-600 bg-blue-100 rounded-full w-6 h-6 flex items-center justify-center' : ''
-                  }`}>
+                  <div
+                    className={`text-sm font-medium mb-1 ${
+                      isToday
+                        ? 'text-blue-600 bg-blue-100 rounded-full w-6 h-6 flex items-center justify-center'
+                        : ''
+                    }`}
+                  >
                     {day.date.getDate()}
                   </div>
-
-                  {/* Événements du jour */}
                   <div className="space-y-1">
-                    {day.events.slice(0, 3).map(event => (
+                    {day.events.slice(0, 3).map((event) => (
                       <div
                         key={event.id}
                         className={`text-xs p-1 rounded text-white truncate ${getEventTypeColor(event.type)}`}
@@ -338,7 +389,6 @@ const CalendarPage = () => {
         </CardContent>
       </Card>
 
-      {/* Liste des événements à venir */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -348,30 +398,36 @@ const CalendarPage = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {events.length === 0 && !isLoading ? (
+            {showInitialLoading ? (
+              <p className="text-sm text-muted-foreground">{t('loading')}</p>
+            ) : upcomingEvents.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('emptyUpcoming')}</p>
-            ) : null}
-            {events.slice(0, 5).map(event => (
-              <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${getEventTypeColor(event.type).split(' ')[0]}`} />
-                  <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(event.date).toLocaleDateString('fr-FR')} • {event.time} • {event.room}
-                    </p>
+            ) : (
+              upcomingEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-3 h-3 rounded-full ${getEventTypeColor(event.type).split(' ')[0]}`}
+                    />
+                    <div>
+                      <p className="font-medium">{event.title}</p>
+                      <p className="text-sm text-gray-500">
+                        {parseLocalYmd(event.date).toLocaleDateString('fr-FR')} • {event.time} •{' '}
+                        {event.room}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {event.students > 0 && (
+                      <Badge variant="secondary">{t('studentsCount', { count: event.students })}</Badge>
+                    )}
+                    <Button variant="outline" size="sm">
+                      {t('details')}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {event.students > 0 && (
-                    <Badge variant="secondary">{t('studentsCount', { count: event.students })}</Badge>
-                  )}
-                  <Button variant="outline" size="sm">
-                    {t('details')}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

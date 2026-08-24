@@ -24,6 +24,8 @@ const GuardianChildrenContext = createContext<GuardianChildrenContextType | unde
  */
 export const GuardianChildrenProvider = ({ children: reactChildren }: { children: ReactNode }) => {
   const { user } = useStrkAuth();
+  const userId = user?.id;
+  const role = user?.role;
   const [children, setChildren] = useState<GuardianChildSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export const GuardianChildrenProvider = ({ children: reactChildren }: { children
   });
 
   const refresh = useCallback(async () => {
-    if (!user || user.role !== 'parent') {
+    if (!userId || role !== 'parent') {
       setChildren([]);
       setIsLoading(false);
       return;
@@ -42,7 +44,7 @@ export const GuardianChildrenProvider = ({ children: reactChildren }: { children
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchChildrenForGuardian(user.id);
+      const data = await fetchChildrenForGuardian(userId);
       setChildren(data);
 
       // Si l'enfant sélectionné n'appartient plus à la liste (ou aucun choix
@@ -59,10 +61,10 @@ export const GuardianChildrenProvider = ({ children: reactChildren }: { children
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [userId, role]);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const setSelectedChildId = useCallback((studentId: string) => {
