@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireFeature } from '../middleware/requireFeature.js';
 import { getStudentAccess, isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
 import type { JwtPayload } from '../lib/jwt.js';
-import { isAiConfigured } from '../lib/anthropicClient.js';
+import { isAiConfigured, aiMissingKeyMessage } from '../lib/anthropicClient.js';
 import * as aiExercise from '../lib/aiExercise.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { logAudit } from '../lib/audit.js';
@@ -15,14 +15,13 @@ exercisesRouter.use(requireAuth);
 
 // --- Assistant IA (remplace l'edge function Supabase `ai-exercise-helper`) ---
 //
-// Nécessite ANTHROPIC_API_KEY côté serveur ; si absente, réponse 501 claire
-// plutôt qu'un échec silencieux (même principe que le stub Stripe de
-// subscriptions.routes.ts). La génération d'exercice reste en outre possible
-// à la main via POST /exercises même quand l'IA n'est pas configurée.
+// Nécessite ANTHROPIC_API_KEY et/ou OPENAI_API_KEY ; si aucune, réponse 501
+// claire plutôt qu'un échec silencieux. La génération manuelle via POST
+// /exercises reste possible sans IA.
 const requireAiConfigured: import('express').RequestHandler = (_req, res, next) => {
   if (!isAiConfigured()) {
     return res.status(501).json({
-      error: "L'assistant IA n'est pas configuré sur cette instance (clé ANTHROPIC_API_KEY manquante). Contactez SDCREATIV.",
+      error: aiMissingKeyMessage(),
     });
   }
   next();

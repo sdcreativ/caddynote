@@ -280,7 +280,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'patch', path: '/reports/:id/status', tag: 'Rapports', summary: 'Mettre à jour le statut', auth: 'bearer', roles: [...direction] },
   { method: 'delete', path: '/reports/:id', tag: 'Rapports', summary: 'Supprimer un ticket', auth: 'bearer', roles: [...direction] },
 
-  { method: 'post', path: '/exercises/ai/generate', tag: 'Exercices', summary: 'Générer un exercice (Claude, 501 si non configuré)', auth: 'bearer', roles: [...staff], statuses: [200, 403, 501] },
+  { method: 'post', path: '/exercises/ai/generate', tag: 'Exercices', summary: 'Générer un exercice (Claude/OpenAI, 501 si non configuré)', auth: 'bearer', roles: [...staff], statuses: [200, 403, 501] },
   { method: 'post', path: '/exercises/ai/correct-answer', tag: 'Exercices', summary: 'Correction assistée', auth: 'bearer', statuses: [200, 501] },
   { method: 'post', path: '/exercises/ai/adaptive-recommendations', tag: 'Exercices', summary: 'Recommandations adaptatives', auth: 'bearer', statuses: [200, 501] },
   { method: 'post', path: '/exercises/ai/pedagogical-help', tag: 'Exercices', summary: 'Aide pédagogique', auth: 'bearer', statuses: [200, 501] },

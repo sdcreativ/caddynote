@@ -23,18 +23,30 @@ import { buildFixture, auth, type Fixture } from './fixtures.js';
  */
 describe('Assistant IA des exercices (module IA, §4.16)', () => {
   let fx: Fixture;
-  const originalKey = process.env.ANTHROPIC_API_KEY;
+  const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+  const originalOpenAiKey = process.env.OPENAI_API_KEY;
+  const originalProvider = process.env.AI_PROVIDER;
 
   beforeAll(async () => {
     fx = await buildFixture();
   }, 30000);
 
   afterEach(() => {
-    if (originalKey === undefined) delete process.env.ANTHROPIC_API_KEY;
-    else process.env.ANTHROPIC_API_KEY = originalKey;
+    if (originalAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+    if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalOpenAiKey;
+    if (originalProvider === undefined) delete process.env.AI_PROVIDER;
+    else process.env.AI_PROVIDER = originalProvider;
   });
 
-  describe('Gating (ANTHROPIC_API_KEY absente dans cet environnement)', () => {
+  describe('Gating (aucune clé IA dans cet environnement)', () => {
+    beforeEach(() => {
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.AI_PROVIDER;
+    });
+
     beforeAll(async () => {
       // Flag opt-in : sans activation, requireFeature répond 403 avant le 501.
       await request(app)
@@ -61,7 +73,7 @@ describe('Assistant IA des exercices (module IA, §4.16)', () => {
         .set(auth(fx.a.teacher.token))
         .send({ subject: 'Mathématiques', difficulty: 3, topic: 'Fractions' });
       expect(res.status).toBe(501);
-      expect(res.body.error).toContain('ANTHROPIC_API_KEY');
+      expect(res.body.error).toMatch(/ANTHROPIC_API_KEY|OPENAI_API_KEY/);
     });
 
     it('POST /exercises/ai/correct-answer répond 501', async () => {
@@ -206,57 +218,56 @@ describe('Assistant IA des exercices (module IA, §4.16)', () => {
     });
   });
 
-  describe('lib/aiExercise.ts — logique réelle sur un client Anthropic simulé', () => {
-    const fakeTextResponse = (payload: unknown) => ({
-      content: [{ type: 'text', text: JSON.stringify(payload) }],
-    });
-
+  describe('lib/aiExercise.ts — logique réelle via completeJson', () => {
     beforeEach(() => {
       vi.resetModules();
     });
 
-    it('generateExercise() demande le modèle attendu et parse la sortie structurée', async () => {
-      const created = vi.fn().mockResolvedValue(
-        fakeTextResponse({
-          title: 'Fractions simples',
-          description: 'Exercice généré',
-          questions: [
-            {
-              questionText: '1/2 + 1/4 = ?',
-              questionType: 'multiple_choice',
-              options: ['3/4', '2/6', '1/6'],
-              correctAnswer: '3/4',
-              explanation: 'Mise au même dénominateur',
-              points: 1,
-            },
-          ],
-        })
-      );
+    it('generateExercise() parse la sortie structurée du provider', async () => {
+      const completeJson = vi.fn().mockResolvedValue({
+        title: 'Fractions simples',
+        description: 'Exercice généré',
+        questions: [
+          {
+            questionText: '1/2 + 1/4 = ?',
+            questionType: 'multiple_choice',
+            options: ['3/4', '2/6', '1/6'],
+            correctAnswer: '3/4',
+            explanation: 'Mise au même dénominateur',
+            points: 1,
+          },
+        ],
+      });
       vi.doMock('../lib/anthropicClient.js', () => ({
-        getAnthropicClient: () => ({ messages: { create: created } }),
-        AI_MODEL: 'claude-opus-5',
+        completeJson,
         isAiConfigured: () => true,
       }));
 
       const { generateExercise } = await import('../lib/aiExercise.js');
-      const result = await generateExercise({ subject: 'Mathématiques', difficulty: 2, topic: 'Fractions', questionCount: 1 });
+      const result = await generateExercise({
+        subject: 'Mathématiques',
+        difficulty: 2,
+        topic: 'Fractions',
+        questionCount: 1,
+      });
 
-      expect(created).toHaveBeenCalledTimes(1);
-      const call = created.mock.calls[0][0];
-      expect(call.model).toBe('claude-opus-5');
-      expect(call.output_config.format.type).toBe('json_schema');
-      expect(call.messages[0].content).toContain('Fractions');
+      expect(completeJson).toHaveBeenCalledTimes(1);
+      const call = completeJson.mock.calls[0][0];
+      expect(call.schemaName).toBe('generated_exercise');
+      expect(call.user).toContain('Fractions');
       expect(result.title).toBe('Fractions simples');
       expect(result.questions).toHaveLength(1);
     });
 
     it('correctOpenAnswer() renvoie le score et le retour tels que produits par le modèle', async () => {
-      const created = vi.fn().mockResolvedValue(
-        fakeTextResponse({ score: 7, isCorrect: false, feedback: 'Presque, mais...', suggestions: ['Revoir la leçon'] })
-      );
+      const completeJson = vi.fn().mockResolvedValue({
+        score: 7,
+        isCorrect: false,
+        feedback: 'Presque, mais...',
+        suggestions: ['Revoir la leçon'],
+      });
       vi.doMock('../lib/anthropicClient.js', () => ({
-        getAnthropicClient: () => ({ messages: { create: created } }),
-        AI_MODEL: 'claude-opus-5',
+        completeJson,
         isAiConfigured: () => true,
       }));
 
@@ -273,11 +284,10 @@ describe('Assistant IA des exercices (module IA, §4.16)', () => {
       expect(result.suggestions).toEqual(['Revoir la leçon']);
     });
 
-    it('lève une erreur explicite si la réponse du modèle ne contient aucun bloc texte (jamais un crash silencieux)', async () => {
-      const created = vi.fn().mockResolvedValue({ content: [{ type: 'tool_use', input: {} }] });
+    it('propage l’erreur du provider si la réponse est inutilisable', async () => {
+      const completeJson = vi.fn().mockRejectedValue(new Error('Réponse IA vide ou inattendue'));
       vi.doMock('../lib/anthropicClient.js', () => ({
-        getAnthropicClient: () => ({ messages: { create: created } }),
-        AI_MODEL: 'claude-opus-5',
+        completeJson,
         isAiConfigured: () => true,
       }));
 
