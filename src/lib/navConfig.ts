@@ -281,18 +281,17 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'student':
+      // Jour 1 : parcours scolaire. Signatures / exercices sous « Plus ».
       return [
         {
           labelKey: 'sections.journey',
           items: [
             { titleKey: 'items.dashboard', href: '/dashboard', icon: Home },
+            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.myCourses', href: '/my-courses', icon: BookOpen },
             { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
             { titleKey: 'items.myAbsences', href: '/my-absences', icon: ClipboardCheck },
             { titleKey: 'items.assignments', href: '/assignments', icon: FileText },
-            { titleKey: 'items.exercises', href: '/exercises', icon: PenTool },
-            { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
           ],
         },
@@ -300,8 +299,18 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           labelKey: 'sections.account',
           items: [
             { titleKey: 'items.profile', href: '/profile', icon: User },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
+          ],
+        },
+        {
+          labelKey: 'sections.advanced',
+          collapsible: true,
+          defaultCollapsed: true,
+          items: [
+            { titleKey: 'items.exercises', href: '/exercises', icon: PenTool },
+            { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
+            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
+            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
       ];

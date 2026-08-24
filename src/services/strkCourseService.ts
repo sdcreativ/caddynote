@@ -21,6 +21,8 @@ export interface CourseWithDetails extends StrkCourse {
   class_name?: string;
   institution_name?: string;
   student_count?: number;
+  subject_id?: string;
+  subject_name?: string;
 }
 
 interface ApiCourse {
@@ -35,11 +37,13 @@ interface ApiCourse {
   scheduleTime?: string | null;
   duration?: number | null;
   status?: string | null;
+  subjectId?: string | null;
   createdAt?: string;
   updatedAt?: string;
   teacher?: { profile?: { firstName: string | null; lastName: string | null } | null } | null;
   class?: { name: string } | null;
   institution?: { name: string } | null;
+  subject?: { id: string; name: string } | null;
 }
 
 const mapApiCourse = (c: ApiCourse): CourseWithDetails => ({
@@ -62,6 +66,8 @@ const mapApiCourse = (c: ApiCourse): CourseWithDetails => ({
   class_name: c.class?.name,
   institution_name: c.institution?.name,
   student_count: 0,
+  subject_id: c.subjectId || c.subject?.id || undefined,
+  subject_name: c.subject?.name || undefined,
 });
 
 export const fetchCoursesByTeacher = async (teacherId: string): Promise<CourseWithDetails[]> => {

@@ -14,6 +14,7 @@ const COURSE_INCLUDE = {
   teacher: { include: { profile: { select: { firstName: true, lastName: true } } } },
   class: { select: { name: true } },
   institution: { select: { name: true } },
+  subject: { select: { id: true, name: true } },
 };
 
 coursesRouter.get('/', async (req, res) => {

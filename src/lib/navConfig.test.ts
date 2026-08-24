@@ -76,4 +76,26 @@ describe('navConfig (NFR-009)', () => {
       );
     }
   });
+
+  it('Élève : menu jour 1 allégé (+ section Plus)', () => {
+    const sections = navSectionsForRole('student');
+    const day1 = sections.filter((s) => !s.collapsible);
+    const advanced = sections.find((s) => s.collapsible);
+    const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
+    expect(visibleCount).toBeLessThanOrEqual(10);
+    expect(advanced?.defaultCollapsed).toBe(true);
+    const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toContain('/dashboard');
+    expect(hrefs).toContain('/calendar');
+    expect(hrefs).toContain('/my-courses');
+    expect(hrefs).toContain('/my-grades');
+    expect(hrefs).toContain('/my-absences');
+    expect(hrefs).toContain('/assignments');
+    expect(hrefs).toContain('/messages');
+    expect(hrefs).not.toContain('/exercises');
+    expect(hrefs).not.toContain('/signatures');
+    expect(advanced?.items.map((i) => i.href)).toEqual(
+      expect.arrayContaining(['/exercises', '/signatures', '/communications'])
+    );
+  });
 });

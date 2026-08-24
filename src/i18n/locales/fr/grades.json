@@ -49,6 +49,8 @@
     "load": "Chargement de vos notes…",
     "subjects": "Matières",
     "bySubject": "Moyennes par matière",
+    "bySubjectHint": "Moyennes pondérées /20 à partir des notes publiées.",
+    "subjectAverage": "Moyenne",
     "history": "Historique des notes"
   },
   "toast": {
