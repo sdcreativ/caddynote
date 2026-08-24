@@ -105,15 +105,12 @@ export const useStrkSchedules = () => {
       setError(null);
       try {
         const newSchedule = await createSchedule(scheduleData);
-        if (newSchedule) {
-          setSchedules((prev) => [...prev, newSchedule]);
-          toast({
-            title: 'Cours ajouté',
-            description: "Le cours a été ajouté à l'emploi du temps",
-          });
-          return newSchedule;
-        }
-        return null;
+        setSchedules((prev) => [...prev, newSchedule]);
+        toast({
+          title: 'Cours ajouté',
+          description: "Le cours a été ajouté à l'emploi du temps",
+        });
+        return newSchedule;
       } catch (err) {
         console.error('Error in addSchedule:', err);
         setError("Erreur lors de l'ajout du cours");

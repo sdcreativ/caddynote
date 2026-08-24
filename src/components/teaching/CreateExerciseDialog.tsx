@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { AIExerciseGenerator } from '@/components/exercises/AIExerciseGenerator';
 import { useTranslation } from 'react-i18next';
 import { tCommon } from '@/i18n/config';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface CreateExerciseDialogProps {
   isOpen: boolean;
@@ -45,6 +46,11 @@ interface CreateExerciseDialogProps {
   // désormais un second paramètre, à persister via `POST /exercises/:id/
   // questions` après la création de l'exercice.
   onExerciseCreated: (exercise: Partial<StrkExercise>, questions: Question[]) => void;
+  /** Mode édition : préremplit le formulaire et appelle onExerciseUpdated à la sauvegarde. */
+  exerciseToEdit?: StrkExercise | null;
+  initialQuestions?: Question[];
+  questionsLoading?: boolean;
+  onExerciseUpdated?: (exerciseId: string, exercise: Partial<StrkExercise>, questions: Question[]) => void;
 }
 
 export interface Question {
@@ -57,11 +63,20 @@ export interface Question {
   explanation?: string;
 }
 
-const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExerciseDialogProps) => {
+const CreateExerciseDialog = ({
+  isOpen,
+  onClose,
+  onExerciseCreated,
+  exerciseToEdit = null,
+  initialQuestions,
+  questionsLoading = false,
+  onExerciseUpdated,
+}: CreateExerciseDialogProps) => {
   const { toast } = useToast();
   const { t } = useTranslation('teaching');
   const { user } = useStrkAuth();
-  
+  const isEditMode = !!exerciseToEdit;
+
   // États pour l'exercice
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -99,51 +114,6 @@ const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExer
     { value: 'numeric', label: t('createExercise.questionTypes.numeric') }
   ];
 
-  const handleCreateExercise = () => {
-    if (!title) {
-      toast({
-        title: tCommon('status.error'),
-        description: t('createExercise.titleRequired'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (questions.length === 0) {
-      toast({
-        title: tCommon('status.error'), 
-        description: t('createExercise.questionsRequired'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const exerciseData: Partial<StrkExercise> = {
-      title,
-      description,
-      institution_id: user?.institutionId || '',
-      teacher_id: user?.id || '',
-      exercise_type: exerciseType,
-      difficulty_level: difficultyLevel[0],
-      time_limit: timeLimit ?? undefined,
-      max_attempts: maxAttempts,
-      due_date: dueDate?.toISOString(),
-      is_published: isPublished,
-      points,
-      subject
-    };
-
-    onExerciseCreated(exerciseData, questions);
-
-    toast({
-      title: tCommon('status.success'),
-      description: isPublished ? t('createExercise.publishedSuccess') : t('createExercise.draftSuccess'),
-    });
-
-    resetForm();
-    onClose();
-  };
-
   const resetForm = () => {
     setTitle('');
     setDescription('');
@@ -164,6 +134,86 @@ const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExer
       correct_answer: '',
       explanation: ''
     });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!exerciseToEdit) {
+      resetForm();
+      return;
+    }
+    setTitle(exerciseToEdit.title || '');
+    setDescription(exerciseToEdit.description || '');
+    setExerciseType(exerciseToEdit.exercise_type || 'quiz');
+    setDifficultyLevel([exerciseToEdit.difficulty_level || 3]);
+    setTimeLimit(exerciseToEdit.time_limit ?? null);
+    setMaxAttempts(exerciseToEdit.max_attempts || 1);
+    setDueDate(exerciseToEdit.due_date ? new Date(exerciseToEdit.due_date) : undefined);
+    setPoints(exerciseToEdit.points || 10);
+    setIsPublished(!!exerciseToEdit.is_published);
+    setSubject(exerciseToEdit.subject || '');
+  }, [isOpen, exerciseToEdit]);
+
+  useEffect(() => {
+    if (!isOpen || !exerciseToEdit) return;
+    if (initialQuestions) {
+      setQuestions(initialQuestions);
+    }
+  }, [isOpen, exerciseToEdit, initialQuestions]);
+
+  const buildExercisePayload = (): Partial<StrkExercise> => ({
+    title,
+    description,
+    institution_id: user?.institutionId || '',
+    teacher_id: user?.id || '',
+    exercise_type: exerciseType,
+    difficulty_level: difficultyLevel[0],
+    time_limit: timeLimit ?? undefined,
+    max_attempts: maxAttempts,
+    due_date: dueDate?.toISOString(),
+    is_published: isPublished,
+    points,
+    subject
+  });
+
+  const handleCreateExercise = () => {
+    if (!title) {
+      toast({
+        title: tCommon('status.error'),
+        description: t('createExercise.titleRequired'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (questions.length === 0) {
+      toast({
+        title: tCommon('status.error'), 
+        description: t('createExercise.questionsRequired'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isEditMode && exerciseToEdit && onExerciseUpdated) {
+      onExerciseUpdated(exerciseToEdit.id, buildExercisePayload(), questions);
+      toast({
+        title: tCommon('status.success'),
+        description: t('createExercise.updatedSuccess'),
+      });
+      onClose();
+      return;
+    }
+
+    onExerciseCreated(buildExercisePayload(), questions);
+
+    toast({
+      title: tCommon('status.success'),
+      description: isPublished ? t('createExercise.publishedSuccess') : t('createExercise.draftSuccess'),
+    });
+
+    resetForm();
+    onClose();
   };
 
   const addQuestion = () => {
@@ -244,12 +294,19 @@ const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExer
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('createExercise.title')}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? t('createExercise.editTitle') : t('createExercise.title')}
+          </DialogTitle>
           <DialogDescription>
-            {t('createExercise.description')}
+            {isEditMode ? t('createExercise.editDescription') : t('createExercise.description')}
           </DialogDescription>
         </DialogHeader>
 
+        {questionsLoading ? (
+          <div className="py-12">
+            <LoadingSpinner />
+          </div>
+        ) : (
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general">{t('createExercise.tabGeneral')}</TabsTrigger>
@@ -590,6 +647,7 @@ const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExer
             </div>
           </TabsContent>
         </Tabs>
+        )}
 
         <DialogFooter>
           <div className="flex justify-between w-full">
@@ -602,9 +660,13 @@ const CreateExerciseDialog = ({ isOpen, onClose, onExerciseCreated }: CreateExer
               </Button>
               <Button 
                 onClick={handleCreateExercise}
-                disabled={!title || questions.length === 0}
+                disabled={questionsLoading || !title || questions.length === 0}
               >
-                {isPublished ? t('createExercise.publish') : tCommon('actions.save')}
+                {isEditMode
+                  ? tCommon('actions.save')
+                  : isPublished
+                    ? t('createExercise.publish')
+                    : tCommon('actions.save')}
               </Button>
             </div>
           </div>

@@ -475,6 +475,44 @@ exercisesRouter.patch('/:id/progress', async (req, res) => {
 // --- Tentatives (élève) ---
 
 exercisesRouter.get('/:id/attempts', async (req, res) => {
+  const exercise = await prisma.strkExercise.findUnique({ where: { id: req.params.id } });
+  if (!exercise) {
+    return res.status(404).json({ error: 'Exercice introuvable' });
+  }
+  if (!canAccessExercise(req.auth!, exercise)) {
+    return res.status(403).json({ error: 'Permissions insuffisantes' });
+  }
+
+  const auth = req.auth!;
+  const isOwnerOrStaff =
+    isGlobalAdmin(auth) ||
+    exercise.teacherId === auth.sub ||
+    (auth.role === 'school_admin' && isSameInstitution(auth, exercise.institutionId));
+
+  // Enseignant / direction : sans studentId → toutes les tentatives (résultats).
+  // Un élève continue de ne voir que les siennes (chemin ci-dessous).
+  if (isOwnerOrStaff && req.query.studentId === undefined) {
+    const attempts = await prisma.strkExerciseAttempt.findMany({
+      where: { exerciseId: req.params.id },
+      orderBy: [{ submittedAt: 'desc' }, { startedAt: 'desc' }],
+    });
+    const studentIds = [...new Set(attempts.map((a) => a.studentId))];
+    const profiles =
+      studentIds.length === 0
+        ? []
+        : await prisma.strkProfile.findMany({
+            where: { id: { in: studentIds } },
+            select: { id: true, firstName: true, lastName: true, email: true },
+          });
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    return res.json({
+      attempts: attempts.map((a) => ({
+        ...a,
+        student: byId.get(a.studentId) ?? null,
+      })),
+    });
+  }
+
   const studentId = await resolveProgressStudentId(req, res, req.query.studentId);
   if (!studentId) return;
   const attempts = await prisma.strkExerciseAttempt.findMany({

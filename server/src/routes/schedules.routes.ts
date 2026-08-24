@@ -182,8 +182,15 @@ schedulesRouter.post('/', requireRole('admin', 'school_admin'), async (req, res)
   if (conflicts.length > 0 && !parsed.data.force) {
     return res.status(409).json({ error: 'Conflit d’emploi du temps détecté', conflicts });
   }
-  const { force, ...data } = parsed.data;
-  const schedule = await prisma.strkSchedule.create({ data, include: SCHEDULE_INCLUDE });
+  const { force, startDate, endDate, ...rest } = parsed.data;
+  const schedule = await prisma.strkSchedule.create({
+    data: {
+      ...rest,
+      ...(startDate ? { startDate: new Date(startDate) } : {}),
+      ...(endDate ? { endDate: new Date(endDate) } : {}),
+    },
+    include: SCHEDULE_INCLUDE,
+  });
   if (conflicts.length > 0) {
     await logAudit({
       institutionId: parsed.data.institutionId,

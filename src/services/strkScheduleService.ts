@@ -101,25 +101,21 @@ export const fetchSchedulesByInstitution = async (
   }
 };
 
-export const createSchedule = async (scheduleData: any): Promise<StrkSchedule | null> => {
-  try {
-    const { schedule } = await apiClient.post<{ schedule: ApiSchedule }>('/schedules', {
-      courseId: scheduleData.course_id,
-      classId: scheduleData.class_id,
-      institutionId: scheduleData.institution_id,
-      teacherId: scheduleData.teacher_id,
-      dayOfWeek: scheduleData.day_of_week,
-      startTime: scheduleData.start_time,
-      endTime: scheduleData.end_time,
-      room: scheduleData.room,
-      startDate: scheduleData.effective_from,
-      endDate: scheduleData.effective_until,
-    });
-    return mapApiSchedule(schedule);
-  } catch (error) {
-    console.error("Error in createSchedule:", error);
-    return null;
-  }
+export const createSchedule = async (scheduleData: any): Promise<StrkSchedule> => {
+  const { schedule } = await apiClient.post<{ schedule: ApiSchedule }>('/schedules', {
+    courseId: scheduleData.course_id,
+    classId: scheduleData.class_id,
+    institutionId: scheduleData.institution_id,
+    teacherId: scheduleData.teacher_id,
+    dayOfWeek: scheduleData.day_of_week,
+    startTime: scheduleData.start_time,
+    endTime: scheduleData.end_time,
+    room: scheduleData.room,
+    startDate: scheduleData.effective_from,
+    endDate: scheduleData.effective_until,
+    force: scheduleData.force,
+  });
+  return mapApiSchedule(schedule);
 };
 
 export const updateSchedule = async (id: string, updates: Partial<StrkSchedule>): Promise<StrkSchedule | null> => {

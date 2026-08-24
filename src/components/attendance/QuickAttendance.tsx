@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cacheRoster, getCachedRoster, queueAttendance } from '@/lib/offlineDb';
 import { flushPendingAttendance } from '@/lib/offlineSync';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
+import { newClientId } from '@/lib/clientId';
+import { ApiError } from '@/lib/apiClient';
 
 interface Student {
   id: string;
@@ -23,10 +25,11 @@ interface QuickAttendanceProps {
   classId: string;
   institutionId: string;
   students: Student[];
+  courseId?: string;
   onAttendanceSubmitted?: (attendanceList: StrkAttendance[]) => void;
 }
 
-export const QuickAttendance = ({ classId, institutionId, students, onAttendanceSubmitted }: QuickAttendanceProps) => {
+export const QuickAttendance = ({ classId, institutionId, students, courseId, onAttendanceSubmitted }: QuickAttendanceProps) => {
   const { t } = useTranslation('attendance');
   const { t: tc } = useTranslation('common');
   const [attendanceData, setAttendanceData] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
@@ -66,6 +69,14 @@ export const QuickAttendance = ({ classId, institutionId, students, onAttendance
   const submitAttendance = async () => {
     try {
       setIsSubmitting(true);
+      if (!institutionId) {
+        toast({
+          title: tc('status.error'),
+          description: t('quick.saveError'),
+          variant: 'destructive',
+        });
+        return;
+      }
       const date = new Date().toISOString().split('T')[0];
       const entries = Object.entries(attendanceData).filter(([, status]) => status !== 'present');
 
@@ -83,11 +94,12 @@ export const QuickAttendance = ({ classId, institutionId, students, onAttendance
         ([studentId, status]) => ({
           student_id: studentId,
           institution_id: institutionId,
+          course_id: courseId,
           date,
           type: status === 'late' ? 'lateness' : 'absence',
           duration: status === 'late' ? 15 : 60,
           justified: false,
-          client_id: crypto.randomUUID(),
+          client_id: newClientId(),
         })
       );
 
@@ -110,10 +122,13 @@ export const QuickAttendance = ({ classId, institutionId, students, onAttendance
         });
       } else {
         const results = await bulkMarkAttendance(attendanceList);
+        if (results.length === 0) {
+          throw new Error(t('quick.saveError'));
+        }
         onAttendanceSubmitted?.(results);
         toast({
           title: t('quick.savedTitle'),
-          description: t('quick.savedBody', { count: attendanceList.length }),
+          description: t('quick.savedBody', { count: results.length }),
         });
         // Profite de la connexion présente pour vider une éventuelle file
         // laissée par une session précédente hors ligne.
@@ -125,7 +140,7 @@ export const QuickAttendance = ({ classId, institutionId, students, onAttendance
       console.error('Error submitting attendance:', error);
       toast({
         title: tc('status.error'),
-        description: t('quick.saveError'),
+        description: error instanceof ApiError && error.message ? error.message : t('quick.saveError'),
         variant: "destructive",
       });
     } finally {

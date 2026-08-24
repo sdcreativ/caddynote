@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { fetchStudentsByClass, type ClassRosterStudent, type StrkAttendance } from '@/services/strkAttendanceService';
 import { QuickAttendance } from './QuickAttendance';
 import type { CourseWithDetails } from '@/services/strkCourseService';
@@ -34,7 +33,6 @@ export function AttendanceDialog({ open, onOpenChange, courses, institutionId, o
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [roster, setRoster] = useState<ClassRosterStudent[]>([]);
   const [isRosterLoading, setIsRosterLoading] = useState(false);
-  const { toast } = useToast();
 
   const coursesWithClass = courses.filter((c) => !!c.class_id);
   const selectedCourse = coursesWithClass.find((c) => c.id === selectedCourseId);
@@ -66,7 +64,6 @@ export function AttendanceDialog({ open, onOpenChange, courses, institutionId, o
 
   const handleSubmitted = (attendance: StrkAttendance[]) => {
     onAttendanceSubmitted?.(attendance);
-    toast({ title: t('dialog.savedTitle'), description: t('dialog.savedBody') });
     onOpenChange(false);
   };
 
@@ -109,6 +106,7 @@ export function AttendanceDialog({ open, onOpenChange, courses, institutionId, o
               <QuickAttendance
                 classId={selectedCourse.class_id}
                 institutionId={institutionId ?? selectedCourse.institution_id}
+                courseId={selectedCourse.id}
                 students={roster}
                 onAttendanceSubmitted={handleSubmitted}
               />

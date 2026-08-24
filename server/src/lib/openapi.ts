@@ -298,7 +298,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'delete', path: '/exercises/assignments/:assignmentId', tag: 'Exercices', summary: 'Retirer une assignation', auth: 'bearer', roles: [...staff] },
   { method: 'get', path: '/exercises/:id/progress', tag: 'Exercices', summary: 'Progression', auth: 'bearer' },
   { method: 'patch', path: '/exercises/:id/progress', tag: 'Exercices', summary: 'Mettre à jour la progression', auth: 'bearer' },
-  { method: 'get', path: '/exercises/:id/attempts', tag: 'Exercices', summary: 'Tentatives', auth: 'bearer' },
+  { method: 'get', path: '/exercises/:id/attempts', tag: 'Exercices', summary: 'Tentatives (élève : les siennes ; enseignant/direction : toutes)', auth: 'bearer' },
   { method: 'post', path: '/exercises/:id/attempts', tag: 'Exercices', summary: 'Démarrer une tentative', auth: 'bearer', statuses: [201] },
   { method: 'patch', path: '/exercises/attempts/:attemptId', tag: 'Exercices', summary: 'Soumettre une tentative', auth: 'bearer' },
 

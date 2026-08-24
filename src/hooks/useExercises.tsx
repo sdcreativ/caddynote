@@ -44,6 +44,23 @@ const mapExercisePayloadToApi = (data: Partial<StrkExercise>) => {
   return payload;
 };
 
+const mapAttemptFromApi = (a: any): StrkExerciseAttempt => ({
+  id: a.id,
+  exercise_id: a.exerciseId,
+  student_id: a.studentId,
+  attempt_number: a.attemptNumber ?? 1,
+  started_at: a.startedAt,
+  submitted_at: a.submittedAt ?? undefined,
+  score: Number(a.score ?? 0),
+  max_score: Number(a.maxScore ?? 0),
+  time_spent: a.timeSpent ?? 0,
+  status: (a.status ?? 'in_progress') as AttemptStatus,
+  answers: a.answers ?? {},
+  feedback: a.feedback ?? undefined,
+  created_at: a.createdAt,
+  updated_at: a.updatedAt,
+});
+
 export const useExercises = () => {
   const { user } = useStrkAuth();
   const [exercises, setExercises] = useState<any[]>([]);
@@ -117,6 +134,63 @@ export const useExercises = () => {
     return created;
   };
 
+  const fetchQuestions = async (exerciseId: string) => {
+    const { questions } = await apiClient.get<{ questions: any[] }>(`/exercises/${exerciseId}/questions`);
+    return (questions || []).map((q) => ({
+      id: q.id as string,
+      question_text: q.questionText as string,
+      question_type: q.questionType as string,
+      points: (q.points ?? 1) as number,
+      options: (Array.isArray(q.options) ? q.options : []) as string[],
+      correct_answer: typeof q.correctAnswer === 'string' ? q.correctAnswer : String(q.correctAnswer ?? ''),
+      explanation: (q.explanation ?? undefined) as string | undefined,
+      question_order: q.questionOrder as number | undefined,
+    }));
+  };
+
+  const updateQuestion = async (
+    questionId: string,
+    question: {
+      question_text: string;
+      question_type: string;
+      points: number;
+      options?: string[];
+      correct_answer: string;
+      explanation?: string;
+      question_order?: number;
+    }
+  ) => {
+    const { question: updated } = await apiClient.patch<{ question: any }>(`/exercises/questions/${questionId}`, {
+      questionText: question.question_text,
+      questionType: question.question_type,
+      points: question.points,
+      options: question.options,
+      correctAnswer: question.correct_answer,
+      explanation: question.explanation,
+      questionOrder: question.question_order,
+    });
+    return updated;
+  };
+
+  const deleteQuestion = async (questionId: string) => {
+    await apiClient.delete(`/exercises/questions/${questionId}`);
+  };
+
+  const fetchExerciseAttempts = async (exerciseId: string) => {
+    const { attempts } = await apiClient.get<{ attempts: any[] }>(`/exercises/${exerciseId}/attempts`);
+    return (attempts || []).map((a) => ({
+      ...mapAttemptFromApi(a),
+      student: a.student
+        ? {
+            id: a.student.id as string,
+            firstName: (a.student.firstName ?? null) as string | null,
+            lastName: (a.student.lastName ?? null) as string | null,
+            email: (a.student.email ?? null) as string | null,
+          }
+        : null,
+    }));
+  };
+
   const updateExercise = async (id: string, updates: Partial<StrkExercise>) => {
     try {
       await apiClient.patch(`/exercises/${id}`, mapExercisePayloadToApi(updates));
@@ -148,6 +222,10 @@ export const useExercises = () => {
     fetchExercises,
     createExercise,
     addQuestion,
+    fetchQuestions,
+    updateQuestion,
+    deleteQuestion,
+    fetchExerciseAttempts,
     updateExercise,
     deleteExercise,
     publishExercise,
@@ -223,23 +301,6 @@ export const useExerciseProgress = (exerciseId: string) => {
     refreshProgress: fetchProgress,
   };
 };
-
-const mapAttemptFromApi = (a: any): StrkExerciseAttempt => ({
-  id: a.id,
-  exercise_id: a.exerciseId,
-  student_id: a.studentId,
-  attempt_number: a.attemptNumber ?? 1,
-  started_at: a.startedAt,
-  submitted_at: a.submittedAt ?? undefined,
-  score: Number(a.score ?? 0),
-  max_score: Number(a.maxScore ?? 0),
-  time_spent: a.timeSpent ?? 0,
-  status: (a.status ?? 'in_progress') as AttemptStatus,
-  answers: a.answers ?? {},
-  feedback: a.feedback ?? undefined,
-  created_at: a.createdAt,
-  updated_at: a.updatedAt,
-});
 
 export const useExerciseAttempts = (exerciseId: string) => {
   const { user } = useStrkAuth();

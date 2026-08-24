@@ -1,14 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useExercises } from "@/hooks/useExercises";
-import { StrkExercise } from "@/types/exercises";
+import { StrkExercise, QuestionType } from "@/types/exercises";
 import { 
   BookOpen, 
   Users, 
@@ -22,19 +20,38 @@ import {
   Trophy
 } from "lucide-react";
 import CreateExerciseDialog, { type Question } from "@/components/teaching/CreateExerciseDialog";
+import ExerciseResultsDialog from "@/components/teaching/ExerciseResultsDialog";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useTranslation } from "react-i18next";
 import { tCommon } from "@/i18n/config";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const TeacherExercisesPage = () => {
   const { user } = useStrkAuth();
   const { toast } = useToast();
   const { t } = useTranslation("exercises");
-  const { exercises, loading, createExercise, addQuestion, fetchExercises, publishExercise, updateExercise } = useExercises();
+  const {
+    exercises,
+    loading,
+    createExercise,
+    addQuestion,
+    fetchQuestions,
+    updateQuestion,
+    deleteQuestion,
+    fetchExerciseAttempts,
+    fetchExercises,
+    publishExercise,
+    updateExercise,
+  } = useExercises();
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [editingExercise, setEditingExercise] = useState<StrkExercise | null>(null);
+  const [editQuestions, setEditQuestions] = useState<Question[]>([]);
+  const [editQuestionsLoading, setEditQuestionsLoading] = useState(false);
+  const [resultsExercise, setResultsExercise] = useState<StrkExercise | null>(null);
 
   const handleTogglePublish = async (exercise: StrkExercise) => {
     setPublishingId(exercise.id);
@@ -111,6 +128,94 @@ const TeacherExercisesPage = () => {
       });
     }
   };
+
+  const handleOpenEdit = async (exercise: StrkExercise) => {
+    setEditingExercise(exercise);
+    setEditQuestions([]);
+    setEditQuestionsLoading(true);
+    try {
+      const loaded = await fetchQuestions(exercise.id);
+      setEditQuestions(
+        loaded.map((q) => ({
+          id: q.id,
+          question_text: q.question_text,
+          question_type: q.question_type as QuestionType,
+          points: q.points,
+          options: q.options,
+          correct_answer: q.correct_answer,
+          explanation: q.explanation,
+        }))
+      );
+    } catch (error) {
+      console.error('Erreur chargement questions:', error);
+      toast({
+        title: tCommon('status.error'),
+        description: t('teacher.editLoadError'),
+        variant: 'destructive',
+      });
+      setEditingExercise(null);
+    } finally {
+      setEditQuestionsLoading(false);
+    }
+  };
+
+  const handleUpdateExercise = async (
+    exerciseId: string,
+    exerciseData: Partial<StrkExercise>,
+    questions: Question[]
+  ) => {
+    try {
+      await updateExercise(exerciseId, exerciseData);
+      const existing = await fetchQuestions(exerciseId);
+      const existingIds = new Set(existing.map((q) => q.id));
+      const keptIds = new Set(questions.map((q) => q.id).filter((id) => UUID_RE.test(id)));
+
+      for (const id of existingIds) {
+        if (!keptIds.has(id)) {
+          await deleteQuestion(id);
+        }
+      }
+
+      let failed = 0;
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        try {
+          if (UUID_RE.test(q.id) && existingIds.has(q.id)) {
+            await updateQuestion(q.id, { ...q, question_order: i });
+          } else {
+            await addQuestion(exerciseId, { ...q, question_order: i });
+          }
+        } catch (err) {
+          console.error('Erreur synchronisation question:', err);
+          failed++;
+        }
+      }
+
+      if (failed > 0) {
+        toast({
+          title: t('teacher.incompleteTitle'),
+          description: t('teacher.incompleteBody', { failed, total: questions.length }),
+          variant: 'destructive',
+        });
+      }
+
+      await fetchExercises();
+      setEditingExercise(null);
+      setEditQuestions([]);
+    } catch (error) {
+      console.error('Erreur mise à jour exercice:', error);
+      toast({
+        title: tCommon('status.error'),
+        description: t('teacher.editError'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadAttempts = useCallback(
+    (exerciseId: string) => fetchExerciseAttempts(exerciseId),
+    [fetchExerciseAttempts]
+  );
 
   // Statistiques
   const stats = {
@@ -244,6 +349,8 @@ const TeacherExercisesPage = () => {
               exercise={exercise}
               publishing={publishingId === exercise.id}
               onTogglePublish={() => handleTogglePublish(exercise)}
+              onEdit={() => void handleOpenEdit(exercise)}
+              onViewResults={() => setResultsExercise(exercise)}
             />
           ))
         ) : (
@@ -276,6 +383,26 @@ const TeacherExercisesPage = () => {
         onClose={() => setCreateDialogOpen(false)}
         onExerciseCreated={handleCreateExercise}
       />
+
+      <CreateExerciseDialog
+        isOpen={!!editingExercise}
+        onClose={() => {
+          setEditingExercise(null);
+          setEditQuestions([]);
+        }}
+        onExerciseCreated={handleCreateExercise}
+        exerciseToEdit={editingExercise}
+        initialQuestions={editQuestions}
+        questionsLoading={editQuestionsLoading}
+        onExerciseUpdated={handleUpdateExercise}
+      />
+
+      <ExerciseResultsDialog
+        isOpen={!!resultsExercise}
+        onClose={() => setResultsExercise(null)}
+        exercise={resultsExercise}
+        loadAttempts={loadAttempts}
+      />
     </div>
   );
 };
@@ -284,9 +411,17 @@ interface ExerciseCardProps {
   exercise: StrkExercise;
   publishing?: boolean;
   onTogglePublish: () => void;
+  onEdit: () => void;
+  onViewResults: () => void;
 }
 
-const ExerciseCard = ({ exercise, publishing = false, onTogglePublish }: ExerciseCardProps) => {
+const ExerciseCard = ({
+  exercise,
+  publishing = false,
+  onTogglePublish,
+  onEdit,
+  onViewResults,
+}: ExerciseCardProps) => {
   const { t } = useTranslation("exercises");
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -369,10 +504,10 @@ const ExerciseCard = ({ exercise, publishing = false, onTogglePublish }: Exercis
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={onEdit}>
               {tCommon("actions.edit")}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={onViewResults}>
               {t("teacher.results")}
             </Button>
             {!exercise.is_published ? (

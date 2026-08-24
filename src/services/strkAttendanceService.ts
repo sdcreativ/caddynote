@@ -198,24 +198,19 @@ export const updateAttendance = async (id: string, updates: Partial<StrkAttendan
 };
 
 export const bulkMarkAttendance = async (attendanceList: Omit<StrkAttendance, "id" | "created_at" | "updated_at">[]): Promise<StrkAttendance[]> => {
-  try {
-    const { absences } = await apiClient.post<{ absences: ApiAbsence[] }>(
-      '/absences/bulk',
-      attendanceList.map((a) => ({
-        studentId: a.student_id,
-        institutionId: a.institution_id,
-        courseId: a.course_id,
-        type: a.type,
-        date: a.date,
-        duration: a.duration,
-        clientId: a.client_id,
-      }))
-    );
-    return absences.map(mapApiAttendance);
-  } catch (error) {
-    console.error("Error in bulkMarkAttendance:", error);
-    return [];
-  }
+  const { absences } = await apiClient.post<{ absences: ApiAbsence[] }>(
+    '/absences/bulk',
+    attendanceList.map((a) => ({
+      studentId: a.student_id,
+      institutionId: a.institution_id,
+      courseId: a.course_id,
+      type: a.type,
+      date: a.date,
+      duration: a.duration,
+      clientId: a.client_id,
+    }))
+  );
+  return absences.map(mapApiAttendance);
 };
 
 export const getAttendanceStats = async (studentId: string, startDate: string, endDate: string): Promise<AttendanceStats> => {
