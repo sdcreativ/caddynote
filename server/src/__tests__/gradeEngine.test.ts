@@ -287,6 +287,77 @@ describe('Moteur de notes (EVA-004/005/006)', () => {
         .set(auth(fx.parentA.token));
       expect(forbidden.status).toBe(400); // studentId requis pour un rôle non-personnel
     });
+
+    it('parent : résumé notes par matière avec moyennes', async () => {
+      const periodRes = await request(app)
+        .post('/academic-periods')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({
+          institutionId: fx.a.institutionId,
+          academicYear: '2025-2026',
+          name: 'Trimestre résumé parent',
+          order: 9,
+          startDate: '2026-09-01',
+          endDate: '2026-12-15',
+        });
+      expect(periodRes.status).toBe(201);
+      const periodId = periodRes.body.period.id as string;
+
+      const subjectRes = await request(app)
+        .post('/subjects')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({ name: 'Mathématiques parent', institutionId: fx.a.institutionId });
+      expect(subjectRes.status).toBe(201);
+      const courseRes = await request(app)
+        .post('/courses')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({
+          name: 'Maths 6ème',
+          institutionId: fx.a.institutionId,
+          teacherId: fx.a.teacher.id,
+          classId: fx.a.classId,
+          subjectId: subjectRes.body.subject.id,
+        });
+      expect(courseRes.status).toBe(201);
+      const courseId = courseRes.body.course.id as string;
+
+      const draft = await request(app).post('/grades').set(auth(fx.a.teacher.token)).send({
+        studentId: fx.a.student.id,
+        courseId,
+        teacherId: fx.a.teacher.id,
+        gradeValue: 14,
+        maxGrade: 20,
+        gradeType: 'exam',
+        title: 'Devoir parent',
+        periodId,
+        coefficient: 2,
+      });
+      expect(draft.status).toBe(201);
+      const published = await request(app)
+        .post('/grades/publish')
+        .set(auth(fx.a.teacher.token))
+        .send({ courseId, periodId });
+      expect(published.status).toBe(200);
+
+      const res = await request(app)
+        .get(`/grades/student-summary?studentId=${fx.a.student.id}`)
+        .set(auth(fx.parentA.token));
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.subjects)).toBe(true);
+      expect(res.body.subjects.length).toBeGreaterThan(0);
+      const math = res.body.subjects.find(
+        (s: { subjectName: string }) => s.subjectName === 'Mathématiques parent'
+      );
+      expect(math).toBeTruthy();
+      expect(math.averageOutOf20).toBeCloseTo(14, 5);
+      expect(math.grades.some((g: { title: string }) => g.title === 'Devoir parent')).toBe(true);
+      expect(res.body.overallAverageOutOf20).toEqual(expect.any(Number));
+
+      const otherChild = await request(app)
+        .get(`/grades/student-summary?studentId=${fx.b.student.id}`)
+        .set(auth(fx.parentA.token));
+      expect(otherChild.status).toBe(403);
+    });
   });
 
   describe('EVA-006 — bulletin PDF', () => {

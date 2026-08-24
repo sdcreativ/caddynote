@@ -197,6 +197,42 @@ export const calculateStudentCourseAverage = async (studentId: string, courseId:
   }
 };
 
+export type StudentSubjectGradeSummary = {
+  key: string;
+  subjectId: string | null;
+  subjectName: string;
+  courseId: string | null;
+  courseName: string | null;
+  courseCoefficient: number;
+  averageOutOf20: number | null;
+  grades: Array<{
+    id: string;
+    title: string;
+    gradeValue: number;
+    maxGrade: number;
+    coefficient: number;
+    date: string;
+    gradeType: string;
+    normalizedOutOf20: number;
+    periodId: string | null;
+  }>;
+};
+
+export type StudentGradeSummary = {
+  subjects: StudentSubjectGradeSummary[];
+  overallAverageOutOf20: number | null;
+};
+
+/** Notes publiées regroupées par matière + moyennes /20 (espace parent / élève). */
+export const fetchStudentGradeSummary = async (
+  studentId: string,
+  periodId?: string
+): Promise<StudentGradeSummary> => {
+  const qs = new URLSearchParams({ studentId });
+  if (periodId) qs.set('periodId', periodId);
+  return apiClient.get<StudentGradeSummary>(`/grades/student-summary?${qs.toString()}`);
+};
+
 /** EVA-005 : publie toutes les notes brouillon d'un cours / période. */
 export const publishGrades = async (courseId: string, periodId: string): Promise<number> => {
   const { published } = await apiClient.post<{ published: number }>('/grades/publish', {

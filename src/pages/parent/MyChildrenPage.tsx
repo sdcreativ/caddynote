@@ -16,7 +16,7 @@ import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
 import { JustificationDialog } from '@/components/absences/JustificationDialog';
 import { StudentHealthForm } from '@/components/students/StudentHealthForm';
-import { fetchGradesByStudent } from '@/services/strkGradeService';
+import { fetchStudentGradeSummary, type StudentGradeSummary } from '@/services/strkGradeService';
 import {
   fetchInvoicesByStudent,
   initiateCinetPayPayment,
@@ -30,7 +30,6 @@ import {
   fetchMyAdmissionApplications,
   type AdmissionApplication,
 } from '@/services/strkAdmissionService';
-import { StrkGrade } from '@/types/strk';
 import { Link } from 'react-router-dom';
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
@@ -65,7 +64,7 @@ const MyChildrenPage = () => {
         : undefined;
   const { children, isLoading, selectedChildId, selectedChild, setSelectedChildId } = useGuardianChildren();
   const { absences, loadAbsencesByStudent, isLoading: absencesLoading } = useStrkAbsences();
-  const [grades, setGrades] = useState<StrkGrade[]>([]);
+  const [gradeSummary, setGradeSummary] = useState<StudentGradeSummary | null>(null);
   const [gradesLoading, setGradesLoading] = useState(false);
   const [invoices, setInvoices] = useState<StrkInvoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -88,8 +87,10 @@ const MyChildrenPage = () => {
   const loadGrades = useCallback(async (studentId: string) => {
     setGradesLoading(true);
     try {
-      const data = await fetchGradesByStudent(studentId);
-      setGrades(data);
+      const data = await fetchStudentGradeSummary(studentId);
+      setGradeSummary(data);
+    } catch {
+      setGradeSummary(null);
     } finally {
       setGradesLoading(false);
     }
@@ -421,7 +422,7 @@ const MyChildrenPage = () => {
                 <p className="text-sm text-gray-500">Vous n'avez pas accès aux notes de cet enfant.</p>
               ) : gradesLoading ? (
                 <p className="text-sm text-gray-500">Chargement…</p>
-              ) : grades.length === 0 ? (
+              ) : !gradeSummary || gradeSummary.subjects.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
                     <Award className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -430,26 +431,81 @@ const MyChildrenPage = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
-                  {grades.map((grade) => {
-                    const courseName = (grade as StrkGrade & { course?: { name?: string } }).course?.name;
-                    return (
-                    <Card key={grade.id}>
-                      <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-4">
+                  {gradeSummary.overallAverageOutOf20 != null && (
+                    <Card className="border-blue-100 bg-blue-50/40">
+                      <CardContent className="flex items-center justify-between gap-3 p-4">
                         <div>
-                          <p className="font-semibold">{grade.title}</p>
-                          <p className="text-sm text-gray-500">
-                            {courseName && `${courseName} • `}
-                            {new Date(grade.date).toLocaleDateString('fr-FR')}
+                          <p className="text-sm font-medium text-slate-600">Moyenne générale</p>
+                          <p className="text-xs text-slate-500">
+                            Pondérée par le coefficient de chaque matière
                           </p>
                         </div>
-                        <div className="text-xl font-bold">
-                          {grade.grade_value}/{grade.max_grade}
-                        </div>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {gradeSummary.overallAverageOutOf20.toLocaleString('fr-FR', {
+                            maximumFractionDigits: 2,
+                          })}
+                          <span className="text-base font-semibold text-slate-500"> / 20</span>
+                        </p>
                       </CardContent>
                     </Card>
-                    );
-                  })}
+                  )}
+
+                  {gradeSummary.subjects.map((subject) => (
+                    <Card key={subject.key}>
+                      <CardHeader className="pb-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <CardTitle className="text-base">{subject.subjectName}</CardTitle>
+                            {subject.courseName && subject.courseName !== subject.subjectName && (
+                              <CardDescription>{subject.courseName}</CardDescription>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                              Moyenne
+                            </p>
+                            <p className="text-xl font-bold text-slate-900">
+                              {subject.averageOutOf20 == null
+                                ? '—'
+                                : `${subject.averageOutOf20.toLocaleString('fr-FR', {
+                                    maximumFractionDigits: 2,
+                                  })} / 20`}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              Coeff. matière {subject.courseCoefficient}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {subject.grades.map((grade) => (
+                          <div
+                            key={grade.id}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-slate-900">{grade.title}</p>
+                              <p className="text-xs text-slate-500">
+                                {new Date(grade.date).toLocaleDateString('fr-FR')}
+                                {grade.coefficient !== 1 ? ` · coeff. ${grade.coefficient}` : ''}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-lg font-semibold">
+                                {grade.gradeValue}/{grade.maxGrade}
+                              </p>
+                              {grade.maxGrade !== 20 && (
+                                <p className="text-[11px] text-slate-400">
+                                  ≈ {grade.normalizedOutOf20}/20
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </TabsContent>

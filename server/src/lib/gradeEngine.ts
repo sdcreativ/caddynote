@@ -249,3 +249,138 @@ export const getLatestComputations = async (params: { classId: string; periodId:
     orderBy: [{ studentId: 'asc' }, { subjectId: 'asc' }],
   });
 };
+
+export type StudentSubjectGradeBucket = {
+  key: string;
+  subjectId: string | null;
+  subjectName: string;
+  courseId: string | null;
+  courseName: string | null;
+  courseCoefficient: number;
+  averageOutOf20: number | null;
+  grades: Array<{
+    id: string;
+    title: string;
+    gradeValue: number;
+    maxGrade: number;
+    coefficient: number;
+    date: string;
+    gradeType: string;
+    normalizedOutOf20: number;
+    periodId: string | null;
+  }>;
+};
+
+/**
+ * Résumé parent/élève : notes publiées regroupées par matière (ou cours
+ * sans matière), avec moyenne /20 par groupe et moyenne générale pondérée
+ * par le coefficient du cours. Ne dépend pas d’un calcul de rang direction.
+ */
+export const getStudentGradeSummary = async (params: {
+  studentId: string;
+  periodId?: string;
+}): Promise<{ subjects: StudentSubjectGradeBucket[]; overallAverageOutOf20: number | null }> => {
+  const grades = await prisma.strkGrade.findMany({
+    where: {
+      studentId: params.studentId,
+      status: { in: ['published', 'corrected'] },
+      ...(params.periodId ? { periodId: params.periodId } : {}),
+    },
+    orderBy: { date: 'desc' },
+    select: {
+      id: true,
+      title: true,
+      gradeValue: true,
+      maxGrade: true,
+      coefficient: true,
+      date: true,
+      gradeType: true,
+      periodId: true,
+      courseId: true,
+    },
+  });
+
+  if (grades.length === 0) {
+    return { subjects: [], overallAverageOutOf20: null };
+  }
+
+  const courseIds = [...new Set(grades.map((g) => g.courseId))];
+  const courses = await prisma.strkCourse.findMany({
+    where: { id: { in: courseIds } },
+    select: {
+      id: true,
+      name: true,
+      coefficient: true,
+      subjectId: true,
+      subject: { select: { id: true, name: true } },
+    },
+  });
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+
+  const buckets = new Map<
+    string,
+    {
+      meta: StudentSubjectGradeBucket;
+      entries: { value: number; weight: number }[];
+    }
+  >();
+
+  for (const grade of grades) {
+    const course = courseById.get(grade.courseId);
+    const subjectId = course?.subjectId ?? null;
+    const key = subjectId ?? `course:${grade.courseId}`;
+    const subjectName = course?.subject?.name || course?.name || 'Cours';
+    const courseCoefficient = Number(course?.coefficient ?? 1) || 1;
+    const maxGrade = Number(grade.maxGrade);
+    const gradeValue = Number(grade.gradeValue);
+    const coefficient = Number(grade.coefficient) || 1;
+    const normalized = normalizeToTwenty(gradeValue, maxGrade);
+
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        meta: {
+          key,
+          subjectId,
+          subjectName,
+          courseId: course?.id ?? grade.courseId,
+          courseName: course?.name ?? null,
+          courseCoefficient,
+          averageOutOf20: null,
+          grades: [],
+        },
+        entries: [],
+      });
+    }
+    const bucket = buckets.get(key)!;
+    bucket.entries.push({ value: normalized, weight: coefficient });
+    bucket.meta.grades.push({
+      id: grade.id,
+      title: grade.title,
+      gradeValue,
+      maxGrade,
+      coefficient,
+      date: grade.date.toISOString(),
+      gradeType: grade.gradeType,
+      normalizedOutOf20: Math.round(normalized * 100) / 100,
+      periodId: grade.periodId,
+    });
+  }
+
+  const subjects: StudentSubjectGradeBucket[] = [...buckets.values()].map(({ meta, entries }) => {
+    const avg = entries.length ? weightedAverage(entries) : null;
+    return {
+      ...meta,
+      averageOutOf20: avg == null ? null : Math.round(avg * 100) / 100,
+    };
+  });
+
+  subjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName, 'fr'));
+
+  const overallItems = subjects
+    .filter((s) => s.averageOutOf20 != null)
+    .map((s) => ({ value: s.averageOutOf20!, weight: s.courseCoefficient }));
+  const overall =
+    overallItems.length > 0 ? Math.round(weightedAverage(overallItems) * 100) / 100 : null;
+
+  return { subjects, overallAverageOutOf20: overall };
+};

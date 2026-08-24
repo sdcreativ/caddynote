@@ -9,7 +9,7 @@ import {
   rejectUnlessStudentAccess,
   sendForbidden,
 } from '../lib/httpAuthz.js';
-import { computeClassPeriodGrades, getLatestComputations } from '../lib/gradeEngine.js';
+import { computeClassPeriodGrades, getLatestComputations, getStudentGradeSummary } from '../lib/gradeEngine.js';
 import { importGradesFromCsv } from '../lib/gradeImport.js';
 import { logAudit } from '../lib/audit.js';
 
@@ -37,7 +37,15 @@ const enrichGrades = async <T extends { studentId: string; courseId: string; tea
       where: { id: { in: studentIds } },
       select: { id: true, profile: { select: { firstName: true, lastName: true } } },
     }),
-    prisma.strkCourse.findMany({ where: { id: { in: courseIds } }, select: { id: true, name: true } }),
+    prisma.strkCourse.findMany({
+      where: { id: { in: courseIds } },
+      select: {
+        id: true,
+        name: true,
+        subjectId: true,
+        subject: { select: { id: true, name: true } },
+      },
+    }),
   ]);
   const studentById = new Map(students.map((s) => [s.id, s]));
   const courseById = new Map(courses.map((c) => [c.id, c]));
@@ -45,7 +53,18 @@ const enrichGrades = async <T extends { studentId: string; courseId: string; tea
   return grades.map((g) => ({
     ...g,
     student: studentById.get(g.studentId) ?? null,
-    course: courseById.get(g.courseId) ?? null,
+    course: courseById.get(g.courseId)
+      ? {
+          id: courseById.get(g.courseId)!.id,
+          name: courseById.get(g.courseId)!.name,
+          subject: courseById.get(g.courseId)!.subject
+            ? {
+                id: courseById.get(g.courseId)!.subject!.id,
+                name: courseById.get(g.courseId)!.subject!.name,
+              }
+            : null,
+        }
+      : null,
   }));
 };
 
@@ -430,4 +449,19 @@ gradesRouter.get('/average', async (req, res) => {
     ? grades.reduce((sum, g) => sum + Number(g.gradeValue), 0) / grades.length
     : 0;
   res.json({ average });
+});
+
+/** Notes + moyennes par matière pour l’espace parent / élève. */
+gradesRouter.get('/student-summary', async (req, res) => {
+  const { studentId, periodId } = req.query;
+  if (typeof studentId !== 'string') {
+    return res.status(400).json({ error: 'studentId requis' });
+  }
+  const access = await rejectUnlessStudentAccess(res, req.auth!, studentId, { guardianPermission: 'canViewGrades' });
+  if (!access) return;
+  const summary = await getStudentGradeSummary({
+    studentId,
+    periodId: typeof periodId === 'string' ? periodId : undefined,
+  });
+  res.json(summary);
 });

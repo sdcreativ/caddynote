@@ -151,7 +151,11 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           echo "Now at $(git rev-parse --short HEAD)"
-          docker compose up -d --build caddynote-db caddynote-api caddynote-web
+          # Conteneurs fantômes (ex. « <hash>_caddynote-api ») : Compose refuse
+          # Recreate si le container_name est déjà pris par un vieux conteneur.
+          docker ps -aq --filter "name=caddynote-api" | xargs -r docker rm -f || true
+          docker ps -aq --filter "name=caddynote-web" | xargs -r docker rm -f || true
+          docker compose up -d --build --remove-orphans caddynote-db caddynote-api caddynote-web
           # L'entrypoint API fait déjà `migrate deploy` ; on attend que le process
           # écoute avant le curl hôte (sinon curl 52 Empty reply pendant le boot).
           echo "Waiting for API health…"
