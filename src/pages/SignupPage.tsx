@@ -1,35 +1,36 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Shield, Sparkles, Clock } from 'lucide-react';
+import { CheckCircle2, Shield, Users, School } from 'lucide-react';
 import { PublicShell } from '@/components/public/PublicShell';
-import StrkSignupForm from '@/components/auth/StrkSignupForm';
 import { FadeIn } from '@/components/public/FadeIn';
 import { CaddyNoteMark } from '@/components/brand/CaddyNoteLogo';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 
 const BLUE = '#1D70D8';
 
+/** Page « obtenir un compte » — plus d’auto-inscription (modèle Pronote). */
 export default function SignupPage() {
   const { t } = useTranslation('auth');
 
-  const benefits = [
+  const steps = [
     {
-      title: t('signupPage.benefits.nocard.title'),
-      text: t('signupPage.benefits.nocard.text'),
+      title: t('signupPage.steps.school.title'),
+      text: t('signupPage.steps.school.text'),
     },
     {
-      title: t('signupPage.benefits.community.title'),
-      text: t('signupPage.benefits.community.text'),
+      title: t('signupPage.steps.student.title'),
+      text: t('signupPage.steps.student.text'),
     },
     {
-      title: t('signupPage.benefits.support.title'),
-      text: t('signupPage.benefits.support.text'),
+      title: t('signupPage.steps.parent.title'),
+      text: t('signupPage.steps.parent.text'),
     },
   ];
 
   const highlights = [
+    { icon: School, label: t('signupPage.highlights.school') },
+    { icon: Users, label: t('signupPage.highlights.spaces') },
     { icon: Shield, label: t('signupPage.highlights.secure') },
-    { icon: Sparkles, label: t('signupPage.highlights.simple') },
-    { icon: Clock, label: t('signupPage.highlights.fast') },
   ];
 
   return (
@@ -54,7 +55,7 @@ export default function SignupPage() {
             </p>
 
             <ul className="mt-8 space-y-4">
-              {benefits.map((item) => (
+              {steps.map((item) => (
                 <li key={item.title} className="flex gap-3">
                   <span
                     className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white"
@@ -81,32 +82,45 @@ export default function SignupPage() {
                 </div>
               ))}
             </div>
-
-            <p className="mt-10 text-sm text-slate-500">
-              {t('signupPage.hasAccount')}{' '}
-              <Link to="/sign" className="font-semibold text-[#1D70D8] hover:underline">
-                {t('signupPage.login')}
-              </Link>
-            </p>
           </FadeIn>
 
           <FadeIn delay={0.06}>
             <section
-              aria-labelledby="signup-form-title"
+              aria-labelledby="signup-info-title"
               className="rounded-[1.5rem] border border-slate-200/80 bg-white p-6 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)] sm:p-8 lg:p-9"
             >
               <div className="mb-5 flex justify-center sm:justify-start">
                 <CaddyNoteMark size={40} />
               </div>
-              <h2 id="signup-form-title" className="font-display text-2xl font-bold tracking-tight text-[#0B1F3A]">
-                {t('signupPage.formTitle')}
+              <h2 id="signup-info-title" className="font-display text-2xl font-bold tracking-tight text-[#0B1F3A]">
+                {t('signupPage.cardTitle')}
               </h2>
-              <p className="mt-1.5 text-sm text-slate-600">
-                {t('signupPage.formSubtitle')}
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                {t('signupPage.cardBody')}
               </p>
-              <div className="mt-7">
-                <StrkSignupForm embedded />
+
+              <div className="mt-8 flex flex-col gap-3">
+                <Button
+                  asChild
+                  className="h-12 w-full rounded-full text-sm font-semibold text-white"
+                  style={{ backgroundColor: BLUE }}
+                >
+                  <Link to="/sign">{t('signupPage.loginCta')}</Link>
+                </Button>
+                <Button asChild variant="outline" className="h-12 w-full rounded-full text-sm font-semibold">
+                  <Link to="/admissions">{t('signupPage.admissionsCta')}</Link>
+                </Button>
+                <Button asChild variant="ghost" className="h-11 w-full rounded-full text-sm font-semibold text-slate-600">
+                  <Link to="/contact">{t('signupPage.schoolCta')}</Link>
+                </Button>
               </div>
+
+              <p className="mt-8 text-center text-sm text-slate-500">
+                {t('signupPage.hasAccount')}{' '}
+                <Link to="/sign" className="font-semibold text-[#1D70D8] hover:underline">
+                  {t('signupPage.login')}
+                </Link>
+              </p>
             </section>
           </FadeIn>
         </div>

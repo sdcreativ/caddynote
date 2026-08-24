@@ -1,25 +1,27 @@
 /**
- * IAM-001 : rôles auto-assignables via POST /auth/register public.
- * Les rôles privilégiés (admin, school_admin, teacher, …) passent par
- * invitation / POST /users — sauf en NODE_ENV=test (fixtures) ou avec
- * CADDYNOTE_ALLOW_PRIVILEGED_REGISTER=true (jamais en production).
+ * IAM-001 — inscription publique (POST /auth/register).
+ *
+ * Modèle type Pronote : aucun rôle n’est auto-créable en public.
+ * Les comptes élève / parent / enseignant / direction sont provisionnés
+ * par l’établissement (`POST /users`, admissions, import), puis liés
+ * (ex. responsables ↔ élève).
+ *
+ * Exception : NODE_ENV=test (fixtures) ou
+ * CADDYNOTE_ALLOW_PRIVILEGED_REGISTER=true (bootstrap, jamais en prod).
  */
 
-export const PUBLIC_SELF_REGISTER_ROLES = ['student', 'parent'] as const;
-export type PublicSelfRegisterRole = (typeof PUBLIC_SELF_REGISTER_ROLES)[number];
+/** Historiquement student/parent — vidé volontairement (alignement Pronote). */
+export const PUBLIC_SELF_REGISTER_ROLES = [] as const;
+export type PublicSelfRegisterRole = never;
 
 const PUBLIC_SET = new Set<string>(PUBLIC_SELF_REGISTER_ROLES);
 
-export const isPublicSelfRegisterRole = (role: string): role is PublicSelfRegisterRole =>
-  PUBLIC_SET.has(role);
+export const isPublicSelfRegisterRole = (role: string): role is string => PUBLIC_SET.has(role);
 
-/** Autorise admin/school_admin/teacher uniquement pour fixtures ou bootstrap explicite. */
+/** Autorise tout rôle via /auth/register uniquement pour fixtures ou bootstrap explicite. */
 export const allowPrivilegedSelfRegister = (): boolean =>
   process.env.NODE_ENV === 'test' ||
   process.env.CADDYNOTE_ALLOW_PRIVILEGED_REGISTER === 'true' ||
   process.env.CADDYNOTE_ALLOW_PRIVILEGED_REGISTER === '1';
 
-export const canSelfAssignRole = (role: string): boolean => {
-  if (isPublicSelfRegisterRole(role)) return true;
-  return allowPrivilegedSelfRegister();
-};
+export const canSelfAssignRole = (_role: string): boolean => allowPrivilegedSelfRegister();

@@ -226,7 +226,7 @@ const Index = () => {
                   asChild
                   className="h-12 rounded-full bg-[#1D70D8] px-6 text-base font-semibold text-white hover:bg-[#185CB4]"
                 >
-                  <Link to="/signup">
+                  <Link to="/contact">
                     {t('hero.ctaStart')}
                     <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                   </Link>

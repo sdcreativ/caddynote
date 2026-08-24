@@ -39,7 +39,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'get', path: '/openapi.json', tag: 'Système', summary: 'Spécification OpenAPI 3.0 de cette API', auth: 'public' },
   { method: 'get', path: '/docs', tag: 'Système', summary: 'Interface Swagger UI (lit /openapi.json)', auth: 'public' },
 
-  { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Créer un compte', auth: 'public', statuses: [201, 400, 429] },
+  { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Créer un compte (désactivé en public — fixtures/bootstrap uniquement)', auth: 'public', statuses: [201, 400, 403, 429] },
   { method: 'post', path: '/auth/login', tag: 'Auth', summary: 'Connexion (peut renvoyer mfaRequired)', auth: 'public', statuses: [200, 401, 429] },
   { method: 'get', path: '/auth/sso/public-config', tag: 'Auth', summary: 'Config SSO publique (bouton login)', auth: 'public' },
   { method: 'get', path: '/auth/sso/discover', tag: 'Auth', summary: 'Découvrir SSO par domaine e-mail', auth: 'public' },

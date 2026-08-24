@@ -13,7 +13,7 @@
     "firstSteps": {
       "title": "Premiers pas",
       "login": "2.1. Connexion",
-      "loginBody": "Connectez-vous depuis la page d'accueil (<home>/</home>) avec l'adresse e-mail communiquée par l'établissement. En cas d'oubli, utilisez « Mot de passe oublié ? ». Si l'établissement a activé la double authentification, un code à 6 chiffres vous sera demandé après le mot de passe.",
+      "loginBody": "Connectez-vous depuis la page d'accueil (<home>/</home>) avec l'adresse e-mail communiquée par l'établissement pour votre compte parent / responsable (distinct du compte de l'élève). En cas d'oubli, utilisez « Mot de passe oublié ? ». Si l'établissement a activé la double authentification, un code à 6 chiffres vous sera demandé après le mot de passe.",
       "dashboard": "2.2. Tableau de bord",
       "dashboardBody": "Après connexion, votre espace s'ouvre sur <dash>/dashboard</dash>. Le point d'entrée principal pour suivre vos enfants est <children>/my-children</children>."
     },
@@ -149,7 +149,7 @@
     "firstSteps": {
       "title": "Premiers pas",
       "login": "2.1. Connexion",
-      "loginBody": "Pour accéder à votre compte étudiant, rendez-vous sur la page d'accueil (<home>/</home>). Utilisez l'adresse email et le mot de passe fournis par votre établissement. En cas d'oubli, utilisez le lien \"Mot de passe oublié ?\".",
+      "loginBody": "Pour accéder à votre espace étudiant, rendez-vous sur la page d'accueil (<home>/</home>). Utilisez l'adresse e-mail et le mot de passe fournis par votre établissement (compte créé par la direction, distinct du compte parent). En cas d'oubli, utilisez le lien \"Mot de passe oublié ?\".",
       "space": "2.2. Présentation de votre espace (<dash>/dashboard</dash>)",
       "spaceIntro": "Votre tableau de bord (<dash>/dashboard</dash>) est votre page d'accueil personnalisée. Vous y trouverez :",
       "itemSessions": "<strong>Vos prochaines sessions de cours.</strong>",
@@ -251,7 +251,7 @@
       "teacherAssign": "<strong>Assigner :</strong> Liez les enseignants aux classes/cours qu'ils dispensent.",
       "teacherEdit": "<strong>Modifier/Désactiver :</strong> Gérez les informations et les départs.",
       "guardians": "3.3. Gérer les responsables (parents / tuteurs)",
-      "guardiansBody": "Depuis la fiche élève, liez un responsable (père, mère, tuteur, payeur, autre personne autorisée) avec des droits différenciés (notes, présence, facturation, communications, discipline). Un même compte parent peut suivre plusieurs enfants.",
+      "guardiansBody": "Depuis la fiche élève, créez ou liez un responsable (père, mère, tuteur, payeur, autre personne autorisée) avec des droits différenciés (notes, présence, facturation, communications, discipline). Compte parent distinct du compte élève (modèle Pronote). Un même compte parent peut suivre plusieurs enfants.",
       "admins": "3.4. Gérer les autres administrateurs (si applicable)",
       "adminsBody": "Si votre rôle le permet, gérez les comptes d'autres administrateurs depuis <users>/users</users>. Un compte n'est jamais supprimé : il est désactivé (sessions révoquées, connexion bloquée) et peut être réactivé."
     },

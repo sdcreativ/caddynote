@@ -56,9 +56,8 @@ const registerSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   phoneNumber: z.string().optional(),
-  // IAM-001 : en production seuls student/parent sont auto-assignables.
-  // admin/school_admin/teacher restent acceptés en NODE_ENV=test (fixtures)
-  // ou CADDYNOTE_ALLOW_PRIVILEGED_REGISTER (bootstrap, jamais en prod).
+  // IAM-001 / Pronote : aucun compte n’est créé via inscription publique.
+  // Les fixtures (NODE_ENV=test) et le bootstrap explicite restent possibles.
   role: z.enum(['admin', 'school_admin', 'teacher', 'student', 'parent']).default('student'),
   institutionId: z.string().uuid().optional(),
 });
@@ -73,8 +72,8 @@ authRouter.post('/register', authLimiter, async (req, res) => {
   if (!canSelfAssignRole(role)) {
     return res.status(403).json({
       error:
-        'Ce rôle ne peut pas être choisi à l’inscription publique. Demandez une invitation à votre établissement.',
-      code: 'privileged_role_forbidden',
+        'Les comptes sont créés par votre établissement (espace élève et espace parent séparés). Utilisez les identifiants fournis par la direction, ou contactez-la.',
+      code: 'public_register_disabled',
     });
   }
 
