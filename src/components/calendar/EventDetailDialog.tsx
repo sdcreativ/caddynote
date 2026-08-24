@@ -17,7 +17,7 @@ interface EventDetailDialogProps {
   event: Event | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const EventDetailDialog = ({ event, open, onOpenChange, onDelete }: EventDetailDialogProps) => {
@@ -53,11 +53,11 @@ const EventDetailDialog = ({ event, open, onOpenChange, onDelete }: EventDetailD
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Classe</p>
-              <p>{event.className}</p>
+              <p>{event.className || '—'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Enseignant</p>
-              <p>{event.teacherName}</p>
+              <p>{event.teacherName || '—'}</p>
             </div>
           </div>
           
@@ -80,12 +80,14 @@ const EventDetailDialog = ({ event, open, onOpenChange, onDelete }: EventDetailD
         </div>
         
         <DialogFooter>
-          <Button 
-            variant="destructive" 
-            onClick={() => onDelete(event.id)}
-          >
-            Supprimer
-          </Button>
+          {onDelete ? (
+            <Button
+              variant="destructive"
+              onClick={() => onDelete(event.id)}
+            >
+              Supprimer
+            </Button>
+          ) : null}
           <Button onClick={() => onOpenChange(false)}>
             Fermer
           </Button>

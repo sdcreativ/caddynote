@@ -16,7 +16,9 @@ import { useStrkSchedules } from '@/hooks/useStrkSchedules';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { useQuickActions } from '@/components/quick-actions/QuickActionsManager';
 import { fetchStudentCountByClass } from '@/services/strkClassService';
+import EventDetailDialog from '@/components/calendar/EventDetailDialog';
 import type { StrkSchedule } from '@/types/strk';
+import type { Event as CalendarDetailEvent } from '@/types/calendar';
 
 const STAFF_INSTITUTION_ROLES = new Set([
   'school_admin',
@@ -37,15 +39,29 @@ const formatLocalYmd = (date: Date): string => {
   return `${y}-${m}-${d}`;
 };
 
+type ScheduleExtras = StrkSchedule & {
+  class?: { name?: string };
+  teacher?: { first_name?: string | null; last_name?: string | null };
+};
+
 type CalendarEvent = {
   id: string;
+  scheduleId: string;
   title: string;
   type: 'course';
   time: string;
+  startTime: string;
+  endTime: string;
   room: string;
   students: number;
   date: string;
+  className: string;
+  teacherName: string;
+  description?: string;
 };
+
+const personName = (p?: { first_name?: string | null; last_name?: string | null } | null) =>
+  `${p?.first_name ?? ''} ${p?.last_name ?? ''}`.trim();
 
 const scheduleToEvent = (
   schedule: StrkSchedule,
@@ -53,14 +69,37 @@ const scheduleToEvent = (
   studentCounts: Record<string, number>,
   courseFallback: string,
   roomFallback: string
-): CalendarEvent => ({
-  id: `${schedule.id}-${date}`,
-  title: schedule.course?.name || courseFallback,
-  type: 'course',
-  time: `${schedule.start_time}-${schedule.end_time}`,
-  room: schedule.room || schedule.course?.room || roomFallback,
-  students: schedule.class_id ? studentCounts[schedule.class_id] || 0 : 0,
-  date,
+): CalendarEvent => {
+  const s = schedule as ScheduleExtras;
+  const teacherName = personName(s.teacher) || personName(s.course?.teacher) || '—';
+  return {
+    id: `${schedule.id}-${date}`,
+    scheduleId: schedule.id,
+    title: schedule.course?.name || courseFallback,
+    type: 'course',
+    time: `${schedule.start_time}-${schedule.end_time}`,
+    startTime: schedule.start_time,
+    endTime: schedule.end_time,
+    room: schedule.room || schedule.course?.room || roomFallback,
+    students: schedule.class_id ? studentCounts[schedule.class_id] || 0 : 0,
+    date,
+    className: s.class?.name || '—',
+    teacherName,
+    description: schedule.course?.description || undefined,
+  };
+};
+
+const toDetailEvent = (event: CalendarEvent): CalendarDetailEvent => ({
+  id: event.scheduleId,
+  title: event.title,
+  date: parseLocalYmd(event.date),
+  startTime: event.startTime,
+  endTime: event.endTime,
+  type: 'cours',
+  className: event.className,
+  teacherName: event.teacherName,
+  location: event.room,
+  description: event.description,
 });
 
 const CalendarPage = () => {
@@ -68,6 +107,8 @@ const CalendarPage = () => {
   const { t: tc } = useTranslation('common');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
+  const [detailEvent, setDetailEvent] = useState<CalendarDetailEvent | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { user } = useStrkAuth();
   const {
     schedules,
@@ -75,6 +116,7 @@ const CalendarPage = () => {
     loadSchedulesByStudent,
     loadSchedulesByTeacher,
     loadSchedulesByInstitution,
+    removeSchedule,
   } = useStrkSchedules();
   const { openEventDialog } = useQuickActions();
   const isParent = user?.role === 'parent';
@@ -86,8 +128,6 @@ const CalendarPage = () => {
     isLoading: childrenLoading,
   } = useGuardianChildren();
 
-  // Refs : le chargement ne doit se relancer que si l’identité / le rôle change,
-  // pas à chaque re-render (sinon isLoading reste vrai → section « à venir » bloquée).
   const loadersRef = useRef({
     loadSchedulesByStudent,
     loadSchedulesByTeacher,
@@ -173,7 +213,6 @@ const CalendarPage = () => {
   const today = new Date();
   const todayYmd = formatLocalYmd(today);
 
-  // Indépendant du mois affiché : 4 prochaines semaines (tous rôles).
   const upcomingEvents = useMemo(() => {
     const list: CalendarEvent[] = [];
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -191,6 +230,12 @@ const CalendarPage = () => {
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
       .slice(0, 8);
   }, [schedules, studentCounts, todayYmd, courseFallback, roomFallback]);
+
+  const openDetails = (event: CalendarEvent, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setDetailEvent(toDetailEvent(event));
+    setDetailOpen(true);
+  };
 
   const monthNames = t('months', { returnObjects: true }) as string[];
   const daysOfWeekLabels = t('daysOfWeek', { returnObjects: true }) as string[];
@@ -256,8 +301,6 @@ const CalendarPage = () => {
         })
       : t('subtitle');
 
-  // Ne bloquer l’UI que sur le tout premier chargement (sinon la grille a des
-  // données mais « Événements à venir » reste figé sur « Chargement… »).
   const showInitialLoading =
     (isLoading && schedules.length === 0) || (isParent && childrenLoading && !selectedChildId);
 
@@ -368,13 +411,15 @@ const CalendarPage = () => {
                   </div>
                   <div className="space-y-1">
                     {day.events.slice(0, 3).map((event) => (
-                      <div
+                      <button
                         key={event.id}
-                        className={`text-xs p-1 rounded text-white truncate ${getEventTypeColor(event.type)}`}
+                        type="button"
+                        className={`w-full text-left text-xs p-1 rounded text-white truncate ${getEventTypeColor(event.type)}`}
                         title={t('eventTitle', { title: event.title, time: event.time })}
+                        onClick={(e) => openDetails(event, e)}
                       >
                         {event.time.split('-')[0]} {event.title}
-                      </div>
+                      </button>
                     ))}
                     {day.events.length > 3 && (
                       <div className="text-xs text-gray-500 font-medium">
@@ -404,24 +449,24 @@ const CalendarPage = () => {
               <p className="text-sm text-muted-foreground">{t('emptyUpcoming')}</p>
             ) : (
               upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div key={event.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`w-3 h-3 rounded-full ${getEventTypeColor(event.type).split(' ')[0]}`}
+                      className={`h-3 w-3 shrink-0 rounded-full ${getEventTypeColor(event.type).split(' ')[0]}`}
                     />
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium">{event.title}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="truncate text-sm text-gray-500">
                         {parseLocalYmd(event.date).toLocaleDateString('fr-FR')} • {event.time} •{' '}
                         {event.room}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     {event.students > 0 && (
                       <Badge variant="secondary">{t('studentsCount', { count: event.students })}</Badge>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => openDetails(event)}>
                       {t('details')}
                     </Button>
                   </div>
@@ -431,6 +476,25 @@ const CalendarPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      <EventDetailDialog
+        event={detailEvent}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setDetailEvent(null);
+        }}
+        onDelete={
+          canManageEvents
+            ? (scheduleId) => {
+                void removeSchedule(scheduleId).then(() => {
+                  setDetailOpen(false);
+                  setDetailEvent(null);
+                });
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };
