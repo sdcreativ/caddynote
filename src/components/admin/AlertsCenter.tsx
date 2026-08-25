@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionAlerts } from '@/hooks/useSubscriptionAlerts';
 import { fetchDiagnostics, type DiagnosticsPayload } from '@/services/strkOpsService';
 import { apiClient } from '@/lib/apiClient';
+import { buildIntegrationAlerts } from '@/lib/integrationDiagnostics';
 
 type AlertType = 'critical' | 'warning' | 'info' | 'success';
 
@@ -145,28 +146,16 @@ const AlertsCenter = ({
     }
 
     if (diag.integrations) {
-      for (const [name, info] of Object.entries(diag.integrations)) {
-        if (info.configured === false) {
-          list.push({
-            id: `int-${name}-cfg`,
-            type: 'warning',
-            title: `Intégration ${name}`,
-            message: 'Non configurée (variables d’environnement manquantes).',
-            timestamp: new Date(diag.timestamp),
-            source: 'Intégrations',
-            section: 'settings',
-          });
-        } else if (info.ok === false) {
-          list.push({
-            id: `int-${name}-err`,
-            type: 'critical',
-            title: `Intégration ${name}`,
-            message: info.detail || 'En erreur',
-            timestamp: new Date(diag.timestamp),
-            source: 'Intégrations',
-            section: 'critical-alerts',
-          });
-        }
+      for (const alert of buildIntegrationAlerts(diag.integrations)) {
+        list.push({
+          id: alert.id,
+          type: alert.severity,
+          title: alert.label,
+          message: alert.message,
+          timestamp: new Date(diag.timestamp),
+          source: 'Intégrations',
+          section: alert.severity === 'critical' ? 'critical-alerts' : 'settings',
+        });
       }
     }
 

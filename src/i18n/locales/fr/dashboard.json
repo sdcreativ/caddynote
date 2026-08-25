@@ -100,6 +100,38 @@
     "primaryCta": "Gérer les absences",
     "primaryCtaHint": "Suivi des absences et justificatifs"
   },
+  "accountantMobile": {
+    "primaryCta": "Ouvrir les finances",
+    "shortcutsTitle": "Aller où",
+    "unpaidToHandle": "{{count}} facture(s) — {{amount}} à encaisser"
+  },
+  "teamCockpit": {
+    "toHandleTitle": "Ops plateforme",
+    "toHandleEmpty": "Rien d’urgent — la console reste le point d’entrée ops.",
+    "shortcutsTitle": "Aller où",
+    "primaryCtaHint": "Console Super Admin : abonnements, tenants et santé système",
+    "byRoleTitle": "Fonctionnalités par rôle",
+    "byRoleHint": "Raccourcis groupés selon le métier que vous pilotez côté établissements.",
+    "roles": {
+      "platform": "Plateforme",
+      "platformHint": "Ops globales, tenants et comptes.",
+      "direction": "Direction d’établissement",
+      "directionHint": "Effectifs, documents et exports (contexte établissement requis).",
+      "finance": "Comptabilité & services",
+      "financeHint": "Collecte des frais, cantine/transport et offres.",
+      "familyTeaching": "Famille & communication",
+      "familyTeachingHint": "Messages, annonces et support."
+    },
+    "modules": {
+      "console": "Console",
+      "users": "Utilisateurs",
+      "audit": "Journal d’audit",
+      "exports": "Exports",
+      "plans": "Offres",
+      "communications": "Communications",
+      "support": "Support"
+    }
+  },
   "statCard": {
     "vsLastMonth": "par rapport au mois dernier"
   },

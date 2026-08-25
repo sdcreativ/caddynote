@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import SubscriptionPlansAdmin from '@/components/admin/SubscriptionPlansAdmin';
 import { fetchDiagnostics } from '@/services/strkOpsService';
+import { findIntegration } from '@/lib/integrationDiagnostics';
 import { subscriptionService } from '@/services/subscriptionService';
 import type { BillingHistory as BillingHistoryRow } from '@/types/subscription';
 import { 
@@ -132,9 +133,15 @@ const SubscriptionManager = () => {
     void (async () => {
       try {
         const diag = await fetchDiagnostics();
+        const stripe = findIntegration(diag.integrations, 'stripe');
+        const webhook = findIntegration(diag.integrations, 'stripe_webhook');
         setStripeStatus({
-          ...diag.integrations?.stripe,
-          webhook: diag.integrations?.stripe_webhook,
+          configured: stripe?.configured,
+          ok: stripe?.ok,
+          detail: stripe?.detail || stripe?.notes,
+          webhook: webhook
+            ? { configured: webhook.configured, ok: webhook.ok, detail: webhook.detail || webhook.notes }
+            : undefined,
         });
       } catch {
         setStripeStatus(null);

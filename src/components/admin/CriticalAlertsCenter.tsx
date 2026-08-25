@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchDiagnostics, type DiagnosticsPayload } from '@/services/strkOpsService';
+import { buildIntegrationAlerts } from '@/lib/integrationDiagnostics';
 
 /** Alertes dérivées des diagnostics réels — plus de mockAlerts. */
 const CriticalAlertsCenter = ({ embedded = false }: { embedded?: boolean }) => {
@@ -32,22 +33,12 @@ const CriticalAlertsCenter = ({ embedded = false }: { embedded?: boolean }) => {
         detail: `Statut Postgres : ${diag.database}`,
       });
     }
-    if (diag.integrations) {
-      for (const [name, info] of Object.entries(diag.integrations)) {
-        if (info.configured === false) {
-          alerts.push({
-            severity: 'warning',
-            title: `Intégration ${name}`,
-            detail: 'Non configurée (variables d’environnement manquantes).',
-          });
-        } else if (info.ok === false) {
-          alerts.push({
-            severity: 'critical',
-            title: `Intégration ${name}`,
-            detail: info.detail || 'En erreur',
-          });
-        }
-      }
+    for (const alert of buildIntegrationAlerts(diag.integrations)) {
+      alerts.push({
+        severity: alert.severity,
+        title: alert.label,
+        detail: alert.message,
+      });
     }
     if (alerts.length === 0) {
       alerts.push({

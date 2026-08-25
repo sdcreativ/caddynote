@@ -4,7 +4,8 @@ export type DiagnosticsPayload = {
   status: string;
   database: string;
   timestamp: string;
-  integrations?: Record<string, { configured?: boolean; ok?: boolean; detail?: string }>;
+  /** Tableau API `{ key, configured, notes }` (ou Record legacy). */
+  integrations?: unknown;
   rpoHintHours?: number;
   backupCron?: string;
   filePurgeEnabled?: boolean;

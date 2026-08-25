@@ -16,6 +16,7 @@ import { fetchDiagnostics, fetchOpsMetrics, type DiagnosticsPayload, type OpsMet
 import { apiClient, ApiError } from '@/lib/apiClient';
 import CriticalAlertsCenter from '@/components/admin/CriticalAlertsCenter';
 import CommunicationsOpsPanel from '@/components/admin/CommunicationsOpsPanel';
+import { integrationLabel, normalizeIntegrations } from '@/lib/integrationDiagnostics';
 
 type AuditRow = {
   id: string;
@@ -297,24 +298,32 @@ const ObservabilityCenter = () => {
               <CardDescription>État déclaré par GET /diagnostics</CardDescription>
             </CardHeader>
             <CardContent>
-              {!data?.integrations || Object.keys(data.integrations).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucune intégration signalée.</p>
-              ) : (
-                <ul className="divide-y">
-                  {Object.entries(data.integrations).map(([name, info]) => (
-                    <li key={name} className="flex items-center justify-between py-2 text-sm">
-                      <span className="font-medium">{name}</span>
-                      <span className="text-muted-foreground">
-                        {info.configured === false
-                          ? 'non configuré'
-                          : info.ok === false
-                            ? info.detail || 'erreur'
-                            : 'OK'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {(() => {
+                const integrations = normalizeIntegrations(data?.integrations);
+                if (integrations.length === 0) {
+                  return <p className="text-sm text-muted-foreground">Aucune intégration signalée.</p>;
+                }
+                return (
+                  <ul className="divide-y">
+                    {integrations.map((info) => (
+                      <li key={info.key} className="flex items-center justify-between py-2 text-sm">
+                        <span className="font-medium">{integrationLabel(info.key)}</span>
+                        <span className="text-muted-foreground">
+                          {info.key === 'test_mode'
+                            ? info.configured
+                              ? 'actif'
+                              : 'désactivé'
+                            : info.configured === false
+                              ? 'non configuré'
+                              : info.ok === false
+                                ? info.detail || info.notes || 'erreur'
+                                : 'OK'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
             </CardContent>
           </Card>
 
