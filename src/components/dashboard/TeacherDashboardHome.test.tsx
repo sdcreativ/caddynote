@@ -20,8 +20,8 @@ const metrics: DashboardMetrics = {
   recentActivities: [],
 };
 
-describe('TeacherDashboardHome', () => {
-  it('propose Faire l’appel et les raccourcis essentiels', () => {
+describe('TeacherDashboardHome (cockpit deux clics)', () => {
+  it('expose À traiter, KPI et CTA Faire l’appel + raccourcis', () => {
     render(
       <MemoryRouter>
         <TeacherDashboardHome
@@ -35,12 +35,36 @@ describe('TeacherDashboardHome', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Bonjour, Ada/i })).toBeInTheDocument();
+    expect(screen.getByText('À traiter')).toBeInTheDocument();
+    expect(screen.getByText(/3 absence\(s\) à suivre/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Voir les absences/i })).toHaveAttribute('href', '/absences');
+
+    expect(screen.getAllByText('120').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('96.5 %').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
+
     expect(screen.getAllByRole('button', { name: /Faire l'appel/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Notes$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Mes cours/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole('button', { name: /Calendrier/i })).toBeInTheDocument();
-    expect(screen.getAllByText('96.5 %').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('affiche un empty calme quand il n’y a pas d’absences', () => {
+    render(
+      <MemoryRouter>
+        <TeacherDashboardHome
+          userName="Ada"
+          role="teacher"
+          metrics={{ ...metrics, absences: 0 }}
+          metricsState="ready"
+          totalStudents={120}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Voir les absences/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Faire l'appel/i }).length).toBeGreaterThanOrEqual(1);
   });
 });

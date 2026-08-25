@@ -62,7 +62,11 @@
     "followUp": "Suivi"
   },
   "teacherMobile": {
-    "primaryCtaHint": "Action principale du jour"
+    "primaryCtaHint": "Action principale du jour — deux clics pour faire l’appel",
+    "shortcutsTitle": "Aller où",
+    "absencesToHandle": "{{count}} absence(s) à suivre",
+    "absencesCta": "Voir les absences",
+    "callReminder": "Appel du jour non fait — démarrez depuis le bouton ci-dessous"
   },
   "directionMobile": {
     "primaryCta": "Gérer les élèves",
