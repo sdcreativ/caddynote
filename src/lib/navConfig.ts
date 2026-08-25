@@ -177,16 +177,21 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'parent':
-      // Enfants · Finances · Calendrier · Messages · Plus (login → /my-children)
+      // Accueil · Enfants · Finances · Messages · Plus
       return [
-        { kind: 'link', titleKey: 'bottomNav.children', href: '/my-children', icon: Home },
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
+        {
+          kind: 'link',
+          titleKey: 'bottomNav.children',
+          href: '/my-children',
+          icon: Users,
+        },
         {
           kind: 'link',
           titleKey: 'items.finance',
           href: '/my-children?tab=finance',
           icon: CreditCard,
         },
-        { kind: 'link', titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
         { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
@@ -460,6 +465,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
         {
           labelKey: 'sections.family',
           items: [
+            { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
             { titleKey: 'items.parentSpace', href: '/my-children', icon: Home },
             { titleKey: 'items.finance', href: '/my-children?tab=finance', icon: CreditCard },
             { titleKey: 'items.services', href: '/my-children?tab=services', icon: Bus },

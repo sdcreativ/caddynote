@@ -78,11 +78,19 @@
   },
   "parentMobile": {
     "primaryCta": "Voir mes enfants",
-    "primaryCtaHint": "Suivi famille, absences et paiements"
+    "primaryCtaFinance": "Régler les frais",
+    "primaryCtaHint": "Deux clics pour le suivi famille ou le paiement",
+    "shortcutsTitle": "Aller où",
+    "unpaidToHandle": "{{count}} facture(s) — {{amount}} à régler",
+    "admissionStatus": "Préinscription · {{status}}"
   },
   "studentMobile": {
     "primaryCta": "Mes notes",
-    "primaryCtaHint": "Consulter vos résultats scolaires"
+    "primaryCtaHomework": "Voir mes devoirs",
+    "primaryCtaHint": "Deux clics pour notes ou devoirs",
+    "shortcutsTitle": "Aller où",
+    "homeworkToHandle": "{{count}} devoir(s) en cours",
+    "absencesToHandle": "{{count}} absence(s) sur 30 jours"
   },
   "secretaryMobile": {
     "primaryCta": "Gérer les élèves",

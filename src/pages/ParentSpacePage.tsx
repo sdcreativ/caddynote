@@ -8,14 +8,14 @@ import { FadeIn, Stagger, StaggerItem } from '@/components/public/FadeIn';
 
 /**
  * Espace parent dédié — point d’entrée public + redirection si déjà connecté
- * en rôle parent vers /my-children.
+ * en rôle parent vers /dashboard (cockpit famille).
  */
 export default function ParentSpacePage() {
   const { user, isLoading } = useStrkAuth();
   const { t } = useTranslation('home');
 
   if (!isLoading && user?.role === 'parent') {
-    return <Navigate to="/my-children" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (!isLoading && user) {

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ParentDashboardHome from './ParentDashboardHome';
 
@@ -8,8 +8,43 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
   return { ...actual, roleLabel: () => 'Famille' };
 });
 
-describe('ParentDashboardHome', () => {
-  it('propose Voir mes enfants et les raccourcis essentiels', () => {
+vi.mock('@/services/strkAdmissionService', () => ({
+  fetchMyAdmissionApplications: vi.fn().mockResolvedValue({ applications: [] }),
+}));
+
+describe('ParentDashboardHome (cockpit deux clics)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('expose À traiter, KPI et CTA + raccourcis', async () => {
+    render(
+      <MemoryRouter>
+        <ParentDashboardHome
+          userName="Léa"
+          childrenCount={2}
+          invoicesOpen={0}
+          unpaidCents={0}
+          state="ready"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { name: /Bonjour, Léa/i })).toBeInTheDocument();
+    expect(screen.getByText('À traiter')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Voir mes enfants/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /^Mes enfants$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /^Finances$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('oriente le CTA vers les finances s’il y a un reste à payer', async () => {
     render(
       <MemoryRouter>
         <ParentDashboardHome
@@ -22,12 +57,14 @@ describe('ParentDashboardHome', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: /Bonjour, Léa/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Voir mes enfants/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Finances$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      expect(screen.getByText(/facture\(s\)/i)).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('button', { name: /Régler les frais/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
+      'href',
+      '/my-children?tab=finance'
+    );
   });
 
   it('affiche l’état vide sans enfants', () => {

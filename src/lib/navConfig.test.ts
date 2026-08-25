@@ -162,12 +162,12 @@ describe('navConfig (NFR-009)', () => {
     }
   });
 
-  it('Parent : barre du bas mobile = Enfants · Finances · Calendrier · Messages · Plus', () => {
+  it('Parent : barre du bas mobile = Accueil · Enfants · Finances · Messages · Plus', () => {
     const items = mobileBottomNavForRole('parent');
     expect(items).toHaveLength(5);
-    expect(items![0]).toMatchObject({ kind: 'link', href: '/my-children' });
-    expect(items![1]).toMatchObject({ kind: 'link', href: '/my-children?tab=finance' });
-    expect(items![2]).toMatchObject({ kind: 'link', href: '/calendar' });
+    expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
+    expect(items![1]).toMatchObject({ kind: 'link', href: '/my-children' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/my-children?tab=finance' });
     expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
     expect(items![4]).toMatchObject({ kind: 'more' });
     for (const item of items!) {

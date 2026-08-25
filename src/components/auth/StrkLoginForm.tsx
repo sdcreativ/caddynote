@@ -66,7 +66,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
   );
 
   const handleManualRedirect = useCallback(() => {
-    const dest = user?.role === 'parent' ? '/my-children' : '/dashboard';
+    const dest = '/dashboard';
     window.location.href = dest;
     setTimeout(() => {
       if (window.location.pathname !== dest) {
