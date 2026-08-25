@@ -154,6 +154,23 @@ export const fetchAttendanceByClass = async (classId: string, date?: string): Pr
   }
 };
 
+/** Historique d’absences/retards pour l’effectif d’une classe (hub Présences). */
+export const fetchAttendanceHistoryByClass = async (
+  classId: string,
+  opts?: { startDate?: string; endDate?: string }
+): Promise<StrkAttendance[]> => {
+  try {
+    const params = new URLSearchParams({ classId });
+    if (opts?.startDate) params.set('startDate', opts.startDate);
+    if (opts?.endDate) params.set('endDate', opts.endDate);
+    const { absences } = await apiClient.get<{ absences: ApiAbsence[] }>(`/absences?${params.toString()}`);
+    return absences.map(mapApiAttendance);
+  } catch (error) {
+    console.error('Error in fetchAttendanceHistoryByClass:', error);
+    return [];
+  }
+};
+
 export const fetchAttendanceByStudent = async (studentId: string, startDate?: string, endDate?: string): Promise<StrkAttendance[]> => {
   try {
     const params = new URLSearchParams({ studentId });

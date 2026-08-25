@@ -185,7 +185,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/absences/alert-check', tag: 'Présence', summary: 'Déclencher les alertes parentales (PRS-004)', auth: 'bearer', roles: ['admin'] },
   { method: 'post', path: '/absences/threshold-check', tag: 'Présence', summary: 'Évaluer les seuils d’absentéisme (PRS-006)', auth: 'bearer', roles: ['admin'] },
   { method: 'get', path: '/absences/threshold-alerts', tag: 'Présence', summary: 'Lister les alertes de seuil', auth: 'bearer', roles: [...direction] },
-  { method: 'get', path: '/absences', tag: 'Présence', summary: 'Lister les absences', auth: 'bearer' },
+  { method: 'get', path: '/absences', tag: 'Présence', summary: 'Lister les absences (studentId | courseId | classId | institutionId)', auth: 'bearer' },
   { method: 'post', path: '/absences', tag: 'Présence', summary: 'Enregistrer une absence (clientId pour l’idempotence hors-ligne)', auth: 'bearer', roles: [...staff], statuses: [201] },
   { method: 'post', path: '/absences/bulk', tag: 'Présence', summary: 'Appel en masse', auth: 'bearer', roles: [...staff] },
   { method: 'get', path: '/absences/stats', tag: 'Présence', summary: 'Statistiques d’assiduité', auth: 'bearer' },

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Users, Scan, BarChart3, Download } from 'lucide-react';
 import { AttendanceScanner } from '@/components/attendance/AttendanceScanner';
 import { QuickAttendance } from '@/components/attendance/QuickAttendance';
+import { AttendanceHistory } from '@/components/attendance/AttendanceHistory';
 import { useToast } from '@/hooks/use-toast';
 import { useStrkClasses } from '@/hooks/useStrkClasses';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
@@ -26,6 +27,7 @@ const AttendanceManagement = () => {
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [rosterStudents, setRosterStudents] = useState<ClassRosterStudent[]>([]);
   const [isRosterLoading, setIsRosterLoading] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const { toast } = useToast();
 
   const isTeacherHub =
@@ -81,7 +83,8 @@ const AttendanceManagement = () => {
   }
 
   const handleAttendanceMarked = (attendance: any) => {
-    setAttendanceData(prev => [...prev, attendance]);
+    setAttendanceData((prev) => [...prev, attendance]);
+    setHistoryRefreshKey((k) => k + 1);
   };
 
   // Bug réel corrigé au passage (découvert en travaillant NFR-004, même
@@ -233,24 +236,16 @@ const AttendanceManagement = () => {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('page.historyTitle')}</CardTitle>
-              <CardDescription>
-                {selectedClass 
-                  ? t('page.historyForClass', { className: selectedClass.name })
-                  : t('page.historySelectClass')
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>{t('page.historySoon')}</p>
-                <p className="text-sm">{t('page.historySoonHint')}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {selectedClass ? (
+            <AttendanceHistory
+              classId={selectedClass.id}
+              className={selectedClass.name}
+              students={rosterStudents}
+              refreshKey={historyRefreshKey}
+            />
+          ) : (
+            <p className="text-muted-foreground">{t('page.selectClass')}</p>
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -23,6 +23,24 @@
     "historySoonHint": "Sera disponible dans la prochaine version",
     "justificationsTab": "Justificatifs"
   },
+  "history": {
+    "searchPlaceholder": "Rechercher un élève…",
+    "filterType": "Type",
+    "filterAll": "Tous",
+    "filterAbsence": "Absences",
+    "filterLateness": "Retards",
+    "statAbsences": "Absences",
+    "statLates": "Retards",
+    "statJustified": "Justifiés",
+    "emptyTitle": "Aucun historique",
+    "emptyBody": "Les absences et retards saisis pour cette classe apparaîtront ici.",
+    "noResultTitle": "Aucun résultat",
+    "noResultBody": "Aucun enregistrement ne correspond à vos filtres.",
+    "unknownStudent": "Élève",
+    "reason": "Raison : {{reason}}",
+    "noReason": "Sans motif renseigné",
+    "justified": "Justifié"
+  },
   "quick": {
     "title": "Appel rapide",
     "description": "Marquez rapidement les présences pour tous les étudiants",

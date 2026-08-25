@@ -44,7 +44,7 @@ absencesRouter.get('/threshold-alerts', requireRole(...DIRECTION_ROLES, 'supervi
 });
 
 absencesRouter.get('/', async (req, res) => {
-  const { studentId, institutionId, courseId, date, startDate, endDate } = req.query;
+  const { studentId, institutionId, courseId, classId, date, startDate, endDate } = req.query;
 
   const dateFilter =
     typeof date === 'string'
@@ -83,13 +83,51 @@ absencesRouter.get('/', async (req, res) => {
     return res.json({ absences });
   }
 
+  // Historique d’appel par classe (effectif actif) — utilisé par le hub Présences.
+  if (typeof classId === 'string') {
+    const cls = await prisma.strkClass.findUnique({
+      where: { id: classId },
+      select: { institutionId: true },
+    });
+    if (!cls) {
+      sendForbidden(res);
+      return;
+    }
+    if (rejectUnlessSameInstitution(res, req.auth!, cls.institutionId)) return;
+    const enrollments = await prisma.strkClassStudent.findMany({
+      where: { classId, isActive: true },
+      select: { studentId: true },
+    });
+    // Aligné sur le roster classes : inscriptions actives + éventuel classId legacy.
+    const legacyStudents = await prisma.strkStudent.findMany({
+      where: { classId },
+      select: { id: true },
+    });
+    const studentIds = [
+      ...new Set([...enrollments.map((e) => e.studentId), ...legacyStudents.map((s) => s.id)]),
+    ];
+    if (studentIds.length === 0) {
+      return res.json({ absences: [] });
+    }
+    const absences = await prisma.strkAbsence.findMany({
+      where: {
+        institutionId: cls.institutionId,
+        studentId: { in: studentIds },
+        ...(dateFilter ? { date: dateFilter } : {}),
+      },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+    });
+    return res.json({ absences });
+  }
+
   if (typeof institutionId === 'string') {
     if (rejectUnlessSameInstitution(res, req.auth!, institutionId)) return;
     const absences = await prisma.strkAbsence.findMany({ where: { institutionId }, orderBy: { date: 'desc' } });
     return res.json({ absences });
   }
 
-  return res.status(400).json({ error: 'studentId, courseId ou institutionId requis' });
+  return res.status(400).json({ error: 'studentId, courseId, classId ou institutionId requis' });
 });
 
 const absenceSchema = z.object({
