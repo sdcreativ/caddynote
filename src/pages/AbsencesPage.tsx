@@ -18,7 +18,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useNavigate } from 'react-router-dom';
-import { hasAnyRole, ATTENDANCE_HUB_ROLES } from '@/lib/roles';
+import { hasAnyRole, ATTENDANCE_HUB_ROLES, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
 
 const AbsencesPage = () => {
   const { t } = useTranslation('absences');
