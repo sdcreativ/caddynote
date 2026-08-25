@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isSameInstitution, TEACHING_ROLES, SECRETARIAT_ROLES } from '../lib/authz.js';
 import { isS3Configured } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
 import { deriveScheduleFromCourseFields } from '../lib/courseSchedule.js';
 import { findScheduleConflicts } from '../lib/scheduling.js';
@@ -231,7 +232,7 @@ coursesRouter.post('/:id/materials', requireRole(...TEACHING_ROLES), async (req,
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
   if (parsed.data.fileKey) {
-    if (!parsed.data.fileKey.startsWith('course-materials/')) {
+    if (!parsed.data.fileKey.startsWith(`${STORAGE_FOLDER.cours}/`)) {
       return res.status(400).json({ error: 'Clé de fichier invalide' });
     }
     if (!isS3Configured()) {

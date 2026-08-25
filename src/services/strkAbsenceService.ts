@@ -48,27 +48,46 @@ interface ApiAbsence {
   courseId?: string | null;
   createdAt: string;
   updatedAt: string;
+  student?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  } | null;
+  courseName?: string | null;
+  className?: string | null;
 }
 
-const mapApiAbsence = (a: ApiAbsence): StrkAbsence => ({
-  id: a.id,
-  student_id: a.studentId,
-  institution_id: a.institutionId,
-  type: a.type,
-  date: a.date,
-  duration: a.duration,
-  justified: !!a.justified,
-  justification_status: a.justificationStatus ?? 'none',
-  justification: a.justification || undefined,
-  justification_file: a.justificationFile || undefined,
-  reason: a.reason || undefined,
-  course_id: a.courseId || undefined,
-  created_at: a.createdAt,
-  updated_at: a.updatedAt,
-  duration_minutes: a.duration,
-  justification_reason: a.justification || undefined,
-  class_name: a.courseId || 'Classe non définie',
-});
+const mapApiAbsence = (a: ApiAbsence): StrkAbsence => {
+  const firstName = a.student?.firstName?.trim() || '';
+  const lastName = a.student?.lastName?.trim() || '';
+  return {
+    id: a.id,
+    student_id: a.studentId,
+    institution_id: a.institutionId,
+    type: a.type,
+    date: a.date,
+    duration: a.duration,
+    justified: !!a.justified,
+    justification_status: a.justificationStatus ?? 'none',
+    justification: a.justification || undefined,
+    justification_file: a.justificationFile || undefined,
+    reason: a.reason || undefined,
+    course_id: a.courseId || undefined,
+    created_at: a.createdAt,
+    updated_at: a.updatedAt,
+    duration_minutes: a.duration,
+    justification_reason: a.justification || undefined,
+    class_name: a.courseName || a.className || undefined,
+    student:
+      firstName || lastName || a.student?.email
+        ? {
+            first_name: firstName,
+            last_name: lastName,
+            email: a.student?.email || '',
+          }
+        : undefined,
+  };
+};
 
 export const fetchAbsencesByInstitution = async (institutionId: string): Promise<StrkAbsence[]> => {
   try {
@@ -87,7 +106,7 @@ export const fetchAbsencesByStudent = async (studentId: string): Promise<StrkAbs
     const { absences } = await apiClient.get<{ absences: ApiAbsence[] }>(
       `/absences?studentId=${encodeURIComponent(studentId)}`
     );
-    return absences.map((a) => ({ ...mapApiAbsence(a), class_name: a.courseId || 'Ma classe' }));
+    return absences.map(mapApiAbsence);
   } catch (error) {
     console.error("Error in fetchAbsencesByStudent:", error);
     return [];

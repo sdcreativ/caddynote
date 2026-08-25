@@ -48,7 +48,7 @@ export const createCourseMaterial = async (
 ): Promise<CourseMaterial> => {
   let fileKey: string | undefined;
   if (data.file) {
-    fileKey = await uploadViaPresignedPost('course-materials', data.file);
+    fileKey = await uploadViaPresignedPost('cours', data.file);
   }
   const { material } = await apiClient.post<{ material: ApiMaterial }>(`/courses/${courseId}/materials`, {
     title: data.title,

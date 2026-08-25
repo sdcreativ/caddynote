@@ -4,6 +4,8 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { isGlobalAdmin, isSameInstitution, getAllowedContactIds } from '../lib/authz.js';
 import type { JwtPayload } from '../lib/jwt.js';
+import { isOwnedObjectKey } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 
 export const messagesRouter = Router();
 messagesRouter.use(requireAuth);
@@ -65,8 +67,24 @@ const messageSchema = z.object({
   content: z.string().min(1),
   messageType: z.string().default('general'),
   priority: z.string().default('normal'),
-  attachments: z.array(z.any()).default([]),
+  /** Clés S3 du dossier `messages/` (DOC-005). */
+  attachments: z.array(z.string().min(1)).max(5).default([]),
 });
+
+const assertMessageAttachmentKeys = (
+  keys: string[],
+  auth: JwtPayload
+): { ok: true } | { ok: false; error: string } => {
+  for (const key of keys) {
+    if (
+      !key.startsWith(`${STORAGE_FOLDER.messages}/`) ||
+      (!isGlobalAdmin(auth) && !isOwnedObjectKey(key, STORAGE_FOLDER.messages, auth.institutionId, auth.sub))
+    ) {
+      return { ok: false, error: 'Pièce jointe invalide' };
+    }
+  }
+  return { ok: true };
+};
 
 messagesRouter.post('/', async (req, res) => {
   const parsed = messageSchema.safeParse(req.body);
@@ -83,7 +101,21 @@ messagesRouter.post('/', async (req, res) => {
       return res.status(403).json({ error: 'Destinataire non autorisé' });
     }
   }
-  const message = await prisma.strkMessage.create({ data: { ...parsed.data, senderId: req.auth!.sub } });
+  const keysOk = assertMessageAttachmentKeys(parsed.data.attachments, req.auth!);
+  if (!keysOk.ok) {
+    return res.status(400).json({ error: keysOk.error });
+  }
+  const message = await prisma.strkMessage.create({
+    data: {
+      recipientId: parsed.data.recipientId,
+      subject: parsed.data.subject,
+      content: parsed.data.content,
+      messageType: parsed.data.messageType,
+      priority: parsed.data.priority,
+      attachments: parsed.data.attachments,
+      senderId: req.auth!.sub,
+    },
+  });
   res.status(201).json({ message });
 });
 
@@ -111,8 +143,21 @@ messagesRouter.post('/:id/reply', async (req, res) => {
   if (original.recipientId !== req.auth!.sub) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
+  const keysOk = assertMessageAttachmentKeys(parsed.data.attachments, req.auth!);
+  if (!keysOk.ok) {
+    return res.status(400).json({ error: keysOk.error });
+  }
   const reply = await prisma.strkMessage.create({
-    data: { ...parsed.data, senderId: req.auth!.sub, recipientId: original.senderId, parentMessageId: original.id },
+    data: {
+      subject: parsed.data.subject,
+      content: parsed.data.content,
+      messageType: parsed.data.messageType,
+      priority: parsed.data.priority,
+      attachments: parsed.data.attachments,
+      senderId: req.auth!.sub,
+      recipientId: original.senderId,
+      parentMessageId: original.id,
+    },
   });
   await prisma.strkMessage.update({ where: { id: original.id }, data: { repliedAt: new Date() } });
   res.status(201).json({ message: reply });

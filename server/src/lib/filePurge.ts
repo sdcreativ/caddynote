@@ -10,11 +10,11 @@ import { logAudit } from './audit.js';
  * le cron — jamais d’activation silencieuse.
  *
  * Périmètre initial volontairement restreint :
- * - `admissions/` : dossiers `rejected`/`cancelled` dont `updatedAt` > 365 j
+ * - `inscription/` : dossiers `rejected`/`cancelled` dont `updatedAt` > 365 j
  * - `messages/` : objets S3 plus vieux que 730 j (pas de jointure fiable
  *   message↔clé dans tous les cas — se base sur LastModified S3)
  *
- * Les dossiers `receipts` / `assignments` restent hors purge auto tant que
+ * Les dossiers `recus` / `devoirs` restent hors purge auto tant que
  * SDCREATIV n’a pas validé la politique (`docs/POLITIQUE_CONSERVATION_FICHIERS.md`).
  */
 

@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Send, Search, Plus, Mail, Reply, Archive } from "lucide-react";
+import { MessageSquare, Send, Search, Plus, Mail, Reply, Archive, Paperclip, X, Download } from "lucide-react";
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { sendMessage, fetchReceivedMessages, fetchSentMessages, markMessageAsRead } from "@/services/strkMessageService";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { StrkMessage } from "@/types/strk";
+import { uploadViaPresignedPost } from "@/lib/s3Upload";
+import { apiClient } from "@/lib/apiClient";
 
 const MessagesPage = () => {
   const { user } = useStrkAuth();
@@ -32,6 +34,8 @@ const MessagesPage = () => {
     message_type: "general",
     priority: "normal"
   });
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadMessages();
@@ -59,12 +63,29 @@ const MessagesPage = () => {
 
   const handleSendMessage = async () => {
     if (!user) return;
+    if (!newMessage.recipient_id || !newMessage.subject.trim() || !newMessage.content.trim()) {
+      toast({
+        title: tc('status.error'),
+        description: t('sendError'),
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setSending(true);
     try {
+      const attachmentKeys: string[] = [];
+      for (const file of composeFiles) {
+        attachmentKeys.push(await uploadViaPresignedPost('messages', file));
+      }
+
       await sendMessage({
-        ...newMessage,
-        sender_id: user.id,
-        attachments: null
+        recipientId: newMessage.recipient_id,
+        subject: newMessage.subject,
+        content: newMessage.content,
+        messageType: newMessage.message_type,
+        priority: newMessage.priority,
+        attachments: attachmentKeys,
       });
 
       toast({
@@ -73,6 +94,7 @@ const MessagesPage = () => {
       });
 
       setIsComposeOpen(false);
+      setComposeFiles([]);
       setNewMessage({
         recipient_id: "",
         subject: "",
@@ -87,7 +109,28 @@ const MessagesPage = () => {
         description: t('sendError'),
         variant: "destructive",
       });
+    } finally {
+      setSending(false);
     }
+  };
+
+  const openAttachment = async (key: string) => {
+    try {
+      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast({
+        title: tc('status.error'),
+        description: t('loadError'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const attachmentKeys = (message: StrkMessage): string[] => {
+    const raw = message.attachments;
+    if (Array.isArray(raw)) return raw.filter((k): k is string => typeof k === 'string');
+    return [];
   };
 
   const handleMarkAsRead = async (messageId: string) => {
@@ -207,9 +250,40 @@ const MessagesPage = () => {
                   rows={6}
                 />
               </div>
-              <Button onClick={handleSendMessage} className="w-full">
+              <div className="space-y-2">
+                <Label htmlFor="attachments">Pièces jointes (PDF / images, max 5)</Label>
+                <Input
+                  id="attachments"
+                  type="file"
+                  accept=".pdf,.jpeg,.jpg,.png,.webp"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []).slice(0, 5);
+                    setComposeFiles(files);
+                  }}
+                />
+                {composeFiles.length > 0 ? (
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    {composeFiles.map((f) => (
+                      <li key={f.name} className="flex items-center gap-2">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          className="ml-auto"
+                          onClick={() => setComposeFiles((prev) => prev.filter((x) => x !== f))}
+                          aria-label="Retirer"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+              <Button onClick={handleSendMessage} className="w-full" disabled={sending}>
                 <Send className="mr-2 h-4 w-4" />
-                {t('send')}
+                {sending ? 'Envoi…' : t('send')}
               </Button>
             </div>
           </DialogContent>
@@ -352,6 +426,24 @@ const MessagesPage = () => {
                     {selectedMessage.message_type}
                   </Badge>
                 )}
+                {attachmentKeys(selectedMessage).length > 0 ? (
+                  <ul className="space-y-2 border-t pt-3">
+                    {attachmentKeys(selectedMessage).map((key) => (
+                      <li key={key}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => openAttachment(key)}
+                        >
+                          <Download className="mr-2 h-3.5 w-3.5" />
+                          <span className="truncate">{key.split('/').pop() ?? key}</span>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </CardContent>
           </Card>

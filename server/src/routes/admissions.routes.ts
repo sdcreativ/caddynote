@@ -13,6 +13,7 @@ import {
   ensureParentAccountsForApplication,
 } from '../lib/admissions.js';
 import { isS3Configured, buildObjectKey, createPresignedUploadPost } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, isFileStorageAvailable, getStoredObjectBytes, deleteStoredObject, putStoredObject } from '../lib/fileStorage.js';
 import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
 import { logAudit } from '../lib/audit.js';
@@ -474,7 +475,7 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
     return res.status(400).json({ error: `Type de fichier non autorisé (autorisés : ${ADMISSION_DOCUMENT_TYPES.join(', ')})` });
   }
   const scope = `inst-${application.institutionId}-app-${application.id}`;
-  const key = buildObjectKey('admissions', scope, parsed.data.filename);
+  const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, parsed.data.filename);
 
   if (isS3Configured()) {
     const { url, fields } = await createPresignedUploadPost(key, parsed.data.contentType, ADMISSION_DOCUMENT_MAX_BYTES);
@@ -510,7 +511,7 @@ admissionsPublicRouter.put('/status/:token/documents/direct-upload', submitLimit
   }
 
   const keyHeader = typeof req.headers['x-object-key'] === 'string' ? req.headers['x-object-key'] : '';
-  const expectedPrefix = `admissions/inst-${application.institutionId}-app-${application.id}/`;
+  const expectedPrefix = `${STORAGE_FOLDER.inscription}/inst-${application.institutionId}-app-${application.id}/`;
   if (!keyHeader.startsWith(expectedPrefix)) {
     return res.status(403).json({ error: 'Clé de fichier invalide pour ce dossier' });
   }
@@ -550,7 +551,7 @@ admissionsPublicRouter.post('/status/:token/documents', submitLimiter, async (re
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
-  const expectedPrefix = `admissions/inst-${application.institutionId}-app-${application.id}/`;
+  const expectedPrefix = `${STORAGE_FOLDER.inscription}/inst-${application.institutionId}-app-${application.id}/`;
   if (!parsed.data.fileKey.startsWith(expectedPrefix)) {
     return res.status(403).json({ error: 'Ce fichier ne provient pas de ce dossier' });
   }

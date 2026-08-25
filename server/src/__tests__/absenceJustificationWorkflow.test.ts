@@ -143,4 +143,28 @@ describe('Workflow de validation du justificatif (PRS-005)', () => {
       .send({ justified: true });
     expect(res.status).toBe(403);
   });
+
+  it('refuse une clé de fichier hors dossier justificatifs/', async () => {
+    const id = await createAbsence();
+    const res = await request(app)
+      .patch(`/absences/${id}/justify`)
+      .set(auth(fx.a.student.token))
+      .send({
+        justification: 'Avec fichier intrus',
+        justificationFile: `documents/inst-${fx.a.institutionId}/fake.pdf`,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('refuse une clé justificatifs/ d’un autre établissement', async () => {
+    const id = await createAbsence();
+    const res = await request(app)
+      .patch(`/absences/${id}/justify`)
+      .set(auth(fx.a.student.token))
+      .send({
+        justification: 'Fichier autre tenant',
+        justificationFile: `justificatifs/inst-${fx.b.institutionId}/cert.pdf`,
+      });
+    expect(res.status).toBe(400);
+  });
 });

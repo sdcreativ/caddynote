@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, Calendar, Download, Check, X } from 'lucide-react';
+import { PlusCircle, Search, Calendar, Download, Check, X, Paperclip } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { trackProductEvent } from '@/lib/productTelemetry';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useNavigate } from 'react-router-dom';
 import { hasAnyRole, ATTENDANCE_HUB_ROLES, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
+import { apiClient } from '@/lib/apiClient';
 
 const AbsencesPage = () => {
   const { t } = useTranslation('absences');
@@ -95,6 +96,19 @@ const AbsencesPage = () => {
           : t('page.rejectedBody'),
       });
     } else {
+      toast({
+        title: tc('status.error'),
+        description: t('page.reviewError'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openJustificationFile = async (key: string) => {
+    try {
+      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch {
       toast({
         title: tc('status.error'),
         description: t('page.reviewError'),
@@ -306,12 +320,22 @@ const AbsencesPage = () => {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
-                            {absence.student_id?.substring(0, 2).toUpperCase() || t('page.initialsFallback')}
+                            {getInitials(
+                              [absence.student?.first_name, absence.student?.last_name]
+                                .filter(Boolean)
+                                .join(' ') || t('page.initialsFallback')
+                            )}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-sm">{t('page.studentLabel', { id: absence.student_id?.substring(0, 8) || t('page.unknown') })}</div>
-                          <div className="text-xs text-gray-500">{t('page.studentId', { id: absence.student_id })}</div>
+                          <div className="font-medium text-sm">
+                            {[absence.student?.first_name, absence.student?.last_name]
+                              .filter(Boolean)
+                              .join(' ') || t('page.unknown')}
+                          </div>
+                          {absence.student?.email ? (
+                            <div className="text-xs text-gray-500">{absence.student.email}</div>
+                          ) : null}
                         </div>
                       </div>
                     </TableCell>
@@ -347,6 +371,16 @@ const AbsencesPage = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      {absence.justification_file ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openJustificationFile(absence.justification_file!)}
+                          aria-label={t('mine.viewDocument', { defaultValue: 'Voir le justificatif' })}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                       <Button variant="ghost" size="sm">
                         {t('page.details')}
                       </Button>

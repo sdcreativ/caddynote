@@ -7,6 +7,7 @@ import { rejectUnlessCourseTenant, rejectUnlessResolvedTenant, rejectUnlessStude
 import { notifyAssignmentPublished, runAssignmentReminderCheck } from '../lib/assignmentReminders.js';
 import { buildAssignmentFollowUp } from '../lib/assignmentFollowUp.js';
 import { isOwnedObjectKey } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { TEACHING_ROLES } from '../lib/authz.js';
 import { logAudit } from '../lib/audit.js';
 
@@ -255,7 +256,7 @@ assignmentsRouter.post('/submissions', async (req, res) => {
   const institutionId = rejectUnlessResolvedTenant(res, req.auth!, await getAssignmentInstitutionId(parsed.data.assignmentId));
   if (!institutionId) return;
   for (const att of parsed.data.attachments) {
-    if (!isOwnedObjectKey(att.key, 'assignments', institutionId, req.auth!.sub)) {
+    if (!isOwnedObjectKey(att.key, STORAGE_FOLDER.devoirs, institutionId, req.auth!.sub)) {
       return res.status(403).json({ error: 'Pièce jointe hors périmètre de stockage' });
     }
   }

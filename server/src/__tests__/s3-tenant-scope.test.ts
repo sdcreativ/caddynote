@@ -92,7 +92,7 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
       const forMaterials = await request(app)
         .post('/files/presign-upload')
         .set(auth(actor.token))
-        .send({ folder: 'course-materials', filename: 'cours.pdf', contentType: 'application/pdf' });
+        .send({ folder: 'cours', filename: 'cours.pdf', contentType: 'application/pdf' });
       expect(forMaterials.status).toBe(501);
     });
   });

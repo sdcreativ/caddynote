@@ -7,13 +7,29 @@ import { useTranslation } from "react-i18next";
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { useStrkAbsences } from "@/hooks/useStrkAbsences";
 import { JustificationDialog } from "@/components/absences/JustificationDialog";
+import { apiClient } from "@/lib/apiClient";
+import { useToast } from "@/hooks/use-toast";
 
 const MyAbsencesPage = () => {
   const { t } = useTranslation('absences');
   const { user } = useStrkAuth();
   const { absences, loadAbsencesByStudent, isLoading } = useStrkAbsences();
+  const { toast } = useToast();
   const [selectedAbsenceId, setSelectedAbsenceId] = useState<string | undefined>();
   const [justificationDialogOpen, setJustificationDialogOpen] = useState(false);
+
+  const openJustificationFile = async (key: string) => {
+    try {
+      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d’ouvrir le justificatif.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -179,7 +195,11 @@ const MyAbsencesPage = () => {
                     )}
                     
                     {(isJustified || hasJustificationPending) && absence.justification_file && (
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openJustificationFile(absence.justification_file!)}
+                      >
                         <Eye className="h-4 w-4 mr-1" />
                         {t('mine.viewDocument')}
                       </Button>

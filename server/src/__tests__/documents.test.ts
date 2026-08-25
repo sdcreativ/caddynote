@@ -3,10 +3,9 @@ import request from 'supertest';
 import { app } from '../index.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
-// Documents & vérification (chap. 18, DOC-001 à 005). S3 n'est pas configuré
-// dans cet environnement de test : `/download` doit donc régénérer le PDF à
-// la volée depuis `dataSnapshot` — c'est justement ce chemin qui est exercé
-// ici, en plus du chemin "métadonnées seules".
+// Documents & vérification (chap. 18, DOC-001 à 005). Sans S3, fileStorage
+// persiste sur disque local : `/download` lit les octets stockés (ou régénère
+// en repli). Le chemin S3 (URL signée) n'est pas exercé ici.
 describe('Documents PDF + QR de vérification (DOC-001 à 005)', () => {
   let fx: Fixture;
 
@@ -55,7 +54,11 @@ describe('Documents PDF + QR de vérification (DOC-001 à 005)', () => {
       verificationToken = res.body.document.verificationToken;
     });
 
-    it('télécharge un vrai PDF (régénéré à la volée, sans S3 configuré)', async () => {
+    it('persiste le PDF (fileStorage local sans S3) et le retélécharge', async () => {
+      const meta = await request(app).get(`/documents/${documentId}`).set(auth(fx.a.schoolAdmin.token));
+      expect(meta.status).toBe(200);
+      expect(meta.body.document.fileKey).toMatch(/^certificats\//);
+
       const res = await request(app).get(`/documents/${documentId}/download`).set(auth(fx.a.schoolAdmin.token));
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toBe('application/pdf');

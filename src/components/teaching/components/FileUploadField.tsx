@@ -13,7 +13,7 @@ interface FileUploadFieldProps {
   id: string;
   label: string;
   required?: boolean;
-  folder?: 'assignments' | 'course-materials' | 'documents';
+  folder?: 'devoirs' | 'exercices' | 'cours' | 'documents';
   onFileUploaded?: (file: File, key: string) => void;
 }
 
@@ -21,7 +21,7 @@ const FileUploadField = ({
   id,
   label,
   required = false,
-  folder = 'assignments',
+  folder = 'devoirs',
   onFileUploaded,
 }: FileUploadFieldProps) => {
   const { toast } = useToast();

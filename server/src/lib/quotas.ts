@@ -1,6 +1,7 @@
 import { prisma } from './prisma.js';
 import type { SubscriptionPlan } from '@prisma/client';
 import { isS3Configured, listObjects } from './s3.js';
+import { STORAGE_FOLDERS } from './storageFolders.js';
 
 /**
  * SAA-003 (Lot 10) : quotas élèves / users / SMS / stockage.
@@ -43,15 +44,7 @@ const startOfCurrentMonth = (): Date => {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 };
 
-const STORAGE_FOLDERS = [
-  'avatars',
-  'documents',
-  'assignments',
-  'messages',
-  'receipts',
-  'course-materials',
-  'admissions',
-] as const;
+const STORAGE_QUOTA_FOLDERS = STORAGE_FOLDERS;
 
 /** Octets utilisés pour un établissement (estimation S3 + compteur local). */
 export const estimateInstitutionStorageBytes = async (institutionId: string): Promise<number> => {
@@ -64,7 +57,7 @@ export const estimateInstitutionStorageBytes = async (institutionId: string): Pr
 
   let listed = 0;
   const scope = `inst-${institutionId}`;
-  for (const folder of STORAGE_FOLDERS) {
+  for (const folder of STORAGE_QUOTA_FOLDERS) {
     try {
       const objects = await listObjects(`${folder}/${scope}/`);
       listed += objects.reduce((sum, o) => sum + o.sizeBytes, 0);

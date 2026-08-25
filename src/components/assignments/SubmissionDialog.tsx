@@ -31,7 +31,7 @@ export const SubmissionDialog = ({ assignment, open, onOpenChange }: SubmissionD
 
       const attachments = [];
       for (const file of files) {
-        const key = await uploadViaPresignedPost('assignments', file);
+        const key = await uploadViaPresignedPost('devoirs', file);
         attachments.push({
           name: file.name,
           size: file.size,

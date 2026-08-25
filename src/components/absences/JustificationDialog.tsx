@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
+import { uploadViaPresignedPost } from '@/lib/s3Upload';
 import { Upload, X } from 'lucide-react';
 
 interface JustificationDialogProps {
@@ -80,10 +81,12 @@ export const JustificationDialog = ({
     setIsSubmitting(true);
 
     try {
-      // Pour le moment, on simule l'upload du fichier
-      const fileUrl = file ? `/uploads/justifications/${file.name}` : undefined;
-      
-      const result = await updateAbsenceJustification(absenceId, reason, fileUrl);
+      let fileKey: string | undefined;
+      if (file) {
+        fileKey = await uploadViaPresignedPost('justificatifs', file);
+      }
+
+      const result = await updateAbsenceJustification(absenceId, reason, fileKey);
       
       if (result) {
         toast({

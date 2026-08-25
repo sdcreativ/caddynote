@@ -12,11 +12,14 @@ import {
   buildObjectKey,
   buildTenantScope,
   isOwnedObjectKey,
-  uploadObject,
-  getObjectBytes,
-  deleteObject,
   getPresignedDownloadUrl,
 } from '../lib/s3.js';
+import {
+  putStoredObject,
+  getStoredObjectBytes,
+  deleteStoredObject,
+} from '../lib/fileStorage.js';
+import { STORAGE_FOLDER, folderForDocumentType } from '../lib/storageFolders.js';
 import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
 import type { JwtPayload } from '../lib/jwt.js';
 import { logAudit } from '../lib/audit.js';
@@ -41,9 +44,9 @@ import { Prisma, type StrkDocument, type StrkDocumentType } from '@prisma/client
  * DOC-004 : QR intégré au PDF, pointant vers la page SPA publique
  * `/verify/document/:token` (APP_URL). L’API `GET /documents/verify/:token`
  * reste la source JSON (comme `/finance/verify/:token`).
- * DOC-005 : stockage S3 si configuré (URL signée temporaire) ; sinon le PDF
- * est regénéré à la volée depuis `dataSnapshot` à chaque téléchargement — la
- * fonctionnalité reste entièrement utilisable et testable sans bucket réel.
+ * DOC-005 : persistance systématique via `fileStorage` (S3 si configuré,
+ * sinon disque local). Téléchargement : URL signée S3, ou flux octets locaux ;
+ * repli de régénération depuis `dataSnapshot` si `fileKey` absent.
  */
 export const documentsRouter = Router();
 documentsRouter.use(requireAuth);
@@ -227,9 +230,8 @@ const buildDocumentContent = (
 };
 
 /** DOC-002 : configuration de personnalisation de l'établissement pour ce
- * type de document, si elle existe. Le logo n'est résolu en octets que si
- * S3 est configuré (c'est là qu'il a été déposé) ; son absence ne bloque
- * jamais la génération, elle dégrade simplement vers l'en-tête texte seul. */
+ * type de document, si elle existe. Le logo est lu via `fileStorage` (S3 ou
+ * local) ; son absence ne bloque jamais la génération (dégrade vers texte). */
 const getBranding = async (institutionId: string, type: StrkDocumentType): Promise<DocumentBranding | undefined> => {
   const template = await prisma.strkDocumentTemplate.findUnique({
     where: { institutionId_type: { institutionId, type } },
@@ -237,9 +239,9 @@ const getBranding = async (institutionId: string, type: StrkDocumentType): Promi
   if (!template) return undefined;
 
   let logoBytes: Buffer | null = null;
-  if (template.logoKey && isS3Configured()) {
+  if (template.logoKey) {
     try {
-      logoBytes = await getObjectBytes(template.logoKey);
+      logoBytes = await getStoredObjectBytes(template.logoKey);
     } catch (error) {
       console.error('Logo établissement introuvable sur le stockage (clé obsolète ?) :', error);
     }
@@ -267,9 +269,9 @@ const renderAndStore = async (document: StrkDocument, institution: { name: strin
       photoKey?: string | null;
     };
     let photoBytes: Buffer | null = null;
-    if (s.photoKey && isS3Configured()) {
+    if (s.photoKey) {
       try {
-        photoBytes = await getObjectBytes(s.photoKey);
+        photoBytes = await getStoredObjectBytes(s.photoKey);
       } catch {
         photoBytes = null;
       }
@@ -373,13 +375,11 @@ export const generateDocument = async (params: {
 
   const pdfBytes = await renderAndStore(document, institution);
 
-  if (isS3Configured()) {
-    const scope = buildTenantScope(params.institutionId, params.generatedBy);
-    const fileKey = buildObjectKey('documents', scope, `${params.type}-${params.subjectId}-v${document.version}.pdf`);
-    await uploadObject(fileKey, Buffer.from(pdfBytes), 'application/pdf');
-    return prisma.strkDocument.update({ where: { id: document.id }, data: { fileKey } });
-  }
-  return document;
+  const scope = buildTenantScope(params.institutionId, params.generatedBy);
+  const folder = folderForDocumentType(params.type);
+  const fileKey = buildObjectKey(folder, scope, `${params.type}-${params.subjectId}-v${document.version}.pdf`);
+  await putStoredObject(fileKey, Buffer.from(pdfBytes), 'application/pdf');
+  return prisma.strkDocument.update({ where: { id: document.id }, data: { fileKey } });
 };
 
 // --- Génération (réservée au personnel de direction — action officielle) ---
@@ -814,21 +814,21 @@ documentsRouter.put('/templates/:type', requireRole(...SECRETARIAT_ROLES), async
   }
   if (
     parsed.data.logoKey &&
-    !isOwnedObjectKey(parsed.data.logoKey, 'documents', institutionId, req.auth!.sub)
+    !isOwnedObjectKey(parsed.data.logoKey, STORAGE_FOLDER.documents, institutionId, req.auth!.sub)
   ) {
     return res.status(403).json({ error: 'Ce fichier ne provient pas de votre établissement' });
   }
   // DOC-005 : même principe qu'à l'attachement d'une pièce de préinscription
   // — le logo a transité directement navigateur -> S3, ce PUT est le seul
   // instant où le serveur relit l'objet pour l'enregistrer comme gabarit.
-  if (parsed.data.logoKey && isS3Configured() && isAntivirusConfigured()) {
-    const bytes = await getObjectBytes(parsed.data.logoKey);
+  if (parsed.data.logoKey && isAntivirusConfigured()) {
+    const bytes = await getStoredObjectBytes(parsed.data.logoKey);
     const scan = await scanBuffer(bytes).catch((error) => {
       console.error('Échec du scan antivirus (clamd) :', error);
       return { scanned: false, clean: true } as const;
     });
     if (scan.scanned && !scan.clean) {
-      await deleteObject(parsed.data.logoKey).catch(() => {});
+      await deleteStoredObject(parsed.data.logoKey).catch(() => {});
       await logAudit({
         institutionId,
         actorId: req.auth!.sub,
@@ -950,16 +950,16 @@ documentsRouter.post('/templates/:type/preview', requireRole(...SECRETARIAT_ROLE
   }
   if (
     parsed.data.logoKey &&
-    !isOwnedObjectKey(parsed.data.logoKey, 'documents', institutionId, req.auth!.sub)
+    !isOwnedObjectKey(parsed.data.logoKey, STORAGE_FOLDER.documents, institutionId, req.auth!.sub)
   ) {
     return res.status(403).json({ error: 'Ce fichier ne provient pas de votre établissement' });
   }
 
   const institution = await prisma.strkInstitution.findUniqueOrThrow({ where: { id: institutionId } });
   let logoBytes: Buffer | null = null;
-  if (parsed.data.logoKey && isS3Configured()) {
+  if (parsed.data.logoKey) {
     try {
-      logoBytes = await getObjectBytes(parsed.data.logoKey);
+      logoBytes = await getStoredObjectBytes(parsed.data.logoKey);
     } catch (error) {
       console.error('Aperçu : logo introuvable sur le stockage :', error);
     }
@@ -1100,9 +1100,8 @@ documentsRouter.get('/:id/versions', async (req, res) => {
   res.json({ versions });
 });
 
-// DOC-005 : URL signée si S3 est configuré, sinon régénération à la volée
-// depuis `dataSnapshot` (jamais de dépendance dure au stockage pour pouvoir
-// retélécharger un document déjà émis).
+// DOC-005 : URL signée si S3 + fileKey ; sinon octets depuis fileStorage ;
+// repli régénération depuis dataSnapshot si pas de fileKey.
 documentsRouter.get('/:id/download', async (req, res) => {
   const document = await prisma.strkDocument.findUnique({ where: { id: req.params.id } });
   if (!document) {
@@ -1111,9 +1110,19 @@ documentsRouter.get('/:id/download', async (req, res) => {
   if (!(await canAccessDocument(req.auth!, document))) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
-  if (document.fileKey && isS3Configured()) {
-    const downloadUrl = await getPresignedDownloadUrl(document.fileKey);
-    return res.json({ downloadUrl, expiresIn: 3600 });
+  if (document.fileKey) {
+    if (isS3Configured()) {
+      const downloadUrl = await getPresignedDownloadUrl(document.fileKey);
+      return res.json({ downloadUrl, expiresIn: 3600 });
+    }
+    try {
+      const stored = await getStoredObjectBytes(document.fileKey);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${document.type}-v${document.version}.pdf"`);
+      return res.send(stored);
+    } catch (error) {
+      console.error('Document stocké introuvable, régénération :', error);
+    }
   }
   const institution = await prisma.strkInstitution.findUniqueOrThrow({ where: { id: document.institutionId } });
   const pdfBytes = await renderAndStore(document, institution);

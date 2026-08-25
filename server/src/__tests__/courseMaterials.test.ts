@@ -31,7 +31,7 @@ describe('PED-002 — ressources de cours', () => {
     expect(res.status).toBe(403);
   });
 
-  it('un fileKey hors dossier course-materials est rejeté', async () => {
+  it('un fileKey hors dossier cours/ est rejeté', async () => {
     const res = await request(app)
       .post(`/courses/${fx.a.courseId}/materials`)
       .set(auth(fx.a.teacher.token))
@@ -43,7 +43,7 @@ describe('PED-002 — ressources de cours', () => {
     const res = await request(app)
       .post(`/courses/${fx.a.courseId}/materials`)
       .set(auth(fx.a.teacher.token))
-      .send({ title: 'PDF', type: 'pdf', fileKey: 'course-materials/inst-x/chapitre.pdf' });
+      .send({ title: 'PDF', type: 'pdf', fileKey: 'cours/inst-x/chapitre.pdf' });
     expect(res.status).toBe(501);
   });
 });

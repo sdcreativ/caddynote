@@ -11,8 +11,24 @@ export const fetchSentMessages = async (userId: string): Promise<StrkMessage[]> 
   return messages;
 };
 
-export const sendMessage = async (messageData: Omit<StrkMessage, "id" | "created_at" | "updated_at">): Promise<StrkMessage | null> => {
-  const { message } = await apiClient.post<{ message: StrkMessage }>('/messages', messageData);
+export type SendMessageInput = {
+  recipientId: string;
+  subject: string;
+  content: string;
+  messageType?: string;
+  priority?: string;
+  attachments?: string[];
+};
+
+export const sendMessage = async (messageData: SendMessageInput): Promise<StrkMessage | null> => {
+  const { message } = await apiClient.post<{ message: StrkMessage }>('/messages', {
+    recipientId: messageData.recipientId,
+    subject: messageData.subject,
+    content: messageData.content,
+    messageType: messageData.messageType ?? 'general',
+    priority: messageData.priority ?? 'normal',
+    attachments: messageData.attachments ?? [],
+  });
   return message;
 };
 
@@ -23,16 +39,22 @@ export const markAsRead = async (messageId: string): Promise<boolean> => {
 
 export const replyToMessage = async (
   originalMessageId: string,
-  replyData: Omit<StrkMessage, "id" | "created_at" | "updated_at" | "parent_message_id">
+  replyData: Omit<SendMessageInput, 'recipientId'>
 ): Promise<StrkMessage | null> => {
-  const { message } = await apiClient.post<{ message: StrkMessage }>(`/messages/${originalMessageId}/reply`, replyData);
+  const { message } = await apiClient.post<{ message: StrkMessage }>(`/messages/${originalMessageId}/reply`, {
+    subject: replyData.subject,
+    content: replyData.content,
+    messageType: replyData.messageType ?? 'general',
+    priority: replyData.priority ?? 'normal',
+    attachments: replyData.attachments ?? [],
+  });
   return message;
 };
 
 // Alias pour compatibilité
 export const markMessageAsRead = markAsRead;
 
-export const fetchMessagableUsers = async (currentUserId: string): Promise<any[]> => {
+export const fetchMessagableUsers = async (_currentUserId: string): Promise<any[]> => {
   const { users } = await apiClient.get<{ users: any[] }>('/messages/contacts');
   return users;
 };

@@ -423,11 +423,36 @@ const MyChildrenPage = () => {
                               <strong>Motif :</strong> {absence.justification_reason}
                             </p>
                           )}
-                          {!isJustified && (
-                            <Button size="sm" onClick={() => handleJustifyAbsence(absence.id)}>
-                              {hasJustificationPending ? 'Modifier le justificatif' : "Justifier l'absence"}
-                            </Button>
-                          )}
+                          <div className="flex flex-wrap gap-2">
+                            {!isJustified && (
+                              <Button size="sm" onClick={() => handleJustifyAbsence(absence.id)}>
+                                {hasJustificationPending ? 'Modifier le justificatif' : "Justifier l'absence"}
+                              </Button>
+                            )}
+                            {absence.justification_file ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>(
+                                      '/files/presign-download',
+                                      { key: absence.justification_file }
+                                    );
+                                    window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+                                  } catch {
+                                    toast({
+                                      title: 'Erreur',
+                                      description: 'Impossible d’ouvrir le justificatif.',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }}
+                              >
+                                Voir le document
+                              </Button>
+                            ) : null}
+                          </div>
                         </CardContent>
                       </Card>
                     );

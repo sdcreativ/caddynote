@@ -174,10 +174,8 @@ export const revokeDocument = async (id: string): Promise<boolean> => {
 
 /**
  * DOC-005 : selon la configuration serveur, `/download` renvoie soit une URL
- * signée S3 (JSON, à ouvrir directement), soit le PDF lui-même (régénéré à
- * la volée si S3 n'est pas configuré — le cas dans cet environnement). Hors
- * de `apiClient` volontairement, comme `downloadReportExport` : celui-ci ne
- * sait parser que du JSON, pas un flux binaire.
+ * signée S3 (JSON), soit le PDF stocké via fileStorage (local sans S3).
+ * Hors de `apiClient` volontairement : celui-ci ne parse que du JSON.
  */
 export const downloadDocument = async (id: string, filename: string): Promise<void> => {
   const token = getToken();

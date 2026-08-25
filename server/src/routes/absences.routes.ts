@@ -8,9 +8,51 @@ import { rejectUnlessSameInstitution, rejectUnlessStudentAccess, sendForbidden }
 import { runAbsenceAlertCheck } from '../lib/absenceAlertCron.js';
 import { runAttendanceThresholdCheck } from '../lib/attendanceThresholds.js';
 import { logAudit } from '../lib/audit.js';
+import { isOwnedObjectKey } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 
 export const absencesRouter = Router();
 absencesRouter.use(requireAuth);
+
+/** Enrichit les absences avec prénom/nom élève + libellé cours (pas d’FK join Prisma sur le listage brut). */
+const enrichAbsences = async <T extends { studentId: string; courseId: string | null }>(absences: T[]) => {
+  if (absences.length === 0) return [];
+  const studentIds = [...new Set(absences.map((a) => a.studentId))];
+  const courseIds = [...new Set(absences.map((a) => a.courseId).filter((id): id is string => !!id))];
+
+  const [profiles, courses] = await Promise.all([
+    prisma.strkProfile.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    }),
+    courseIds.length
+      ? prisma.strkCourse.findMany({
+          where: { id: { in: courseIds } },
+          select: { id: true, name: true, class: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+
+  return absences.map((a) => {
+    const profile = profileById.get(a.studentId);
+    const course = a.courseId ? courseById.get(a.courseId) : undefined;
+    return {
+      ...a,
+      student: profile
+        ? {
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            email: profile.email,
+          }
+        : null,
+      courseName: course?.name ?? null,
+      className: course?.class?.name ?? null,
+    };
+  });
+};
 
 // Déclenchement manuel de la tâche planifiée horaire (PRS-004), utile pour
 // tester sans attendre — même principe que POST /subscriptions/expiration-check.
@@ -63,7 +105,7 @@ absencesRouter.get('/', async (req, res) => {
       where: { studentId, ...(dateFilter ? { date: dateFilter } : {}) },
       orderBy: { date: 'desc' },
     });
-    return res.json({ absences });
+    return res.json({ absences: await enrichAbsences(absences) });
   }
 
   if (typeof courseId === 'string') {
@@ -80,7 +122,7 @@ absencesRouter.get('/', async (req, res) => {
       where: { courseId, ...(dateFilter ? { date: dateFilter } : {}) },
       orderBy: { createdAt: 'desc' },
     });
-    return res.json({ absences });
+    return res.json({ absences: await enrichAbsences(absences) });
   }
 
   // Historique d’appel par classe (effectif actif) — utilisé par le hub Présences.
@@ -118,13 +160,13 @@ absencesRouter.get('/', async (req, res) => {
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       take: 500,
     });
-    return res.json({ absences });
+    return res.json({ absences: await enrichAbsences(absences) });
   }
 
   if (typeof institutionId === 'string') {
     if (rejectUnlessSameInstitution(res, req.auth!, institutionId)) return;
     const absences = await prisma.strkAbsence.findMany({ where: { institutionId }, orderBy: { date: 'desc' } });
-    return res.json({ absences });
+    return res.json({ absences: await enrichAbsences(absences) });
   }
 
   return res.status(400).json({ error: 'studentId, courseId, classId ou institutionId requis' });
@@ -250,6 +292,17 @@ absencesRouter.patch('/:id/justify', async (req, res) => {
   const parsed = justifySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
+  }
+  // DOC-005 / ORG-004 : la pièce jointe doit être une clé du dossier
+  // `justificatifs/` appartenant au tenant de l’appelant (jamais une URL libre).
+  if (parsed.data.justificationFile) {
+    const key = parsed.data.justificationFile;
+    if (
+      !key.startsWith(`${STORAGE_FOLDER.justificatifs}/`) ||
+      !isOwnedObjectKey(key, STORAGE_FOLDER.justificatifs, req.auth!.institutionId, req.auth!.sub)
+    ) {
+      return res.status(400).json({ error: 'Fichier justificatif invalide' });
+    }
   }
   const updated = await prisma.strkAbsence.update({
     where: { id: req.params.id },

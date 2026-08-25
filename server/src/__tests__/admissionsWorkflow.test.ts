@@ -118,7 +118,7 @@ describe('Admissions — workflow & stockage (§5.12)', () => {
         expect(presign.body.fields).toBeTruthy();
       } else {
         expect(presign.body.mode).toBe('local');
-        expect(presign.body.key).toMatch(/^admissions\//);
+        expect(presign.body.key).toMatch(/^inscription\//);
         expect(presign.body.uploadPath).toContain('/documents/direct-upload');
 
         const pdf = Buffer.from('%PDF-1.4 local-test');

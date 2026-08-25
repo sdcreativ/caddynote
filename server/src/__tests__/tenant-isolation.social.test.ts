@@ -66,6 +66,45 @@ describe('Isolation multi-tenant — communication, supervision, fichiers', () =
         .send({ subject: 'Re: Info', content: 'Réponse légitime' });
       expect(okRes.status).toBe(201);
     });
+
+    it('refuse des pièces jointes hors dossier messages/ ou d’un autre tenant', async () => {
+      const foreign = await request(app)
+        .post('/messages')
+        .set(auth(fx.a.teacher.token))
+        .send({
+          recipientId: fx.a.schoolAdmin.id,
+          subject: 'PJ',
+          content: 'Intrus',
+          attachments: [`documents/inst-${fx.a.institutionId}/secret.pdf`],
+        });
+      expect(foreign.status).toBe(400);
+
+      const otherTenant = await request(app)
+        .post('/messages')
+        .set(auth(fx.a.teacher.token))
+        .send({
+          recipientId: fx.a.schoolAdmin.id,
+          subject: 'PJ',
+          content: 'Autre établissement',
+          attachments: [`messages/inst-${fx.b.institutionId}/note.pdf`],
+        });
+      expect(otherTenant.status).toBe(400);
+    });
+
+    it('accepte des pièces jointes sous messages/ du même établissement', async () => {
+      const key = `messages/inst-${fx.a.institutionId}/2026-attach-ok.pdf`;
+      const res = await request(app)
+        .post('/messages')
+        .set(auth(fx.a.teacher.token))
+        .send({
+          recipientId: fx.a.schoolAdmin.id,
+          subject: 'Avec PJ',
+          content: 'Voir pièce',
+          attachments: [key],
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.message.attachments).toEqual([key]);
+    });
   });
 
   describe('notifications', () => {

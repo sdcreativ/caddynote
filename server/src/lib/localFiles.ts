@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 /**
  * Stockage fichiers local (dev / instances sans S3).
- * Clés identiques au schéma S3 (`admissions/inst-…/…`) pour bascule transparente.
+ * Clés identiques au schéma S3 (`inscription/inst-…/…`, `devoirs/…`, etc.) pour bascule transparente.
  *
  * Répertoire : LOCAL_UPLOAD_DIR ou `server/uploads` (gitignoré).
  */

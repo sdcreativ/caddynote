@@ -11,7 +11,7 @@ import { buildFixture, auth, type Fixture } from './fixtures.js';
 describe('Documents — purge rétention fichiers (§5.9 / DOC-005)', () => {
   let fx: Fixture;
   let appId: string;
-  const fileKey = `admissions/inst-test/purge-§5.9-${Date.now()}.pdf`;
+  const fileKey = `inscription/inst-test/purge-§5.9-${Date.now()}.pdf`;
 
   beforeAll(async () => {
     fx = await buildFixture();

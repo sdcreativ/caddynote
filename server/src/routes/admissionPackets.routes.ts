@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireFeature } from '../middleware/requireFeature.js';
 import { isSameInstitution, SECRETARIAT_ROLES } from '../lib/authz.js';
 import { buildObjectKey, createPresignedUploadPost, isS3Configured, getPresignedDownloadUrl } from '../lib/s3.js';
+import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, getStoredObjectBytes, deleteStoredObject, ensureStoredObjectEncrypted } from '../lib/fileStorage.js';
 import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
 import { logAudit } from '../lib/audit.js';
@@ -160,7 +161,7 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
     }
 
     const scope = `inst-${application.institutionId}-app-${application.id}`;
-    const key = buildObjectKey('admissions', scope, parsed.data.filename);
+    const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, parsed.data.filename);
     const maxSize = item.documentType.maxSizeBytes || MAX_BYTES;
 
     if (isS3Configured()) {
@@ -205,7 +206,7 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
       .safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
 
-    const expectedPrefix = `admissions/inst-${application.institutionId}-app-${application.id}/`;
+    const expectedPrefix = `${STORAGE_FOLDER.inscription}/inst-${application.institutionId}-app-${application.id}/`;
     if (!parsed.data.fileKey.startsWith(expectedPrefix)) {
       return res.status(403).json({ error: 'Ce fichier ne provient pas de ce dossier' });
     }

@@ -34,7 +34,23 @@ describe('GET /absences?classId — historique par classe', () => {
       .set(auth(fx.a.schoolAdmin.token));
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.absences)).toBe(true);
-    expect(res.body.absences.some((a: { id: string }) => a.id === absenceId)).toBe(true);
+    const row = res.body.absences.find((a: { id: string }) => a.id === absenceId);
+    expect(row).toBeTruthy();
+    expect(row.student?.firstName || row.student?.lastName).toBeTruthy();
+  });
+
+  it('GET /absences?institutionId expose le nom de l’élève', async () => {
+    const res = await request(app)
+      .get(`/absences?institutionId=${fx.a.institutionId}`)
+      .set(auth(fx.a.teacher.token));
+    expect(res.status).toBe(200);
+    const row = res.body.absences.find((a: { id: string }) => a.id === absenceId);
+    expect(row?.student).toEqual(
+      expect.objectContaining({
+        firstName: expect.any(String),
+        lastName: expect.any(String),
+      })
+    );
   });
 
   it('refuse l’accès depuis un autre établissement (ORG-004)', async () => {
