@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DashboardAlert } from '@/hooks/useEstablishmentDashboard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   alerts: DashboardAlert[];
@@ -25,32 +25,48 @@ const initials = (name: string) =>
     .map((p) => p[0]?.toUpperCase())
     .join('') || '?';
 
+const primaryHref = (alerts: DashboardAlert[]) => {
+  const first = alerts[0];
+  if (first) return first.href;
+  if (alerts.some((a) => a.kind === 'admission')) return '/admissions/admin';
+  return '/absences';
+};
+
 export function PriorityAlerts({ alerts, total }: Props) {
   const { t } = useTranslation('dashboard');
+  const hasItems = alerts.length > 0;
+  const seeAllHref = primaryHref(alerts);
+
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t('alerts.section')}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            {t('alerts.section')}
+          </p>
           <h2 className="mt-1 font-display text-lg font-semibold text-slate-900">
-            {t('alerts.recent')} <span className="text-slate-400">({total})</span>
+            {t('alerts.recent')}{' '}
+            <span className="text-slate-400">({total})</span>
           </h2>
         </div>
-        <Link
-          to={alerts.some((a) => a.kind === 'admission') ? '/admissions/admin' : '/absences'}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          {t('alerts.seeAll')}
-        </Link>
+        {hasItems ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm">
+              <Link to={seeAllHref}>{t('alerts.primaryCta')}</Link>
+            </Button>
+            <Link
+              to={seeAllHref}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              {t('alerts.seeAll')}
+            </Link>
+          </div>
+        ) : null}
       </div>
 
-      <ul className="mt-4 divide-y divide-slate-100">
-        {alerts.length === 0 ? (
-          <li className="py-2">
-            <EmptyState title={t('alerts.emptyTitle')} description={t('alerts.emptyBody')} />
-          </li>
-        ) : (
-          alerts.slice(0, 5).map((alert) => (
+      {hasItems ? (
+        <ul className="mt-4 divide-y divide-slate-100">
+          {alerts.slice(0, 5).map((alert) => (
             <li key={alert.id}>
               <Link
                 to={alert.href}
@@ -76,9 +92,11 @@ export function PriorityAlerts({ alerts, total }: Props) {
                 <ChevronRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
               </Link>
             </li>
-          ))
-        )}
-      </ul>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm text-slate-500">{t('alerts.emptyTitle')}</p>
+      )}
     </section>
   );
 }

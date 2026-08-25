@@ -330,6 +330,7 @@ export function useEstablishmentDashboard() {
     alertCount: alerts.length,
     priorityCount: Math.min(priorityCount, alerts.length),
     admissionsPendingCount,
+    hasAttendanceHistory: absences.length > 0,
     studentsDelta: 0,
     tenantStatus,
   };

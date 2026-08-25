@@ -80,7 +80,48 @@ export function EstablishmentOverview() {
       ? '—'
       : `${data.attendanceToday.rate.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}%`;
 
+  const financeActive =
+    data.finance.paidCents + data.finance.pendingCents + data.finance.overdueCents > 0;
   const paymentsValue = formatMoneyShort(data.finance.paidCents, data.finance.currency);
+
+  const showAttendanceChart = data.studentCount > 0 && data.hasAttendanceHistory;
+  const showAgenda = data.agenda.length > 0;
+  const showFinanceBlock = financeActive;
+  const showSecondary = showAttendanceChart || showAgenda || showFinanceBlock;
+
+  const firstAlert = data.alerts[0];
+  const primaryCta = (() => {
+    if (!firstAlert) {
+      return {
+        label: t('directionMobile.primaryCta'),
+        href: '/students',
+        icon: <Users aria-hidden />,
+      };
+    }
+    if (firstAlert.kind === 'admission') {
+      return {
+        label: t('directionMobile.primaryCtaAdmissions'),
+        href: '/admissions/admin',
+        icon: <School aria-hidden />,
+      };
+    }
+    if (firstAlert.kind === 'payment') {
+      return {
+        label: t('directionMobile.primaryCtaPayments'),
+        href: '/finance',
+        icon: <Receipt aria-hidden />,
+      };
+    }
+    return {
+      label: t('directionMobile.primaryCtaAbsences'),
+      href: '/absences',
+      icon: <ClipboardCheck aria-hidden />,
+    };
+  })();
+
+  const kpiColsClass = financeActive
+    ? 'md:grid-cols-2 xl:grid-cols-5'
+    : 'md:grid-cols-2 xl:grid-cols-4';
 
   return (
     <div className="space-y-6 py-4 animate-fade-in md:space-y-8 md:py-0">
@@ -122,19 +163,6 @@ export function EstablishmentOverview() {
         </Alert>
       )}
 
-      {data.admissionsPendingCount > 0 && (
-        <Alert>
-          <School className="h-4 w-4" />
-          <AlertTitle>{t('overview.admissionsPendingTitle')}</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center gap-3">
-            <span>{t('overview.admissionsPendingBody', { count: data.admissionsPendingCount })}</span>
-            <Button asChild size="sm">
-              <Link to="/admissions/admin">{t('overview.openAdmissions')}</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {showSetup && <SetupChecklist />}
 
       {tenantStatus.isEmpty && !tenantStatus.frozen && (
@@ -148,7 +176,10 @@ export function EstablishmentOverview() {
         />
       )}
 
-      {/* Mobile : 4 KPI compacts */}
+      {/* Q1 — À traiter */}
+      <PriorityAlerts alerts={data.alerts} total={data.alertCount} />
+
+      {/* Q2 — Pulsation (KPI) */}
       <div className="grid grid-cols-2 gap-3 md:hidden">
         <MobileCompactStat
           title={t('overview.enrolledStudents')}
@@ -156,54 +187,27 @@ export function EstablishmentOverview() {
           tone="blue"
         />
         <MobileCompactStat title={t('overview.attendanceToday')} value={attendanceValue} tone="emerald" />
-        <MobileCompactStat title={t('overview.paymentsReceived')} value={paymentsValue} tone="violet" />
+        <MobileCompactStat
+          title={t('overview.admissionsPending')}
+          value={String(data.admissionsPendingCount)}
+          tone="amber"
+        />
         <MobileCompactStat
           title={t('overview.alertsToHandle')}
           value={String(data.alertCount)}
           tone="rose"
         />
+        {financeActive ? (
+          <MobileCompactStat
+            title={t('overview.paymentsReceived')}
+            value={paymentsValue}
+            tone="violet"
+            hint={t('overview.thisMonth')}
+          />
+        ) : null}
       </div>
 
-      {/* Mobile : CTA + raccourcis */}
-      <div className="md:hidden">
-        <MobilePrimaryCta
-          label={t('directionMobile.primaryCta')}
-          icon={<Users aria-hidden />}
-          onClick={() => navigate('/students')}
-        />
-        <p className="sr-only">{t('directionMobile.primaryCtaHint')}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:hidden">
-        <MobileQuickTile
-          label={t('quickActions.attendance')}
-          icon={<ClipboardCheck aria-hidden />}
-          onClick={() => navigate('/attendance')}
-        />
-        <MobileQuickTile
-          label={t('quickActions.messages')}
-          icon={<MessageSquare aria-hidden />}
-          onClick={() => navigate('/messages')}
-        />
-        <MobileQuickTile
-          label={t('quickActions.finance')}
-          icon={<Receipt aria-hidden />}
-          onClick={() => navigate('/finance')}
-        />
-        <MobileQuickTile
-          label={t('quickActions.admissions')}
-          icon={<School aria-hidden />}
-          onClick={() => navigate('/admissions/admin')}
-        />
-      </div>
-
-      {/* Mobile : alertes prioritaires avant les blocs lourds */}
-      <div className="md:hidden">
-        <PriorityAlerts alerts={data.alerts} total={data.alertCount} />
-      </div>
-
-      {/* Desktop : grille KPI complète */}
-      <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-5">
+      <div className={`hidden gap-4 md:grid ${kpiColsClass}`}>
         <KpiCard
           title={t('overview.enrolledStudents')}
           value={String(data.studentCount)}
@@ -232,18 +236,6 @@ export function EstablishmentOverview() {
           iconClassName="bg-emerald-50 text-emerald-600"
         />
         <KpiCard
-          title={t('overview.paymentsReceived')}
-          value={paymentsValue}
-          hint={
-            data.finance.paidCents + data.finance.pendingCents + data.finance.overdueCents === 0
-              ? t('overview.noFinanceYet')
-              : t('overview.thisMonth')
-          }
-          hintTone="neutral"
-          icon={<Wallet className="h-5 w-5" />}
-          iconClassName="bg-violet-50 text-violet-600"
-        />
-        <KpiCard
           title={t('overview.admissionsPending')}
           value={String(data.admissionsPendingCount)}
           hint={
@@ -263,22 +255,91 @@ export function EstablishmentOverview() {
           icon={<AlertTriangle className="h-5 w-5" />}
           iconClassName="bg-rose-50 text-rose-600"
         />
+        {financeActive ? (
+          <KpiCard
+            title={t('overview.paymentsReceived')}
+            value={paymentsValue}
+            hint={t('overview.thisMonth')}
+            hintTone="neutral"
+            icon={<Wallet className="h-5 w-5" />}
+            iconClassName="bg-violet-50 text-violet-600"
+          />
+        ) : null}
       </div>
 
-      {/* Desktop : graphiques + agenda */}
-      <div className="hidden gap-4 md:grid md:grid-cols-1 xl:grid-cols-[1.6fr_1fr]">
-        <AttendanceWeekChart
-          average={data.weekAverage}
-          data={data.weekAttendance}
-          empty={data.studentCount === 0}
+      {/* Q3 — Aller où */}
+      <div className="space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 md:hidden">
+          {t('directionMobile.shortcutsTitle')}
+        </p>
+        <MobilePrimaryCta
+          label={primaryCta.label}
+          icon={primaryCta.icon}
+          onClick={() => navigate(primaryCta.href)}
         />
-        <TodayAgenda items={data.agenda} />
+        <p className="sr-only">{t('directionMobile.primaryCtaHint')}</p>
+        <div className={`grid grid-cols-2 gap-3 ${financeActive ? 'md:grid-cols-4 lg:grid-cols-5' : 'md:grid-cols-4'}`}>
+          <MobileQuickTile
+            label={t('quickActions.students')}
+            icon={<Users aria-hidden />}
+            onClick={() => navigate('/students')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('quickActions.attendance')}
+            icon={<ClipboardCheck aria-hidden />}
+            onClick={() => navigate('/attendance')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('quickActions.admissions')}
+            icon={<School aria-hidden />}
+            onClick={() => navigate('/admissions/admin')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('quickActions.messages')}
+            icon={<MessageSquare aria-hidden />}
+            onClick={() => navigate('/messages')}
+            className="md:min-h-[5.5rem]"
+          />
+          {financeActive ? (
+            <MobileQuickTile
+              label={t('quickActions.finance')}
+              icon={<Receipt aria-hidden />}
+              onClick={() => navigate('/finance')}
+              className="md:min-h-[5.5rem]"
+            />
+          ) : null}
+        </div>
       </div>
 
-      <div className="hidden gap-4 md:grid md:grid-cols-1 xl:grid-cols-[1.6fr_1fr]">
-        <PriorityAlerts alerts={data.alerts} total={data.alertCount} />
-        <FinanceCollecte finance={data.finance} />
-      </div>
+      {/* Secondaire — uniquement s’il y a des données */}
+      {showSecondary ? (
+        <div className="hidden space-y-4 md:block">
+          {showAttendanceChart || showAgenda ? (
+            <div
+              className={`grid gap-4 ${
+                showAttendanceChart && showAgenda ? 'xl:grid-cols-[1.6fr_1fr]' : 'grid-cols-1'
+              }`}
+            >
+              {showAttendanceChart ? (
+                <AttendanceWeekChart
+                  average={data.weekAverage}
+                  data={data.weekAttendance}
+                  empty={false}
+                />
+              ) : null}
+              {showAgenda ? <TodayAgenda items={data.agenda} /> : null}
+            </div>
+          ) : null}
+          {showFinanceBlock ? (
+            <div className={showAttendanceChart || showAgenda ? 'xl:max-w-md xl:ml-auto' : undefined}>
+              <FinanceCollecte finance={data.finance} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

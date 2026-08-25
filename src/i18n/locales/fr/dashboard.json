@@ -66,7 +66,11 @@
   },
   "directionMobile": {
     "primaryCta": "Gérer les élèves",
-    "primaryCtaHint": "Point d’entrée principal de la direction"
+    "primaryCtaHint": "Point d’entrée principal de la direction",
+    "primaryCtaAdmissions": "Traiter les admissions",
+    "primaryCtaAbsences": "Voir les absences",
+    "primaryCtaPayments": "Voir les paiements",
+    "shortcutsTitle": "Aller où"
   },
   "parentMobile": {
     "primaryCta": "Voir mes enfants",
@@ -149,10 +153,11 @@
     "fromSchedule": "Issues d’une grille"
   },
   "alerts": {
-    "section": "Suivi prioritaire",
-    "recent": "Alertes récentes",
+    "section": "À traiter",
+    "recent": "Priorités du jour",
     "seeAll": "Tout voir",
-    "emptyTitle": "Aucune alerte",
+    "primaryCta": "Traiter maintenant",
+    "emptyTitle": "Rien à traiter aujourd’hui",
     "emptyBody": "Les préinscriptions, absences et paiements à traiter apparaîtront ici."
   },
   "agenda": {
