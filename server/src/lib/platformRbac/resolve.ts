@@ -12,7 +12,6 @@ import {
 import {
   getSystemRoleDef,
   LEGACY_SCOPE_TO_ROLE,
-  type PlatformSystemRoleCode,
 } from './systemRoles.js';
 import { getPlatformOpsAcl, type PlatformOpsScope } from '../platformOps.js';
 
@@ -71,11 +70,12 @@ export const resolvePlatformAccess = async (userId: string, profileRole: string)
   const acl = await getPlatformOpsAcl();
   const scopes = acl[userId];
   if (scopes && Array.isArray(scopes) && scopes.length > 0) {
+    type LegacyMappedRole = (typeof LEGACY_SCOPE_TO_ROLE)[keyof typeof LEGACY_SCOPE_TO_ROLE];
     const roleCodes = [
       ...new Set(
         scopes
-          .map((s) => LEGACY_SCOPE_TO_ROLE[s as PlatformOpsScope])
-          .filter((c): c is PlatformSystemRoleCode => !!c)
+          .map((s) => LEGACY_SCOPE_TO_ROLE[s as PlatformOpsScope] as LegacyMappedRole | undefined)
+          .filter((c): c is LegacyMappedRole => !!c)
       ),
     ];
     const permissions = new Set<PlatformPermissionCode>();
