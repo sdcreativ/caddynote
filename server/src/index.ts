@@ -255,6 +255,15 @@ if (process.env.NODE_ENV !== 'test') {
       try {
         const { runBootstrapAdminOnStartup } = await import('./lib/bootstrapAdmin.js');
         await runBootstrapAdminOnStartup();
+        try {
+          const { syncPlatformRbacCatalog, migratePlatformOpsAclToRoles } = await import(
+            './lib/platformRbac/seed.js'
+          );
+          await syncPlatformRbacCatalog();
+          await migratePlatformOpsAclToRoles();
+        } catch (rbacErr) {
+          console.error('Seed RBAC plateforme :', rbacErr);
+        }
       } catch (err) {
         console.error(err);
         process.exit(1);

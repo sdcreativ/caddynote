@@ -20,6 +20,8 @@ import SecurityComplianceCenter from "@/components/admin/SecurityComplianceCente
 import CommunicationTools from "@/components/admin/CommunicationTools";
 import PlatformSettings from "@/components/admin/PlatformSettings";
 import SupportOpsCenter from "@/components/admin/SupportOpsCenter";
+import PlatformHabilitationsCenter from "@/components/admin/PlatformHabilitationsCenter";
+import { usePlatformPermissions } from "@/hooks/usePlatformPermissions";
 import { CreateClassDialog } from '@/components/admin/CreateClassDialog';
 import { trackProductEvent } from '@/lib/productTelemetry';
 
@@ -46,6 +48,7 @@ export const SUPER_ADMIN_SECTIONS = [
   'security',
   'notifications',
   'settings',
+  'habilitations',
 ] as const;
 
 export type SuperAdminSection = (typeof SUPER_ADMIN_SECTIONS)[number];
@@ -55,6 +58,7 @@ const isValidSection = (value: string | undefined): value is SuperAdminSection =
 
 const SuperAdminDashboard = () => {
   const { user } = useStrkAuth();
+  const { canSeeSection } = usePlatformPermissions();
   const navigate = useNavigate();
   const { section: sectionParam } = useParams<{ section?: string }>();
   const activeSection = useMemo(
@@ -76,8 +80,12 @@ const SuperAdminDashboard = () => {
     }
     if (!isValidSection(sectionParam)) {
       navigate('/super-admin/overview', { replace: true });
+      return;
     }
-  }, [sectionParam, navigate]);
+    if (!canSeeSection(sectionParam)) {
+      navigate('/super-admin/overview', { replace: true });
+    }
+  }, [sectionParam, navigate, canSeeSection]);
 
   useEffect(() => {
     if (!isValidSection(sectionParam)) return;
@@ -166,6 +174,8 @@ const SuperAdminDashboard = () => {
         );
       case 'settings':
         return <PlatformSettings />;
+      case 'habilitations':
+        return <PlatformHabilitationsCenter />;
       default:
         return <SuperAdminOverview />;
     }

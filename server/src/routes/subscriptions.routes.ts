@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requirePlatformPermission } from '../middleware/requirePlatformPerm.js';
 import { runSubscriptionExpirationCheck } from '../lib/subscriptionCron.js';
 import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
 import { isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
@@ -54,12 +55,12 @@ const planWriteSchema = z.object({
 });
 
 /** Catalogue complet (actifs + inactifs) — admin plateforme. */
-subscriptionsRouter.get('/plans/manage', requireRole('admin'), async (_req, res) => {
+subscriptionsRouter.get('/plans/manage', requireRole('admin'), requirePlatformPermission('platform.billing.read'), async (_req, res) => {
   const plans = await prisma.subscriptionPlan.findMany({ orderBy: { sortOrder: 'asc' } });
   res.json({ plans });
 });
 
-subscriptionsRouter.post('/plans', requireRole('admin'), async (req, res) => {
+subscriptionsRouter.post('/plans', requireRole('admin'), requirePlatformPermission('platform.billing.manage'), async (req, res) => {
   const parsed = planWriteSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
@@ -86,7 +87,7 @@ subscriptionsRouter.post('/plans', requireRole('admin'), async (req, res) => {
   res.status(201).json({ plan });
 });
 
-subscriptionsRouter.patch('/plans/:id', requireRole('admin'), async (req, res) => {
+subscriptionsRouter.patch('/plans/:id', requireRole('admin'), requirePlatformPermission('platform.billing.manage'), async (req, res) => {
   const parsed = planWriteSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
@@ -201,7 +202,7 @@ subscriptionsRouter.post('/expiration-check', requireRole('admin'), async (_req,
 });
 
 // Vue globale SDCREATIV : tous les abonnements, tous établissements confondus.
-subscriptionsRouter.get('/all', requireRole('admin'), async (_req, res) => {
+subscriptionsRouter.get('/all', requireRole('admin'), requirePlatformPermission('platform.billing.read'), async (_req, res) => {
   const subscriptions = await prisma.premiumSubscription.findMany({
     include: {
       plan_: true,
@@ -405,7 +406,7 @@ const adminSubscriptionActionSchema = z.object({
   planId: z.string().uuid().optional(),
 });
 
-subscriptionsRouter.patch('/:id/admin', requireRole('admin'), async (req, res) => {
+subscriptionsRouter.patch('/:id/admin', requireRole('admin'), requirePlatformPermission('platform.billing.manage'), async (req, res) => {
   const parsed = adminSubscriptionActionSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
@@ -637,7 +638,7 @@ subscriptionsRouter.post('/:id/admin/sync-stripe', requireRole('admin'), async (
 });
 
 /** Relance dunning : notification + audit (pas d’e-mail externe en test mode). */
-subscriptionsRouter.post('/:id/admin/dunning-nudge', requireRole('admin'), async (req, res) => {
+subscriptionsRouter.post('/:id/admin/dunning-nudge', requireRole('admin'), requirePlatformPermission('platform.billing.dunning'), async (req, res) => {
   const subscription = await prisma.premiumSubscription.findUnique({
     where: { id: req.params.id },
     include: { plan_: true },

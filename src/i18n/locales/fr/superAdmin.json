@@ -38,6 +38,8 @@
     "security": "Diagnostics ops",
     "securityHint": "Santé système & alertes infra",
     "securityCompliance": "Sécurité & RGPD",
+    "habilitations": "Habilitations",
+    "habilitationsHint": "Rôles plateforme CaddyNote / RBAC",
     "subscriptions": "Abonnements",
     "communicationTools": "Communications",
     "supportOps": "Support ops",

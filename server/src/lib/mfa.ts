@@ -28,8 +28,8 @@ export const verifyMfaCode = async (secret: string, code: string): Promise<boole
 };
 
 /** Rôles pour lesquels la MFA est obligatoire (IAM-003 « rôles sensibles »).
- * Direction, secrétariat et comptabilité : accès aux dossiers et à la caisse.
- * Pas les enseignants / éducateurs — un blocage TOTP y serait disproportionné. */
+ * `admin` couvre toute l’équipe d’administration plateforme CaddyNote (rôles IAM séparés).
+ * Direction, secrétariat et comptabilité établissement : dossiers et caisse. */
 export const MFA_REQUIRED_ROLES = ['admin', 'school_admin', 'secretary', 'accountant'] as const;
 
 export const isMfaRequiredRole = (role: string): boolean =>

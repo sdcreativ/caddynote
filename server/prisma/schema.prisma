@@ -485,6 +485,10 @@ model StrkProfile {
   supportTicketsCreated  StrkSupportTicket[]        @relation("SupportTicketCreatedBy")
   supportTicketsAssigned StrkSupportTicket[]        @relation("SupportTicketAssignedTo")
   supportTicketMessages  StrkSupportTicketMessage[] @relation("SupportTicketMessageAuthor")
+
+  // RBAC plateforme SDCREATIV
+  platformRolesGranted   StrkPlatformUserRole[] @relation("PlatformUserRoleUser")
+  platformRolesGrantedBy StrkPlatformUserRole[] @relation("PlatformUserRoleGrantedBy")
   hrStaffRecords         StrkHrStaffRecord[]
 
   @@map("strk_profiles")
@@ -2802,4 +2806,66 @@ model StrkContactMessage {
 
   @@index([status])
   @@map("strk_contact_messages")
+}
+
+/// Rôle d’administration de la plateforme CaddyNote (équipe éditeur) — distinct des rôles établissement.
+model StrkPlatformRole {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  label       String
+  /// Niveau 0 gouvernance … 4 observation
+  level       Int      @default(3)
+  description String?
+  isSystem    Boolean  @default(true) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  permissions StrkPlatformRolePermission[]
+  assignments StrkPlatformUserRole[]
+
+  @@map("strk_platform_roles")
+}
+
+model StrkPlatformPermission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  domain      String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roles StrkPlatformRolePermission[]
+
+  @@index([domain])
+  @@map("strk_platform_permissions")
+}
+
+model StrkPlatformRolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       StrkPlatformRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission StrkPlatformPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("strk_platform_role_permissions")
+}
+
+model StrkPlatformUserRole {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  roleId      String    @map("role_id") @db.Uuid
+  countryCode String?   @map("country_code") @db.VarChar(2)
+  expiresAt   DateTime? @map("expires_at")
+  grantedBy   String?   @map("granted_by") @db.Uuid
+  grantedAt   DateTime  @default(now()) @map("granted_at")
+
+  user    StrkProfile      @relation("PlatformUserRoleUser", fields: [userId], references: [id], onDelete: Cascade)
+  role    StrkPlatformRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  granter StrkProfile?     @relation("PlatformUserRoleGrantedBy", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+  @@map("strk_platform_user_roles")
 }

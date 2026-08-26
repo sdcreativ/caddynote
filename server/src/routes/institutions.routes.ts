@@ -151,9 +151,9 @@ institutionsRouter.put('/:id/features/:key', requireRole('admin'), async (req, r
 
 /** Gel ops établissement (lecture seule, indépendant du billing). */
 institutionsRouter.post('/:id/freeze', requireRole('admin'), async (req, res) => {
-  const { adminHasPlatformScope } = await import('../lib/platformOps.js');
-  if (!(await adminHasPlatformScope(req.auth!, 'security'))) {
-    return res.status(403).json({ error: 'Permission ops insuffisante (requis: security)', code: 'platform_perm_denied' });
+  const { userHasPlatformPermission } = await import('../lib/platformRbac/resolve.js');
+  if (!(await userHasPlatformPermission(req.auth!, 'platform.tenants.freeze'))) {
+    return res.status(403).json({ error: 'Permission plateforme insuffisante (requis: platform.tenants.freeze)', code: 'platform_perm_denied' });
   }
   const institution = await prisma.strkInstitution.findUnique({ where: { id: req.params.id } });
   if (!institution) return res.status(404).json({ error: 'Établissement introuvable' });
@@ -169,6 +169,10 @@ institutionsRouter.post('/:id/freeze', requireRole('admin'), async (req, res) =>
 });
 
 institutionsRouter.post('/:id/unfreeze', requireRole('admin'), async (req, res) => {
+  const { userHasPlatformPermission } = await import('../lib/platformRbac/resolve.js');
+  if (!(await userHasPlatformPermission(req.auth!, 'platform.tenants.freeze'))) {
+    return res.status(403).json({ error: 'Permission plateforme insuffisante (requis: platform.tenants.freeze)', code: 'platform_perm_denied' });
+  }
   const institution = await prisma.strkInstitution.findUnique({ where: { id: req.params.id } });
   if (!institution) return res.status(404).json({ error: 'Établissement introuvable' });
   const overrides = await setFeatureOverride(req.params.id, OPS_FROZEN_FLAG, null);

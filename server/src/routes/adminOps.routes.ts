@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { requirePlatformPerm } from '../middleware/requirePlatformPerm.js';
+import { requirePlatformPerm, requirePlatformPermission } from '../middleware/requirePlatformPerm.js';
 import { registry } from '../lib/metrics.js';
 import { isQueueStarted } from '../lib/queue.js';
 import { getProcessRole, shouldRunJobs, shouldServeHttp } from '../lib/processRole.js';
@@ -726,12 +726,12 @@ adminOpsRouter.get('/quota-warnings', async (_req, res) => {
   res.json({ institutions: await listInstitutionsNearQuota() });
 });
 
-adminOpsRouter.get('/platform-ops-acl', async (_req, res) => {
+adminOpsRouter.get('/platform-ops-acl', requirePlatformPermission('platform.rbac.read'), async (_req, res) => {
   const { getPlatformOpsAcl, ALL_PLATFORM_OPS_SCOPES } = await import('../lib/platformOps.js');
-  res.json({ acl: await getPlatformOpsAcl(), scopes: ALL_PLATFORM_OPS_SCOPES });
+  res.json({ acl: await getPlatformOpsAcl(), scopes: ALL_PLATFORM_OPS_SCOPES, deprecated: true });
 });
 
-adminOpsRouter.put('/platform-ops-acl', async (req, res) => {
+adminOpsRouter.put('/platform-ops-acl', requirePlatformPermission('platform.rbac.manage'), async (req, res) => {
   const parsed = z
     .object({
       acl: z.record(z.string().uuid(), z.array(z.enum(['support', 'billing', 'security', 'ops']))),
@@ -741,15 +741,172 @@ adminOpsRouter.put('/platform-ops-acl', async (req, res) => {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
   const { setPlatformOpsAcl } = await import('../lib/platformOps.js');
-  res.json({ acl: await setPlatformOpsAcl(parsed.data.acl) });
+  res.json({ acl: await setPlatformOpsAcl(parsed.data.acl), deprecated: true });
 });
 
 adminOpsRouter.get('/me/scopes', async (req, res) => {
   const { getScopesForAdmin } = await import('../lib/platformOps.js');
-  res.json({ scopes: await getScopesForAdmin(req.auth!.sub) });
+  const { resolvePlatformAccess } = await import('../lib/platformRbac/resolve.js');
+  const access = await resolvePlatformAccess(req.auth!.sub, req.auth!.role);
+  res.json({
+    scopes: await getScopesForAdmin(req.auth!.sub),
+    roleCodes: access.roleCodes,
+    permissions: [...access.permissions],
+    legacyFullAccess: access.legacyFullAccess,
+  });
 });
 
-adminOpsRouter.post('/campaign-schedule', async (req, res) => {
+/** Catalogue rôles / permissions d’administration plateforme CaddyNote. */
+adminOpsRouter.get('/platform-rbac/roles', requirePlatformPermission('platform.rbac.read'), async (_req, res) => {
+  const { PLATFORM_SYSTEM_ROLES } = await import('../lib/platformRbac/systemRoles.js');
+  const { getSuperAdminMaxCount } = await import('../lib/platformRbac/systemRoles.js');
+  const { countActiveSuperAdmins } = await import('../lib/platformRbac/manage.js');
+  res.json({
+    roles: PLATFORM_SYSTEM_ROLES.map((r) => ({
+      code: r.code,
+      label: r.label,
+      level: r.level,
+      description: r.description,
+      permissionCount: r.permissions.length,
+    })),
+    superAdmin: { active: await countActiveSuperAdmins(), max: getSuperAdminMaxCount() },
+  });
+});
+
+adminOpsRouter.get(
+  '/platform-rbac/permissions',
+  requirePlatformPermission('platform.rbac.read'),
+  async (_req, res) => {
+    const { PLATFORM_PERMISSIONS } = await import('../lib/platformRbac/catalog.js');
+    res.json({ permissions: PLATFORM_PERMISSIONS });
+  }
+);
+
+adminOpsRouter.get(
+  '/platform-rbac/users/:id/roles',
+  requirePlatformPermission('platform.rbac.read'),
+  async (req, res) => {
+    const { listUserPlatformRoles } = await import('../lib/platformRbac/manage.js');
+    const { resolvePlatformAccess } = await import('../lib/platformRbac/resolve.js');
+    const profile = await prisma.strkProfile.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, role: true, email: true, firstName: true, lastName: true },
+    });
+    if (!profile) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    const assignments = await listUserPlatformRoles(profile.id);
+    const access = await resolvePlatformAccess(profile.id, profile.role);
+    res.json({
+      user: profile,
+      assignments,
+      effective: { roleCodes: access.roleCodes, permissions: [...access.permissions] },
+    });
+  }
+);
+
+adminOpsRouter.put(
+  '/platform-rbac/users/:id/roles',
+  requirePlatformPermission('platform.rbac.manage'),
+  async (req, res) => {
+    const parsed = z
+      .object({
+        roleCodes: z.array(z.string().min(1)).max(20),
+        countryCode: z.string().length(2).regex(/^[A-Z]{2}$/).optional().nullable(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+    }
+    try {
+      const { replaceUserPlatformRoles, PlatformRbacError } = await import(
+        '../lib/platformRbac/manage.js'
+      );
+      const assignments = await replaceUserPlatformRoles({
+        userId: req.params.id,
+        roleCodes: parsed.data.roleCodes,
+        countryCode: parsed.data.countryCode,
+        actorId: req.auth!.sub,
+        actorRole: req.auth!.role,
+        ipAddress: req.ip,
+      });
+      res.json({ assignments });
+    } catch (err) {
+      const { PlatformRbacError } = await import('../lib/platformRbac/manage.js');
+      if (err instanceof PlatformRbacError) {
+        return res.status(err.status).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+  }
+);
+
+adminOpsRouter.post(
+  '/platform-rbac/users/:id/roles',
+  requirePlatformPermission('platform.rbac.manage'),
+  async (req, res) => {
+    const parsed = z
+      .object({
+        roleCode: z.string().min(1),
+        countryCode: z.string().length(2).regex(/^[A-Z]{2}$/).optional().nullable(),
+        expiresAt: z.string().datetime().optional().nullable(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+    }
+    try {
+      const { assignPlatformRole, PlatformRbacError } = await import('../lib/platformRbac/manage.js');
+      const row = await assignPlatformRole({
+        userId: req.params.id,
+        roleCode: parsed.data.roleCode,
+        countryCode: parsed.data.countryCode,
+        expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+        actorId: req.auth!.sub,
+        actorRole: req.auth!.role,
+        ipAddress: req.ip,
+      });
+      res.status(201).json({
+        assignment: {
+          id: row.id,
+          roleCode: row.role.code,
+          countryCode: row.countryCode,
+          expiresAt: row.expiresAt,
+        },
+      });
+    } catch (err) {
+      const { PlatformRbacError } = await import('../lib/platformRbac/manage.js');
+      if (err instanceof PlatformRbacError) {
+        return res.status(err.status).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+  }
+);
+
+adminOpsRouter.delete(
+  '/platform-rbac/users/:id/roles/:roleCode',
+  requirePlatformPermission('platform.rbac.manage'),
+  async (req, res) => {
+    try {
+      const { revokePlatformRole, PlatformRbacError } = await import('../lib/platformRbac/manage.js');
+      await revokePlatformRole({
+        userId: req.params.id,
+        roleCode: req.params.roleCode,
+        actorId: req.auth!.sub,
+        actorRole: req.auth!.role,
+        ipAddress: req.ip,
+      });
+      res.status(204).send();
+    } catch (err) {
+      const { PlatformRbacError } = await import('../lib/platformRbac/manage.js');
+      if (err instanceof PlatformRbacError) {
+        return res.status(err.status).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+  }
+);
+
+adminOpsRouter.post('/campaign-schedule', requirePlatformPermission('platform.comms.campaigns'), async (req, res) => {
   const schema = z.object({
     scheduledAt: z.string().datetime(),
     recipientIds: z.array(z.string().uuid()).min(1).max(500),

@@ -20,12 +20,14 @@ import {
   Megaphone,
   Headphones,
   UserCog,
+  KeyRound,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
 import { BRAND } from '@/lib/brand';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { usePlatformPermissions } from '@/hooks/usePlatformPermissions';
 import { cn } from '@/lib/utils';
 
 interface SuperAdminSidebarProps {
@@ -82,6 +84,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { titleKey: 'items.security', hintKey: 'items.securityHint', icon: Shield, value: 'security' },
       { titleKey: 'items.securityCompliance', icon: Shield, value: 'security-compliance' },
+      { titleKey: 'items.habilitations', hintKey: 'items.habilitationsHint', icon: KeyRound, value: 'habilitations' },
     ],
   },
   {
@@ -99,6 +102,7 @@ const NAV_GROUPS: NavGroupDef[] = [
 const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: SuperAdminSidebarProps) => {
   const { t } = useTranslation('superAdmin');
   const { user, logout } = useStrkAuth();
+  const { canSeeSection } = usePlatformPermissions();
 
   const handleLogout = async () => {
     try {
@@ -107,6 +111,11 @@ const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: Su
       console.error('Erreur lors de la déconnexion:', error);
     }
   };
+
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canSeeSection(item.value)),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -136,7 +145,7 @@ const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: Su
       </div>
 
       <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label={t('sectionsAria')}>
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.labelKey} className="mb-5">
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               {t(group.labelKey)}
