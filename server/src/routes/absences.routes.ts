@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, type StrkAbsence } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isSameInstitution, SUPERVISION_ROLES, DIRECTION_ROLES, getStudentAccess } from '../lib/authz.js';
@@ -314,16 +314,12 @@ const createIdempotentAbsence = async (item: z.infer<typeof absenceSchema>, crea
 };
 
 /** Alerte parentale dès la saisie (absence ou retard). Anti-doublon via `alertSentAt`. */
-const fireAbsenceParentAlert = async (absence: {
-  id: string;
-  studentId: string;
-  courseId: string | null;
-  date: Date;
-  type: string;
-  justified: boolean;
-  alertSentAt: Date | null;
-  createdBy: string | null;
-}): Promise<void> => {
+const fireAbsenceParentAlert = async (
+  absence: Pick<
+    StrkAbsence,
+    'id' | 'studentId' | 'courseId' | 'date' | 'type' | 'justified' | 'alertSentAt' | 'createdBy'
+  >
+): Promise<void> => {
   try {
     await notifyGuardiansOfAbsence(absence, { immediate: true });
   } catch (err) {
