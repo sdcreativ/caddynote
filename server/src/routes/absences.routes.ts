@@ -421,14 +421,14 @@ absencesRouter.patch('/:id/justify', async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
-  // DOC-005 / ORG-004 : la pièce jointe doit être une clé du dossier
-  // `justificatifs/` appartenant au tenant de l’appelant (jamais une URL libre).
+  // DOC-005 / ORG-004 : pièce jointe = clé `justificatifs/` du dépôt parent
+  // (périmètre établissement OU compte `user-{id}` si parent sans institution).
   if (parsed.data.justificationFile) {
     const key = parsed.data.justificationFile;
-    if (
-      !key.startsWith(`${STORAGE_FOLDER.justificatifs}/`) ||
-      !isOwnedObjectKey(key, STORAGE_FOLDER.justificatifs, req.auth!.institutionId, req.auth!.sub)
-    ) {
+    const folder = STORAGE_FOLDER.justificatifs;
+    const ownedByCaller = isOwnedObjectKey(key, folder, req.auth!.institutionId, req.auth!.sub);
+    const ownedByUserScope = isOwnedObjectKey(key, folder, null, req.auth!.sub);
+    if (!key.startsWith(`${folder}/`) || (!ownedByCaller && !ownedByUserScope)) {
       return res.status(400).json({ error: 'Fichier justificatif invalide' });
     }
   }

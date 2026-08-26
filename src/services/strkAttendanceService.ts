@@ -164,6 +164,61 @@ export const mapApiAttendance = (a: ApiAbsence): StrkAttendance => ({
   class_name: a.className?.trim() || undefined,
 });
 
+/**
+ * Complète les noms manquants à partir d’un roster classe (filet si l’API
+ * n’a pas encore renvoyé `student` enrichi).
+ */
+export const attachAttendanceDisplayNames = (
+  records: StrkAttendance[],
+  opts?: {
+    nameByStudentId?: Map<string, string>;
+    courseNameById?: Map<string, string>;
+  }
+): StrkAttendance[] =>
+  records.map((r) => ({
+    ...r,
+    student_name: r.student_name || opts?.nameByStudentId?.get(r.student_id) || undefined,
+    course_name: r.course_name || (r.course_id ? opts?.courseNameById?.get(r.course_id) : undefined) || undefined,
+  }));
+
+/** Historique pour un ou plusieurs cours, avec noms élève/cours résolus. */
+export const fetchAttendanceHistoryForCourses = async (
+  courseIds: string[],
+  opts?: {
+    classIds?: string[];
+    courseNameById?: Map<string, string>;
+  }
+): Promise<StrkAttendance[]> => {
+  if (courseIds.length === 0) return [];
+
+  const nested = await Promise.all(courseIds.map((id) => fetchAttendanceByClass(id)));
+  const byId = new Map<string, StrkAttendance>();
+  for (const row of nested.flat()) byId.set(row.id, row);
+  let records = [...byId.values()];
+
+  const nameByStudentId = new Map<string, string>();
+  const classIds = [...new Set((opts?.classIds ?? []).filter(Boolean))];
+  if (classIds.length > 0) {
+    const rosters = await Promise.all(classIds.map((id) => fetchStudentsByClass(id)));
+    for (const roster of rosters) {
+      for (const student of roster) {
+        if (student.name && student.name !== 'Élève') nameByStudentId.set(student.id, student.name);
+      }
+    }
+  }
+
+  records = attachAttendanceDisplayNames(records, {
+    nameByStudentId,
+    courseNameById: opts?.courseNameById,
+  });
+
+  return records.sort((a, b) => {
+    const byDate = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (byDate !== 0) return byDate;
+    return (a.student_name || a.student_id).localeCompare(b.student_name || b.student_id, 'fr');
+  });
+};
+
 export const fetchAttendanceByClass = async (classId: string, date?: string): Promise<StrkAttendance[]> => {
   try {
     const params = new URLSearchParams({ courseId: classId });

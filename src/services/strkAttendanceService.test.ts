@@ -135,4 +135,24 @@ describe('mapApiAttendance — nom élève', () => {
     });
     expect(mapped.student_name).toBeUndefined();
   });
+
+  it('complète le nom depuis le roster si l’API ne l’a pas fourni', async () => {
+    const { mapApiAttendance, attachAttendanceDisplayNames } = await import('./strkAttendanceService');
+    const mapped = mapApiAttendance({
+      id: 'a3',
+      studentId: 's3',
+      institutionId: 'i1',
+      courseId: 'c1',
+      date: '2026-08-26',
+      type: 'absence',
+      duration: 60,
+      student: null,
+    });
+    const enriched = attachAttendanceDisplayNames([mapped], {
+      nameByStudentId: new Map([['s3', 'Léa Martin']]),
+      courseNameById: new Map([['c1', 'Français']]),
+    });
+    expect(enriched[0].student_name).toBe('Léa Martin');
+    expect(enriched[0].course_name).toBe('Français');
+  });
 });

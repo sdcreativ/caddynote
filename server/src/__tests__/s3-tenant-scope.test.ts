@@ -42,19 +42,62 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
   // routes doivent répondre 501 de façon explicite (même principe que
   // Stripe/CinetPay/SMTP ailleurs dans l'API), jamais planter ni se comporter
   // comme si le stockage était disponible.
-  it('les routes /files répondent 501 tant que S3 n’est pas configuré', async () => {
+  it('les routes /files répondent en mode local tant que S3 n’est pas configuré', async () => {
     const actor = await registerActor('teacher');
     const upload = await request(app)
       .post('/files/presign-upload')
       .set(auth(actor.token))
       .send({ folder: 'documents', filename: 'test.pdf', contentType: 'application/pdf' });
-    expect(upload.status).toBe(501);
+    expect(upload.status).toBe(200);
+    expect(upload.body.mode).toBe('local');
+    expect(upload.body.key).toMatch(/^documents\//);
+    expect(upload.body.uploadPath).toBe('/files/direct-upload');
 
     const download = await request(app)
       .post('/files/presign-download')
       .set(auth(actor.token))
       .send({ key: 'documents/inst-x/test.pdf' });
+    // Téléchargement signé reste réservé à S3.
     expect(download.status).toBe(501);
+  });
+
+  it('accepte un upload direct local de justificatif puis un dépôt parent', async () => {
+    const { buildFixture, auth: authHeader } = await import('./fixtures.js');
+    const fx = await buildFixture();
+    const absenceRes = await request(app).post('/absences').set(authHeader(fx.a.teacher.token)).send({
+      studentId: fx.a.student.id,
+      institutionId: fx.a.institutionId,
+      type: 'absence',
+      date: '2026-08-25',
+      duration: 60,
+    });
+    expect(absenceRes.status).toBe(201);
+
+    const presign = await request(app)
+      .post('/files/presign-upload')
+      .set(authHeader(fx.parentA.token))
+      .send({ folder: 'justificatifs', filename: 'cert.pdf', contentType: 'application/pdf' });
+    expect(presign.status).toBe(200);
+    expect(presign.body.mode).toBe('local');
+
+    const put = await request(app)
+      .put('/files/direct-upload')
+      .set(authHeader(fx.parentA.token))
+      .set('Content-Type', 'application/pdf')
+      .set('X-Object-Key', presign.body.key)
+      .send(Buffer.from('%PDF-1.4 fake'));
+    expect(put.status).toBe(201);
+
+    const justify = await request(app)
+      .patch(`/absences/${absenceRes.body.absence.id}/justify`)
+      .set(authHeader(fx.parentA.token))
+      .send({
+        justification: 'Rendez-vous médical',
+        justificationFile: put.body.key,
+      });
+    expect(justify.status).toBe(200);
+    expect(justify.body.absence.justificationStatus).toBe('pending');
+    expect(justify.body.absence.justificationFile).toBe(put.body.key);
   });
 
   // DOC-005 : le type MIME est vérifié avant même la disponibilité de S3
@@ -81,19 +124,21 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
         .send({ folder: 'avatars', filename: 'cv.pdf', contentType: 'application/pdf' });
       expect(forAvatars.status).toBe(400);
 
-      // Type autorisé pour ce dossier -> passe la validation, ne bute plus
-      // que sur l'absence de configuration S3 réelle (501, comme ci-dessus).
+      // Type autorisé pour ce dossier -> passe la validation ; sans S3,
+      // l’API propose désormais le mode local (plus de 501 à ce stade).
       const forDocuments = await request(app)
         .post('/files/presign-upload')
         .set(auth(actor.token))
         .send({ folder: 'documents', filename: 'cv.pdf', contentType: 'application/pdf' });
-      expect(forDocuments.status).toBe(501);
+      expect(forDocuments.status).toBe(200);
+      expect(forDocuments.body.mode).toBe('local');
 
       const forMaterials = await request(app)
         .post('/files/presign-upload')
         .set(auth(actor.token))
         .send({ folder: 'cours', filename: 'cours.pdf', contentType: 'application/pdf' });
-      expect(forMaterials.status).toBe(501);
+      expect(forMaterials.status).toBe(200);
+      expect(forMaterials.body.mode).toBe('local');
     });
   });
 });

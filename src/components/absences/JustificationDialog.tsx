@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
-import { uploadViaPresignedPost } from '@/lib/s3Upload';
+import { uploadViaPresignedPost, inferUploadContentType } from '@/lib/s3Upload';
+import { ApiError } from '@/lib/apiClient';
 import { Upload, X } from 'lucide-react';
 
 interface JustificationDialogProps {
@@ -16,11 +17,11 @@ interface JustificationDialogProps {
   onJustificationSubmitted?: () => void;
 }
 
-export const JustificationDialog = ({ 
-  open, 
-  onOpenChange, 
+export const JustificationDialog = ({
+  open,
+  onOpenChange,
   absenceId,
-  onJustificationSubmitted 
+  onJustificationSubmitted,
 }: JustificationDialogProps) => {
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -31,24 +32,24 @@ export const JustificationDialog = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Vérifier le type et la taille du fichier
       const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const maxSize = 5 * 1024 * 1024;
+      const contentType = inferUploadContentType(selectedFile);
 
-      if (!allowedTypes.includes(selectedFile.type)) {
+      if (!allowedTypes.includes(contentType)) {
         toast({
-          title: "Type de fichier non autorisé",
-          description: "Seuls les fichiers PDF, JPEG et PNG sont acceptés.",
-          variant: "destructive",
+          title: 'Type de fichier non autorisé',
+          description: 'Seuls les fichiers PDF, JPEG et PNG sont acceptés.',
+          variant: 'destructive',
         });
         return;
       }
 
       if (selectedFile.size > maxSize) {
         toast({
-          title: "Fichier trop volumineux",
-          description: "Le fichier ne doit pas dépasser 5MB.",
-          variant: "destructive",
+          title: 'Fichier trop volumineux',
+          description: 'Le fichier ne doit pas dépasser 5MB.',
+          variant: 'destructive',
         });
         return;
       }
@@ -59,21 +60,21 @@ export const JustificationDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!reason.trim()) {
       toast({
-        title: "Motif requis",
-        description: "Veuillez saisir un motif pour votre absence.",
-        variant: "destructive",
+        title: 'Motif requis',
+        description: 'Veuillez saisir un motif pour votre absence.',
+        variant: 'destructive',
       });
       return;
     }
 
     if (!absenceId) {
       toast({
-        title: "Erreur",
-        description: "Aucune absence sélectionnée.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Aucune absence sélectionnée.',
+        variant: 'destructive',
       });
       return;
     }
@@ -87,26 +88,32 @@ export const JustificationDialog = ({
       }
 
       const result = await updateAbsenceJustification(absenceId, reason, fileKey);
-      
+
       if (result) {
         toast({
-          title: "Justificatif envoyé",
-          description: "Votre justificatif a été envoyé avec succès.",
+          title: 'Justificatif envoyé',
+          description: 'Votre justificatif a été envoyé avec succès.',
         });
-        
+
         setReason('');
         setFile(null);
         onOpenChange(false);
         onJustificationSubmitted?.();
       } else {
-        throw new Error('Échec de l\'envoi du justificatif');
+        throw new Error("Échec de l'envoi du justificatif");
       }
     } catch (error) {
       console.error('Error submitting justification:', error);
+      const description =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Une erreur est survenue lors de l'envoi du justificatif.";
       toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de l'envoi du justificatif.",
-        variant: "destructive",
+        title: 'Erreur',
+        description,
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -146,10 +153,7 @@ export const JustificationDialog = ({
               {!file ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                  <Label 
-                    htmlFor="file" 
-                    className="cursor-pointer text-sm text-blue-600 hover:text-blue-500"
-                  >
+                  <Label htmlFor="file" className="cursor-pointer text-sm text-blue-600 hover:text-blue-500">
                     Cliquez pour sélectionner un fichier
                   </Label>
                   <Input
@@ -159,26 +163,16 @@ export const JustificationDialog = ({
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    PDF, JPEG ou PNG - Max 5MB
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">PDF, JPEG ou PNG - Max 5MB</p>
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <Upload className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium">{file.name}</span>
-                    <span className="text-xs text-gray-500">
-                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
+                    <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeFile}
-                    className="h-8 w-8 p-0"
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={removeFile} className="h-8 w-8 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -187,18 +181,10 @@ export const JustificationDialog = ({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Annuler
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || !reason.trim()}
-            >
+            <Button type="submit" disabled={isSubmitting || !reason.trim()}>
               {isSubmitting ? 'Envoi...' : 'Envoyer le justificatif'}
             </Button>
           </div>

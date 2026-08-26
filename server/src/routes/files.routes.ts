@@ -12,6 +12,7 @@ import {
 import { isGlobalAdmin } from '../lib/authz.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
+import { putStoredObject, getFileStorageMode } from '../lib/fileStorage.js';
 import { STORAGE_FOLDERS, UPLOAD_FOLDERS, type StorageFolder, type UploadFolder } from '../lib/storageFolders.js';
 
 export const filesRouter = Router();
@@ -61,11 +62,8 @@ filesRouter.post('/presign-upload', async (req, res) => {
   }
   const rules = UPLOAD_FOLDER_RULES[parsed.data.folder];
   if (!rules.types.includes(parsed.data.contentType)) {
-    return res.status(400).json({ error: `Type de fichier non autorisé pour ce dossier (autorisés : ${rules.types.join(', ')})` });
-  }
-  if (!isS3Configured()) {
-    return res.status(501).json({
-      error: "Le stockage de fichiers n'est pas configuré sur cette instance (variables S3_* manquantes). Contactez SDCREATIV.",
+    return res.status(400).json({
+      error: `Type de fichier non autorisé pour ce dossier (autorisés : ${rules.types.join(', ')})`,
     });
   }
   if (req.auth!.institutionId) {
@@ -79,8 +77,83 @@ filesRouter.post('/presign-upload', async (req, res) => {
   }
   const tenantScope = buildTenantScope(req.auth!.institutionId, req.auth!.sub);
   const key = buildObjectKey(parsed.data.folder, tenantScope, parsed.data.filename);
-  const { url, fields } = await createPresignedUploadPost(key, parsed.data.contentType, rules.maxSizeBytes);
-  res.json({ key, url, fields, maxSizeBytes: rules.maxSizeBytes, expiresIn: 300 });
+  const uploadPath = '/files/direct-upload';
+
+  // S3 direct navigateur + repli API (CORS / instance sans bucket).
+  if (isS3Configured()) {
+    const { url, fields } = await createPresignedUploadPost(
+      key,
+      parsed.data.contentType,
+      rules.maxSizeBytes
+    );
+    return res.json({
+      mode: 's3' as const,
+      key,
+      url,
+      fields,
+      uploadPath,
+      maxSizeBytes: rules.maxSizeBytes,
+      expiresIn: 300,
+      storageMode: getFileStorageMode(),
+    });
+  }
+
+  res.json({
+    mode: 'local' as const,
+    key,
+    uploadPath,
+    maxSizeBytes: rules.maxSizeBytes,
+    storageMode: getFileStorageMode(),
+  });
+});
+
+/**
+ * Upload binaire via l’API (local ou S3 serveur). Évite les échecs CORS du
+ * POST navigateur → S3, et sert de repli sans bucket.
+ */
+filesRouter.put('/direct-upload', async (req, res) => {
+  const keyHeader = typeof req.headers['x-object-key'] === 'string' ? req.headers['x-object-key'] : '';
+  const folder = (UPLOAD_FOLDERS as readonly string[]).find((f) =>
+    keyHeader.startsWith(`${f}/`)
+  ) as UploadFolder | undefined;
+  if (!folder) {
+    return res.status(400).json({ error: 'Clé de fichier invalide' });
+  }
+  if (
+    !isGlobalAdmin(req.auth!) &&
+    !isOwnedObjectKey(keyHeader, folder, req.auth!.institutionId, req.auth!.sub) &&
+    !isOwnedObjectKey(keyHeader, folder, null, req.auth!.sub)
+  ) {
+    return res.status(403).json({ error: 'Accès refusé à cette clé de fichier' });
+  }
+
+  const rules = UPLOAD_FOLDER_RULES[folder];
+  const contentType = (req.headers['content-type'] || '').split(';')[0].trim();
+  if (!rules.types.includes(contentType)) {
+    return res.status(400).json({
+      error: `Type de fichier non autorisé pour ce dossier (autorisés : ${rules.types.join(', ')})`,
+    });
+  }
+
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.length;
+    if (total > rules.maxSizeBytes) {
+      return res.status(413).json({
+        error: `Fichier trop volumineux (max ${Math.round(rules.maxSizeBytes / (1024 * 1024))} Mo)`,
+      });
+    }
+    chunks.push(buf);
+  }
+  const body = Buffer.concat(chunks);
+  if (body.length === 0) {
+    return res.status(400).json({ error: 'Fichier vide' });
+  }
+
+  await putStoredObject(keyHeader, body, contentType);
+  res.status(201).json({ key: keyHeader, bytes: body.length, mode: getFileStorageMode() });
 });
 
 const presignDownloadSchema = z.object({ key: z.string().min(1) });
@@ -96,11 +169,14 @@ filesRouter.post('/presign-download', requireS3Configured, async (req, res) => {
   if (!folder || folder === 'backups') {
     return res.status(400).json({ error: 'Clé de fichier invalide' });
   }
-  // Inscription : scope `inst-{id}-app-{id}` — téléchargement via module admissions.
   if (folder === 'inscription') {
     return res.status(403).json({ error: 'Téléchargement via le module inscription uniquement' });
   }
-  if (!isGlobalAdmin(req.auth!) && !isOwnedObjectKey(parsed.data.key, folder, req.auth!.institutionId, req.auth!.sub)) {
+  if (
+    !isGlobalAdmin(req.auth!) &&
+    !isOwnedObjectKey(parsed.data.key, folder, req.auth!.institutionId, req.auth!.sub) &&
+    !isOwnedObjectKey(parsed.data.key, folder, null, req.auth!.sub)
+  ) {
     return res.status(403).json({ error: 'Accès refusé à ce fichier' });
   }
   const downloadUrl = await getPresignedDownloadUrl(parsed.data.key);
