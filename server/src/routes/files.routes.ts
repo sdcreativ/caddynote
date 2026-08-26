@@ -12,20 +12,11 @@ import {
 import { isGlobalAdmin } from '../lib/authz.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
-import { putStoredObject, getFileStorageMode } from '../lib/fileStorage.js';
+import { putStoredObject, getFileStorageMode, getStoredObjectBytes, isAtRestEncryptionEnabled } from '../lib/fileStorage.js';
 import { STORAGE_FOLDERS, UPLOAD_FOLDERS, type StorageFolder, type UploadFolder } from '../lib/storageFolders.js';
 
 export const filesRouter = Router();
 filesRouter.use(requireAuth);
-
-const requireS3Configured: import('express').RequestHandler = (_req, res, next) => {
-  if (!isS3Configured()) {
-    return res.status(501).json({
-      error: "Le stockage de fichiers n'est pas configuré sur cette instance (variables S3_* manquantes). Contactez SDCREATIV.",
-    });
-  }
-  next();
-};
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const PDF_IMAGE = [...IMAGE_TYPES, 'application/pdf'] as const;
@@ -156,9 +147,33 @@ filesRouter.put('/direct-upload', async (req, res) => {
   res.status(201).json({ key: keyHeader, bytes: body.length, mode: getFileStorageMode() });
 });
 
+const contentTypeForObjectKey = (key: string): string => {
+  const lower = key.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  return 'application/octet-stream';
+};
+
+const assertCanAccessObjectKey = (
+  auth: NonNullable<import('express').Request['auth']>,
+  key: string,
+  folder: StorageFolder
+): boolean =>
+  isGlobalAdmin(auth) ||
+  isOwnedObjectKey(key, folder, auth.institutionId, auth.sub) ||
+  isOwnedObjectKey(key, folder, null, auth.sub);
+
 const presignDownloadSchema = z.object({ key: z.string().min(1) });
 
-filesRouter.post('/presign-download', requireS3Configured, async (req, res) => {
+/**
+ * Métadonnées de téléchargement.
+ * - S3 sans chiffrement applicatif → URL signée
+ * - Local ou chiffrement → chemin authentifié `/files/content` (déchiffrement)
+ */
+filesRouter.post('/presign-download', async (req, res) => {
   const parsed = presignDownloadSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
@@ -172,15 +187,58 @@ filesRouter.post('/presign-download', requireS3Configured, async (req, res) => {
   if (folder === 'inscription') {
     return res.status(403).json({ error: 'Téléchargement via le module inscription uniquement' });
   }
-  if (
-    !isGlobalAdmin(req.auth!) &&
-    !isOwnedObjectKey(parsed.data.key, folder, req.auth!.institutionId, req.auth!.sub) &&
-    !isOwnedObjectKey(parsed.data.key, folder, null, req.auth!.sub)
-  ) {
+  if (!assertCanAccessObjectKey(req.auth!, parsed.data.key, folder)) {
     return res.status(403).json({ error: 'Accès refusé à ce fichier' });
   }
-  const downloadUrl = await getPresignedDownloadUrl(parsed.data.key);
-  res.json({ downloadUrl, expiresIn: 3600 });
+
+  const downloadPath = `/files/content?key=${encodeURIComponent(parsed.data.key)}`;
+
+  if (isS3Configured() && !isAtRestEncryptionEnabled()) {
+    try {
+      const downloadUrl = await getPresignedDownloadUrl(parsed.data.key);
+      return res.json({ mode: 's3', downloadUrl, downloadPath, expiresIn: 3600 });
+    } catch (err) {
+      console.error('Presign download S3 :', err);
+    }
+  }
+
+  res.json({
+    mode: 'local',
+    downloadPath,
+    storageMode: getFileStorageMode(),
+  });
+});
+
+/** Contenu binaire authentifié (local + S3 chiffré / secours). */
+filesRouter.get('/content', async (req, res) => {
+  const key = typeof req.query.key === 'string' ? req.query.key : '';
+  if (!key) {
+    return res.status(400).json({ error: 'Paramètre key requis' });
+  }
+  const folder = (STORAGE_FOLDERS as readonly string[]).find((f) =>
+    key.startsWith(`${f}/`)
+  ) as StorageFolder | undefined;
+  if (!folder || folder === 'backups') {
+    return res.status(400).json({ error: 'Clé de fichier invalide' });
+  }
+  if (folder === 'inscription') {
+    return res.status(403).json({ error: 'Téléchargement via le module inscription uniquement' });
+  }
+  if (!assertCanAccessObjectKey(req.auth!, key, folder)) {
+    return res.status(403).json({ error: 'Accès refusé à ce fichier' });
+  }
+
+  try {
+    const bytes = await getStoredObjectBytes(key);
+    const filename = key.split('/').pop() || 'fichier';
+    res.setHeader('Content-Type', contentTypeForObjectKey(key));
+    res.setHeader('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.send(bytes);
+  } catch (err) {
+    console.error('Lecture fichier :', err);
+    return res.status(404).json({ error: 'Fichier introuvable dans le stockage' });
+  }
 });
 
 const purgeSchema = z.object({ dryRun: z.boolean().optional() });

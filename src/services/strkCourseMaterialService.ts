@@ -65,6 +65,6 @@ export const deleteCourseMaterial = async (courseId: string, materialId: string)
 };
 
 export const downloadCourseMaterial = async (fileKey: string): Promise<string> => {
-  const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key: fileKey });
-  return downloadUrl;
+  const { resolveStoredFileDisplayUrl } = await import('@/lib/storedFileAccess');
+  return resolveStoredFileDisplayUrl(fileKey);
 };

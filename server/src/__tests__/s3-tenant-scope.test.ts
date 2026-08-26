@@ -53,12 +53,27 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
     expect(upload.body.key).toMatch(/^documents\//);
     expect(upload.body.uploadPath).toBe('/files/direct-upload');
 
+    const put = await request(app)
+      .put('/files/direct-upload')
+      .set(auth(actor.token))
+      .set('Content-Type', 'application/pdf')
+      .set('X-Object-Key', upload.body.key)
+      .send(Buffer.from('%PDF-1.4 local'));
+    expect(put.status).toBe(201);
+
     const download = await request(app)
       .post('/files/presign-download')
       .set(auth(actor.token))
-      .send({ key: 'documents/inst-x/test.pdf' });
-    // Téléchargement signé reste réservé à S3.
-    expect(download.status).toBe(501);
+      .send({ key: upload.body.key });
+    expect(download.status).toBe(200);
+    expect(download.body.mode).toBe('local');
+    expect(download.body.downloadPath).toContain('/files/content?key=');
+
+    const bytes = await request(app)
+      .get(download.body.downloadPath)
+      .set(auth(actor.token));
+    expect(bytes.status).toBe(200);
+    expect(Buffer.compare(bytes.body as Buffer, Buffer.from('%PDF-1.4 local'))).toBe(0);
   });
 
   it('accepte un upload direct local de justificatif puis un dépôt parent', async () => {

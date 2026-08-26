@@ -305,8 +305,10 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/exercises/:id/attempts', tag: 'Exercices', summary: 'Démarrer une tentative', auth: 'bearer', statuses: [201] },
   { method: 'patch', path: '/exercises/attempts/:attemptId', tag: 'Exercices', summary: 'Soumettre une tentative', auth: 'bearer' },
 
-  { method: 'post', path: '/files/presign-upload', tag: 'Fichiers', summary: 'POST signé S3 (MIME/taille imposés, 501 si S3 absent)', auth: 'bearer', statuses: [200, 501] },
-  { method: 'post', path: '/files/presign-download', tag: 'Fichiers', summary: 'URL de téléchargement signée (jamais public)', auth: 'bearer', statuses: [200, 501] },
+  { method: 'post', path: '/files/presign-upload', tag: 'Fichiers', summary: 'Préparer un upload (S3 signé ou local via direct-upload)', auth: 'bearer', statuses: [200] },
+  { method: 'put', path: '/files/direct-upload', tag: 'Fichiers', summary: 'Upload binaire via l’API (local ou S3 serveur)', auth: 'bearer', statuses: [201] },
+  { method: 'post', path: '/files/presign-download', tag: 'Fichiers', summary: 'Métadonnées de téléchargement (URL S3 ou chemin authentifié)', auth: 'bearer', statuses: [200] },
+  { method: 'get', path: '/files/content', tag: 'Fichiers', summary: 'Contenu binaire authentifié (local / chiffrement)', auth: 'bearer' },
 
   { method: 'post', path: '/finance/late-fee-check', tag: 'Finance', summary: 'Déclencher les pénalités de retard', auth: 'bearer', roles: ['admin'] },
   { method: 'get', path: '/finance/fee-items', tag: 'Finance', summary: 'Catalogue de frais', auth: 'bearer' },

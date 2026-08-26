@@ -116,8 +116,8 @@ const MessagesPage = () => {
 
   const openAttachment = async (key: string) => {
     try {
-      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
-      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      const { requestStoredFileDownload, openStoredFile } = await import('@/lib/storedFileAccess');
+      await openStoredFile(await requestStoredFileDownload(key));
     } catch {
       toast({
         title: tc('status.error'),

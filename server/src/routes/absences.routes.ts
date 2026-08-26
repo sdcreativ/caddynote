@@ -527,13 +527,20 @@ absencesRouter.get('/:id/justification-file', async (req, res) => {
     return res.status(400).json({ error: 'Fichier justificatif invalide' });
   }
 
-  if (isS3Configured()) {
+  // Avec chiffrement applicatif, toujours servir via l’API (déchiffrement).
+  // Sinon S3 : URL signée possible ; repli contenu si la signature échoue.
+  const { isAtRestEncryptionEnabled } = await import('../lib/fileStorage.js');
+  if (isS3Configured() && !isAtRestEncryptionEnabled()) {
     try {
       const downloadUrl = await getPresignedDownloadUrl(key);
-      return res.json({ mode: 's3', downloadUrl, expiresIn: 3600 });
+      return res.json({
+        mode: 's3',
+        downloadUrl,
+        downloadPath: `/absences/${absence.id}/justification-file/content`,
+        expiresIn: 3600,
+      });
     } catch (err) {
       console.error('Presign justificatif S3 :', err);
-      // Repli contenu via l’API si la signature échoue.
     }
   }
 

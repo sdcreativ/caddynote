@@ -105,10 +105,8 @@ const ProfilePage = () => {
         return;
       }
       try {
-        const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', {
-          key: user.profileImage,
-        });
-        setAvatarUrl(downloadUrl);
+        const { resolveStoredFileDisplayUrl } = await import('@/lib/storedFileAccess');
+        setAvatarUrl(await resolveStoredFileDisplayUrl(user.profileImage));
       } catch {
         setAvatarUrl(null);
       }
@@ -124,8 +122,8 @@ const ProfilePage = () => {
       const key = await uploadViaPresignedPost('avatars', file);
       await apiClient.patch(`/users/${user.id}`, { profileImage: key });
       toast({ title: t('photoUpdatedTitle'), description: t('photoUpdatedBody') });
-      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
-      setAvatarUrl(downloadUrl);
+      const { resolveStoredFileDisplayUrl } = await import('@/lib/storedFileAccess');
+      setAvatarUrl(await resolveStoredFileDisplayUrl(key));
     } catch (error) {
       toast({
         title: tCommon('status.error'),

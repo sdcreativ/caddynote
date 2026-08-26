@@ -1111,9 +1111,14 @@ documentsRouter.get('/:id/download', async (req, res) => {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   if (document.fileKey) {
-    if (isS3Configured()) {
-      const downloadUrl = await getPresignedDownloadUrl(document.fileKey);
-      return res.json({ downloadUrl, expiresIn: 3600 });
+    const { isAtRestEncryptionEnabled } = await import('../lib/fileStorage.js');
+    if (isS3Configured() && !isAtRestEncryptionEnabled()) {
+      try {
+        const downloadUrl = await getPresignedDownloadUrl(document.fileKey);
+        return res.json({ downloadUrl, expiresIn: 3600 });
+      } catch (error) {
+        console.error('Presign document S3 :', error);
+      }
     }
     try {
       const stored = await getStoredObjectBytes(document.fileKey);
