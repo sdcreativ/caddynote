@@ -248,3 +248,28 @@ export const getAttendanceStats = async (studentId: string, startDate: string, e
     };
   }
 };
+
+export type UpcomingAttendanceCall = {
+  courseId: string;
+  classId: string | null;
+  courseName: string;
+  className: string | null;
+  startTime: string;
+  scheduleId: string | null;
+  minutesUntilStart: number;
+};
+
+/** Créneaux de l’enseignant démarrant dans N minutes (rappel d’appel dashboard). */
+export const fetchUpcomingAttendanceCalls = async (
+  withinMinutes = 10
+): Promise<UpcomingAttendanceCall[]> => {
+  try {
+    const { calls } = await apiClient.get<{ calls: UpcomingAttendanceCall[] }>(
+      `/absences/upcoming-calls?withinMinutes=${encodeURIComponent(String(withinMinutes))}`
+    );
+    return calls ?? [];
+  } catch (error) {
+    console.error('Error in fetchUpcomingAttendanceCalls:', error);
+    return [];
+  }
+};

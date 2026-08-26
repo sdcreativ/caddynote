@@ -72,6 +72,10 @@ describe('Seuils d’assiduité (PRS-006)', () => {
   it('déclenche une alerte quand le seuil d’absences non justifiées est franchi, avec traçabilité', async () => {
     await setThresholds({ absenceThreshold: 3, latenessThreshold: null });
     const { studentId, guardianId } = await makeStudentWithGuardian();
+    await prisma.strkProfile.update({
+      where: { id: studentId },
+      data: { firstName: 'Inès', lastName: 'Moreau' },
+    });
     await createAbsence(studentId, 'absence', 1);
     await createAbsence(studentId, 'absence', 2);
     await createAbsence(studentId, 'absence', 3);
@@ -94,6 +98,14 @@ describe('Seuils d’assiduité (PRS-006)', () => {
     const guardianNotifAfter = await prisma.notification.count({ where: { userId: guardianId } });
     expect(staffNotifAfter).toBeGreaterThan(staffNotifBefore); // direction notifiée
     expect(guardianNotifAfter).toBeGreaterThan(guardianNotifBefore); // famille notifiée
+
+    const guardianNotif = await prisma.notification.findFirst({
+      where: { userId: guardianId },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(guardianNotif?.title).toContain('Inès Moreau');
+    expect(guardianNotif?.message).toContain('Inès Moreau');
+    expect(guardianNotif?.message).not.toContain('votre enfant');
   });
 
   it('ne réalerte pas tant que la fenêtre en cours n’est pas retombée (anti-doublon)', async () => {

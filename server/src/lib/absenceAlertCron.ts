@@ -1,26 +1,19 @@
 import { prisma } from './prisma.js';
 import { sendCommunication, pickPreferredChannel } from './communications.js';
 import { scheduleExclusiveCron } from './cronLock.js';
+import { addMinutesToHhMm, normalizeTimeHhMm } from './courseSchedule.js';
+import type { StrkAbsence } from '@prisma/client';
 
 /**
- * PRS-004 : alerte parentale automatique après un délai suivant une absence
- * non justifiée, sans doublon d'envoi. S'appuie entièrement sur les briques
- * livrées séparément : rôle parent + `strk_student_guardians` (ELV-002) pour
- * savoir QUI alerter, et le module Communication (COM-001 à 005) pour QUOI
- * envoyer et tracer.
+ * PRS-004 : alerte parentale sur absence / retard saisis à l’appel.
  *
- * Délai configurable via `ABSENCE_ALERT_DELAY_HOURS` (def. 24h) : une
- * absence de type "absence" (pas un simple retard), non justifiée, dont la
- * date remonte à plus de ce délai, et pour laquelle aucune alerte n'a encore
- * été envoyée (`StrkAbsence.alertSentAt`), déclenche un envoi à chaque
- * responsable actif ayant le droit `canReceiveCommunications`.
+ * - **Immédiat** : à la saisie (`notifyGuardiansOfAbsence`) — le parent est
+ *   informé dès qu’un élève est marqué absent ou en retard.
+ * - **Filet cron** : absences non justifiées anciennes sans `alertSentAt`
+ *   (imports, bugs) après `ABSENCE_ALERT_DELAY_HOURS` (défaut 24h). Les
+ *   retards ne passent pas par ce filet (notification uniquement à la saisie).
  *
- * Anti-doublon : `alertSentAt` est posé après traitement de l'absence, quel
- * que soit le nombre de responsables notifiés — une même absence ne peut
- * donc jamais générer une seconde vague d'alertes, y compris si le cron
- * tourne plusieurs fois par jour ou est relancé après un redémarrage.
- *
- * Multi-worker : verrou advisory `cronLock` (P2-D).
+ * Anti-doublon : `alertSentAt` est posé après traitement.
  */
 
 const getDelayHours = (): number => {
@@ -28,58 +21,222 @@ const getDelayHours = (): number => {
   return Number.isFinite(configured) && configured > 0 ? configured : 24;
 };
 
+export type NotifyAbsenceResult = { alertsSent: number; skipped: boolean };
+
+export type AttendanceEventKind = 'absence' | 'lateness';
+
+export type AbsenceAlertContext = {
+  studentName: string;
+  courseName: string | null;
+  courseTime: string | null;
+  formattedDate: string;
+};
+
+/** Libellé prénom + nom ; repli sur « votre enfant » si profil incomplet. */
+export const formatStudentDisplayName = (
+  profile: { firstName: string | null; lastName: string | null } | null
+): string => {
+  const parts = [profile?.firstName?.trim(), profile?.lastName?.trim()].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : 'votre enfant';
+};
+
+const buildWhenClause = (ctx: AbsenceAlertContext): string => {
+  const { courseName, courseTime, formattedDate } = ctx;
+  const whenParts: string[] = [`le ${formattedDate}`];
+  if (courseName) {
+    whenParts.push(courseTime ? `au cours de ${courseName} (${courseTime})` : `au cours de ${courseName}`);
+  } else if (courseTime) {
+    whenParts.push(`à ${courseTime}`);
+  }
+  return whenParts.join(' ');
+};
+
+/**
+ * Construit objet / corps explicites (enfant, cours, horaire, date).
+ * Les parties manquantes (pas de cours, pas d’horaire) sont omises sans
+ * rendre le message ambigu.
+ */
+export const formatAbsenceAlertCopy = (
+  ctx: AbsenceAlertContext,
+  opts?: { immediate?: boolean; kind?: AttendanceEventKind }
+): { subject: string; body: string; variables: Record<string, string> } => {
+  const immediate = opts?.immediate !== false;
+  const kind: AttendanceEventKind = opts?.kind ?? 'absence';
+  const { studentName, courseName, courseTime, formattedDate } = ctx;
+  const when = buildWhenClause(ctx);
+
+  if (kind === 'lateness') {
+    return {
+      subject: `Retard de ${studentName}`,
+      body: `${studentName} a été marqué(e) en retard ${when}.`,
+      variables: {
+        studentName,
+        date: formattedDate,
+        courseName: courseName ?? '',
+        courseTime: courseTime ?? '',
+        kind,
+      },
+    };
+  }
+
+  const subject = immediate
+    ? `Absence de ${studentName}`
+    : `Absence non justifiée — ${studentName}`;
+
+  const body = immediate
+    ? `${studentName} a été marqué(e) absent(e) ${when}. Vous pouvez justifier l’absence depuis votre espace parent.`
+    : `Une absence non justifiée de ${studentName} a été enregistrée ${when}. Merci de la justifier auprès de l'établissement dans les meilleurs délais.`;
+
+  return {
+    subject,
+    body,
+    variables: {
+      studentName,
+      date: formattedDate,
+      courseName: courseName ?? '',
+      courseTime: courseTime ?? '',
+      kind,
+    },
+  };
+};
+
+/** Horaire du créneau : emploi du temps du jour, sinon `scheduleTime` du cours. */
+const resolveCourseTimeLabel = async (
+  courseId: string,
+  absenceDate: Date,
+  course: { scheduleTime: string | null; duration: number | null }
+): Promise<string | null> => {
+  const dayOfWeek = absenceDate.getUTCDay();
+  const schedule = await prisma.strkSchedule.findFirst({
+    where: { courseId, dayOfWeek, OR: [{ isActive: true }, { isActive: null }] },
+    select: { startTime: true, endTime: true },
+    orderBy: { startTime: 'asc' },
+  });
+
+  if (schedule) {
+    const start = normalizeTimeHhMm(schedule.startTime) ?? schedule.startTime.trim();
+    const end = normalizeTimeHhMm(schedule.endTime) ?? schedule.endTime.trim();
+    return start && end ? `${start}–${end}` : start || end || null;
+  }
+
+  if (!course.scheduleTime?.trim()) return null;
+  const start = normalizeTimeHhMm(course.scheduleTime) ?? course.scheduleTime.trim();
+  if (!start) return null;
+  const end =
+    course.duration && course.duration > 0 ? addMinutesToHhMm(start, course.duration) : null;
+  return end ? `${start}–${end}` : start;
+};
+
+const loadAbsenceAlertContext = async (
+  absence: Pick<StrkAbsence, 'studentId' | 'courseId' | 'date'>
+): Promise<AbsenceAlertContext> => {
+  const [profile, course] = await Promise.all([
+    prisma.strkProfile.findUnique({
+      where: { id: absence.studentId },
+      select: { firstName: true, lastName: true },
+    }),
+    absence.courseId
+      ? prisma.strkCourse.findUnique({
+          where: { id: absence.courseId },
+          select: { name: true, scheduleTime: true, duration: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const courseTime = course
+    ? await resolveCourseTimeLabel(absence.courseId!, absence.date, course)
+    : null;
+
+  return {
+    studentName: formatStudentDisplayName(profile),
+    courseName: course?.name?.trim() || null,
+    courseTime,
+    formattedDate: absence.date.toLocaleDateString('fr-FR', { timeZone: 'UTC' }),
+  };
+};
+
+/**
+ * Notifie les responsables actifs (`canReceiveCommunications`) pour une
+ * absence ou un retard. No-op si déjà alerté, justifié, type inconnu, ou
+ * sans `createdBy` (dans ce dernier cas on pose quand même `alertSentAt`).
+ */
+export const notifyGuardiansOfAbsence = async (
+  absence: Pick<
+    StrkAbsence,
+    'id' | 'studentId' | 'courseId' | 'date' | 'type' | 'justified' | 'alertSentAt' | 'createdBy'
+  >,
+  opts?: { immediate?: boolean }
+): Promise<NotifyAbsenceResult> => {
+  if (absence.type !== 'absence' && absence.type !== 'lateness') {
+    return { alertsSent: 0, skipped: true };
+  }
+  if (absence.justified) return { alertsSent: 0, skipped: true };
+  if (absence.alertSentAt) return { alertsSent: 0, skipped: true };
+
+  if (!absence.createdBy) {
+    await prisma.strkAbsence.update({ where: { id: absence.id }, data: { alertSentAt: new Date() } });
+    return { alertsSent: 0, skipped: true };
+  }
+
+  const guardianLinks = await prisma.strkStudentGuardian.findMany({
+    where: { studentId: absence.studentId, status: 'active', canReceiveCommunications: true },
+    select: { guardianId: true },
+  });
+
+  const kind: AttendanceEventKind = absence.type;
+  const ctx = await loadAbsenceAlertContext(absence);
+  const { subject, body, variables } = formatAbsenceAlertCopy(ctx, { ...opts, kind });
+
+  let alertsSent = 0;
+  for (const link of guardianLinks) {
+    const guardian = await prisma.strkProfile.findUnique({
+      where: { id: link.guardianId },
+      select: { id: true, phoneNumber: true, email: true },
+    });
+    if (!guardian) continue;
+
+    const preferenceRows = await prisma.strkCommunicationPreference.findMany({
+      where: { profileId: guardian.id },
+    });
+    const preferences = new Map(preferenceRows.map((p) => [p.channel, p.optedIn]));
+    const channel = pickPreferredChannel(guardian, preferences);
+
+    const result = await sendCommunication({
+      recipientId: guardian.id,
+      channel,
+      useCase: kind === 'lateness' ? 'lateness_alert' : 'absence_alert',
+      locale: 'fr',
+      variables,
+      subject,
+      body,
+      isCritical: true,
+      requestedBy: absence.createdBy,
+    });
+    if (result.ok) alertsSent += 1;
+    else {
+      console.error(
+        `Alerte ${kind} non envoyée (élève ${absence.studentId}, responsable ${guardian.id}) :`,
+        result.error
+      );
+    }
+  }
+
+  await prisma.strkAbsence.update({ where: { id: absence.id }, data: { alertSentAt: new Date() } });
+  return { alertsSent, skipped: false };
+};
+
 export const runAbsenceAlertCheck = async (): Promise<{ checked: number; alertsSent: number }> => {
   const threshold = new Date(Date.now() - getDelayHours() * 60 * 60 * 1000);
 
   const absences = await prisma.strkAbsence.findMany({
     where: { type: 'absence', justified: false, alertSentAt: null, date: { lte: threshold } },
-    take: 500, // limite de sécurité par exécution, le reste sera traité au prochain passage
+    take: 500,
   });
 
   let alertsSent = 0;
   for (const absence of absences) {
-    if (!absence.createdBy) {
-      // Aucun auteur identifiable (donnée historique/import) : on ne peut
-      // pas attribuer l'alerte à un `requestedBy` valide (contrainte de
-      // schéma) — on marque quand même comme traité pour ne pas boucler
-      // indéfiniment dessus.
-      await prisma.strkAbsence.update({ where: { id: absence.id }, data: { alertSentAt: new Date() } });
-      continue;
-    }
-
-    const guardianLinks = await prisma.strkStudentGuardian.findMany({
-      where: { studentId: absence.studentId, status: 'active', canReceiveCommunications: true },
-      select: { guardianId: true },
-    });
-
-    for (const link of guardianLinks) {
-      const guardian = await prisma.strkProfile.findUnique({
-        where: { id: link.guardianId },
-        select: { id: true, phoneNumber: true, email: true },
-      });
-      if (!guardian) continue;
-
-      const preferenceRows = await prisma.strkCommunicationPreference.findMany({ where: { profileId: guardian.id } });
-      const preferences = new Map(preferenceRows.map((p) => [p.channel, p.optedIn]));
-      const channel = pickPreferredChannel(guardian, preferences);
-      const formattedDate = absence.date.toLocaleDateString('fr-FR');
-
-      const result = await sendCommunication({
-        recipientId: guardian.id,
-        channel,
-        useCase: 'absence_alert',
-        locale: 'fr',
-        variables: { date: formattedDate },
-        subject: 'Absence non justifiée',
-        body: `Une absence non justifiée de votre enfant a été enregistrée le ${formattedDate}. Merci de la justifier auprès de l'établissement dans les meilleurs délais.`,
-        isCritical: true,
-        requestedBy: absence.createdBy,
-      });
-      if (result.ok) alertsSent += 1;
-      else console.error(`Alerte absence non envoyée (élève ${absence.studentId}, responsable ${guardian.id}) :`, result.error);
-    }
-
-    await prisma.strkAbsence.update({ where: { id: absence.id }, data: { alertSentAt: new Date() } });
+    const result = await notifyGuardiansOfAbsence(absence, { immediate: false });
+    alertsSent += result.alertsSent;
   }
 
   return { checked: absences.length, alertsSent };
@@ -87,8 +244,6 @@ export const runAbsenceAlertCheck = async (): Promise<{ checked: number; alertsS
 
 let started = false;
 
-/** Démarre la tâche planifiée (toutes les heures). Appelé une seule fois au
- * démarrage du serveur (`index.ts`). */
 export const startAbsenceAlertCron = (): void => {
   if (started) return;
   started = true;

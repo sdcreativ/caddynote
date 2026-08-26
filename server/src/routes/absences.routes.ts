@@ -5,11 +5,17 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isSameInstitution, SUPERVISION_ROLES, DIRECTION_ROLES, getStudentAccess } from '../lib/authz.js';
 import { rejectUnlessSameInstitution, rejectUnlessStudentAccess, sendForbidden } from '../lib/httpAuthz.js';
-import { runAbsenceAlertCheck } from '../lib/absenceAlertCron.js';
+import { notifyGuardiansOfAbsence, runAbsenceAlertCheck } from '../lib/absenceAlertCron.js';
 import { runAttendanceThresholdCheck } from '../lib/attendanceThresholds.js';
 import { logAudit } from '../lib/audit.js';
 import { isOwnedObjectKey } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
+import {
+  filterUpcomingCalls,
+  parseScheduleDayToDayOfWeek,
+  type UpcomingCallCandidate,
+} from '../lib/attendanceCallReminders.js';
+import { normalizeTimeHhMm } from '../lib/courseSchedule.js';
 
 export const absencesRouter = Router();
 absencesRouter.use(requireAuth);
@@ -83,6 +89,110 @@ absencesRouter.get('/threshold-alerts', requireRole(...DIRECTION_ROLES, 'supervi
     take: 200,
   });
   res.json({ alerts });
+});
+
+/**
+ * Rappels d’appel pour l’enseignant connecté : créneaux démarrant dans
+ * `withinMinutes` (défaut 10), hors appel déjà saisi aujourd’hui pour le cours.
+ */
+absencesRouter.get('/upcoming-calls', requireRole('teacher', 'head_teacher'), async (req, res) => {
+  const withinRaw = typeof req.query.withinMinutes === 'string' ? Number(req.query.withinMinutes) : 10;
+  const withinMinutes = Number.isFinite(withinRaw) ? Math.min(60, Math.max(1, Math.floor(withinRaw))) : 10;
+  const teacherId = req.auth!.sub;
+  const institutionId = req.auth!.institutionId;
+  if (!institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé à ce compte' });
+  }
+
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const [schedules, courses] = await Promise.all([
+    prisma.strkSchedule.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        dayOfWeek,
+        OR: [{ teacherId }, { course: { teacherId } }],
+      },
+      include: {
+        course: { select: { id: true, name: true } },
+        class: { select: { id: true, name: true } },
+      },
+      take: 100,
+    }),
+    prisma.strkCourse.findMany({
+      where: {
+        institutionId,
+        teacherId,
+        scheduleDay: { not: null },
+        scheduleTime: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        classId: true,
+        scheduleDay: true,
+        scheduleTime: true,
+        class: { select: { name: true } },
+      },
+      take: 100,
+    }),
+  ]);
+
+  const candidates: Array<UpcomingCallCandidate & { dayOfWeek: number }> = [];
+  const seenCourseIds = new Set<string>();
+
+  for (const s of schedules) {
+    if (seenCourseIds.has(s.courseId)) continue;
+    seenCourseIds.add(s.courseId);
+    candidates.push({
+      courseId: s.courseId,
+      classId: s.classId ?? s.class?.id ?? null,
+      courseName: s.course.name,
+      className: s.class?.name ?? null,
+      startTime: s.startTime,
+      scheduleId: s.id,
+      dayOfWeek: s.dayOfWeek,
+    });
+  }
+
+  for (const c of courses) {
+    if (seenCourseIds.has(c.id)) continue;
+    const dow = c.scheduleDay ? parseScheduleDayToDayOfWeek(c.scheduleDay) : null;
+    const start = c.scheduleTime ? normalizeTimeHhMm(c.scheduleTime) : null;
+    if (dow == null || !start || dow !== dayOfWeek) continue;
+    seenCourseIds.add(c.id);
+    candidates.push({
+      courseId: c.id,
+      classId: c.classId,
+      courseName: c.name,
+      className: c.class?.name ?? null,
+      startTime: start,
+      scheduleId: null,
+      dayOfWeek: dow,
+    });
+  }
+
+  const courseIds = candidates.map((c) => c.courseId);
+  const taken =
+    courseIds.length === 0
+      ? []
+      : await prisma.strkAbsence.findMany({
+          where: {
+            institutionId,
+            date: { equals: new Date(ymd) },
+            courseId: { in: courseIds },
+          },
+          select: { courseId: true },
+        });
+  const alreadyTaken = new Set(
+    taken.map((t) => t.courseId).filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+
+  const calls = filterUpcomingCalls(candidates, now, withinMinutes, alreadyTaken);
+  res.json({ calls, withinMinutes, serverTime: now.toISOString() });
 });
 
 absencesRouter.get('/', async (req, res) => {
@@ -203,6 +313,24 @@ const createIdempotentAbsence = async (item: z.infer<typeof absenceSchema>, crea
   }
 };
 
+/** Alerte parentale dès la saisie (absence ou retard). Anti-doublon via `alertSentAt`. */
+const fireAbsenceParentAlert = async (absence: {
+  id: string;
+  studentId: string;
+  courseId: string | null;
+  date: Date;
+  type: string;
+  justified: boolean;
+  alertSentAt: Date | null;
+  createdBy: string | null;
+}): Promise<void> => {
+  try {
+    await notifyGuardiansOfAbsence(absence, { immediate: true });
+  } catch (err) {
+    console.error('Alerte parentale présence (immédiat) :', err);
+  }
+};
+
 // PRS-001/002 : appel réservé au personnel enseignant/direction.
 absencesRouter.post('/', requireRole(...SUPERVISION_ROLES), async (req, res) => {
   const parsed = absenceSchema.safeParse(req.body);
@@ -211,6 +339,7 @@ absencesRouter.post('/', requireRole(...SUPERVISION_ROLES), async (req, res) => 
   }
   if (rejectUnlessSameInstitution(res, req.auth!, parsed.data.institutionId)) return;
   const absence = await createIdempotentAbsence(parsed.data, req.auth!.sub);
+  await fireAbsenceParentAlert(absence);
   res.status(201).json({ absence });
 });
 
@@ -228,7 +357,9 @@ absencesRouter.post('/bulk', requireRole(...SUPERVISION_ROLES), async (req, res)
   }
   const created = [];
   for (const item of parsed.data) {
-    created.push(await createIdempotentAbsence(item, req.auth!.sub));
+    const absence = await createIdempotentAbsence(item, req.auth!.sub);
+    await fireAbsenceParentAlert(absence);
+    created.push(absence);
   }
   res.status(201).json({ absences: created });
 });

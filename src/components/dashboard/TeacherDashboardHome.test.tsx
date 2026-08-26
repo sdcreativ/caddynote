@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TeacherDashboardHome from './TeacherDashboardHome';
 import type { DashboardMetrics } from '@/services/strkAnalyticsService';
@@ -8,6 +8,12 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/navConfig')>();
   return { ...actual, roleLabel: () => 'Enseignant' };
 });
+
+const fetchUpcoming = vi.fn();
+
+vi.mock('@/services/strkAttendanceService', () => ({
+  fetchUpcomingAttendanceCalls: (...args: unknown[]) => fetchUpcoming(...args),
+}));
 
 const metrics: DashboardMetrics = {
   totalInstitutions: 1,
@@ -21,7 +27,11 @@ const metrics: DashboardMetrics = {
 };
 
 describe('TeacherDashboardHome (cockpit deux clics)', () => {
-  it('expose À traiter, KPI et CTA Faire l’appel + raccourcis', () => {
+  beforeEach(() => {
+    fetchUpcoming.mockResolvedValue([]);
+  });
+
+  it('expose À traiter, KPI et CTA Faire l’appel + raccourcis', async () => {
     render(
       <MemoryRouter>
         <TeacherDashboardHome
@@ -36,7 +46,9 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
 
     expect(screen.getByRole('heading', { name: /Bonjour, Ada/i })).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
-    expect(screen.getByText(/3 absence\(s\) à suivre/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/3 absence\(s\) à suivre/i)).toBeInTheDocument();
+    });
     expect(screen.getByRole('link', { name: /Voir les absences/i })).toHaveAttribute('href', '/absences');
 
     expect(screen.getAllByText('120').length).toBeGreaterThanOrEqual(1);
@@ -50,7 +62,7 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
     expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('affiche un empty calme quand il n’y a pas d’absences', () => {
+  it('affiche un empty calme quand il n’y a pas d’absences ni de rappel', async () => {
     render(
       <MemoryRouter>
         <TeacherDashboardHome
@@ -63,8 +75,45 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
+    });
     expect(screen.queryByRole('link', { name: /Voir les absences/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Faire l'appel/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('affiche un rappel d’appel dans À traiter', async () => {
+    fetchUpcoming.mockResolvedValue([
+      {
+        courseId: 'course-1',
+        classId: 'class-1',
+        courseName: 'Mathématiques',
+        className: '3ème',
+        startTime: '16:00',
+        scheduleId: 'sch-1',
+        minutesUntilStart: 8,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <TeacherDashboardHome
+          userName="Ada"
+          role="teacher"
+          metrics={{ ...metrics, absences: 0 }}
+          metricsState="ready"
+          totalStudents={120}
+        />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Appel dans 8 min — Mathématiques/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Début 16:00 · 3ème/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Appel dans 8 min/i })).toHaveAttribute(
+      'href',
+      '/teacher-attendance?course=course-1'
+    );
   });
 });

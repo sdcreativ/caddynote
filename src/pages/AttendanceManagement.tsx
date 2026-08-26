@@ -186,7 +186,7 @@ const AttendanceManagement = () => {
             ) : (
               <QuickAttendance
                 classId={selectedClass.id}
-                institutionId={selectedClass.institution_id}
+                institutionId={selectedClass.institution_id || user?.institutionId || ''}
                 students={rosterStudents}
                 onAttendanceSubmitted={handleAttendanceMarked}
               />
@@ -201,7 +201,7 @@ const AttendanceManagement = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <AttendanceScanner
                 classId={selectedClass.id}
-                institutionId={selectedClass.institution_id}
+                institutionId={selectedClass.institution_id || user?.institutionId || ''}
                 students={rosterStudents}
                 onAttendanceMarked={handleAttendanceMarked}
               />

@@ -1,6 +1,7 @@
 import { scheduleExclusiveCron } from './cronLock.js';
 import { prisma } from './prisma.js';
 import { sendCommunication, pickPreferredChannel } from './communications.js';
+import { formatStudentDisplayName } from './absenceAlertCron.js';
 import type { StrkThresholdAlertType } from '@prisma/client';
 
 /**
@@ -29,6 +30,39 @@ const getWindowStart = (windowDays: number): Date => new Date(Date.now() - windo
 const TYPE_LABEL: Record<StrkThresholdAlertType, string> = {
   absence: 'absences non justifiées',
   lateness: 'retards',
+};
+
+export type ThresholdAlertCopy = {
+  staffSubject: string;
+  staffBody: string;
+  guardianSubject: string;
+  guardianBody: string;
+  variables: Record<string, string>;
+};
+
+/** Messages explicites (nom de l’élève) pour direction et famille. */
+export const formatThresholdAlertCopy = (params: {
+  studentName: string;
+  type: StrkThresholdAlertType;
+  count: number;
+  threshold: number;
+  windowDays: number;
+}): ThresholdAlertCopy => {
+  const label = TYPE_LABEL[params.type];
+  const { studentName, count, threshold, windowDays } = params;
+  return {
+    staffSubject: `Seuil d'assiduité — ${studentName}`,
+    staffBody: `${studentName} cumule ${count} ${label} sur les ${windowDays} derniers jours (seuil : ${threshold}).`,
+    guardianSubject: `Suivi d'assiduité — ${studentName}`,
+    guardianBody: `${studentName} cumule ${count} ${label} sur les ${windowDays} derniers jours, ce qui dépasse le seuil fixé par l'établissement (${threshold}). Merci de nous contacter pour en échanger.`,
+    variables: {
+      studentName,
+      count: String(count),
+      threshold: String(threshold),
+      windowDays: String(windowDays),
+      type: params.type,
+    },
+  };
 };
 
 export const runAttendanceThresholdCheck = async (): Promise<{ checked: number; alertsSent: number }> => {
@@ -111,8 +145,16 @@ const notifyThresholdCrossed = async (params: {
     include: { profile: { select: { firstName: true, lastName: true } } },
   });
   if (!student) return false;
-  const studentName = [student.profile.firstName, student.profile.lastName].filter(Boolean).join(' ') || 'Un élève';
-  const label = TYPE_LABEL[params.type];
+
+  const displayName = formatStudentDisplayName(student.profile);
+  const studentName = displayName === 'votre enfant' ? 'Un élève' : displayName;
+  const copy = formatThresholdAlertCopy({
+    studentName,
+    type: params.type,
+    count: params.count,
+    threshold: params.threshold,
+    windowDays: params.windowDays,
+  });
 
   // Sans membre de direction identifiable, impossible d'attribuer
   // `requestedBy` (contrainte de schéma) — même traitement que PRS-004 pour
@@ -136,8 +178,8 @@ const notifyThresholdCrossed = async (params: {
     const result = await sendCommunication({
       recipientId: staff.id,
       channel: 'push',
-      subject: `Seuil d'assiduité franchi`,
-      body: `${studentName} cumule ${params.count} ${label} sur les ${params.windowDays} derniers jours (seuil : ${params.threshold}).`,
+      subject: copy.staffSubject,
+      body: copy.staffBody,
       isCritical: true,
       requestedBy: schoolAdmin.id,
     });
@@ -163,9 +205,9 @@ const notifyThresholdCrossed = async (params: {
       channel,
       useCase: params.type === 'absence' ? 'attendance_threshold_absence' : 'attendance_threshold_lateness',
       locale: 'fr',
-      variables: { count: String(params.count), threshold: String(params.threshold), windowDays: String(params.windowDays) },
-      subject: `Suivi d'assiduité`,
-      body: `Nous avons constaté ${params.count} ${label} de votre enfant au cours des ${params.windowDays} derniers jours, ce qui dépasse le seuil fixé par l'établissement (${params.threshold}). Merci de nous contacter pour en échanger.`,
+      variables: copy.variables,
+      subject: copy.guardianSubject,
+      body: copy.guardianBody,
       isCritical: true,
       requestedBy: schoolAdmin.id,
     });

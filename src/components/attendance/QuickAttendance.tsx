@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, CheckCircle, XCircle, Clock, Search } from 'lucide-react';
-import { bulkMarkAttendance, StrkAttendance } from '@/services/strkAttendanceService';
+import {
+  bulkMarkAttendance,
+  fetchAttendanceHistoryByClass,
+  StrkAttendance,
+} from '@/services/strkAttendanceService';
 import { useToast } from '@/hooks/use-toast';
-import { cacheRoster, getCachedRoster, queueAttendance } from '@/lib/offlineDb';
+import { cacheRoster, queueAttendance } from '@/lib/offlineDb';
 import { flushPendingAttendance } from '@/lib/offlineSync';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
 import { newClientId } from '@/lib/clientId';
 import { ApiError } from '@/lib/apiClient';
+
+type AttendanceStatus = 'present' | 'absent' | 'late';
 
 interface Student {
   id: string;
@@ -29,40 +32,99 @@ interface QuickAttendanceProps {
   onAttendanceSubmitted?: (attendanceList: StrkAttendance[]) => void;
 }
 
-export const QuickAttendance = ({ classId, institutionId, students, courseId, onAttendanceSubmitted }: QuickAttendanceProps) => {
+const todayIso = () => new Date().toISOString().split('T')[0];
+
+/** Construit l’état d’appel à partir des absences/retards du jour.
+ * Si au moins une saisie existe pour la classe aujourd’hui, les élèves
+ * sans enregistrement sont considérés présents (l’appel a déjà eu lieu). */
+const buildStatusMap = (
+  students: Student[],
+  records: StrkAttendance[]
+): Record<string, AttendanceStatus> => {
+  const byStudent = new Map<string, AttendanceStatus>();
+  for (const r of records) {
+    byStudent.set(r.student_id, r.type === 'lateness' ? 'late' : 'absent');
+  }
+  const next: Record<string, AttendanceStatus> = {};
+  const sessionStarted = byStudent.size > 0;
+  for (const student of students) {
+    const marked = byStudent.get(student.id);
+    if (marked) {
+      next[student.id] = marked;
+    } else if (sessionStarted) {
+      next[student.id] = 'present';
+    }
+  }
+  return next;
+};
+
+export const QuickAttendance = ({
+  classId,
+  institutionId,
+  students,
+  courseId,
+  onAttendanceSubmitted,
+}: QuickAttendanceProps) => {
   const { t } = useTranslation('attendance');
   const { t: tc } = useTranslation('common');
-  const [attendanceData, setAttendanceData] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(false);
   const { toast } = useToast();
 
-  // PRS-003 : dès qu'une vraie liste d'élèves est disponible (réseau
-  // présent), on la met en cache pour pouvoir faire l'appel même hors ligne
-  // juste après (ex. professeur qui entre dans une salle sans réseau).
   useEffect(() => {
     if (classId && students.length > 0) {
       void cacheRoster(classId, students);
     }
   }, [classId, students]);
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  // Recharge l’appel du jour pour que les totaux reflètent l’existant.
+  const studentIdsKey = students.map((s) => s.id).join(',');
+  useEffect(() => {
+    if (!classId || students.length === 0) {
+      setAttendanceData({});
+      return;
+    }
+    let cancelled = false;
+    setIsHydrating(true);
+    const date = todayIso();
+    const roster = students;
+    (async () => {
+      const records = await fetchAttendanceHistoryByClass(classId, {
+        startDate: date,
+        endDate: date,
+      });
+      if (!cancelled) {
+        setAttendanceData(buildStatusMap(roster, records));
+        setIsHydrating(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // studentIdsKey évite de recharger à chaque nouveau tableau `students` identique.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- volontaire
+  }, [classId, studentIdsKey]);
+
+  const filteredStudents = students.filter(
+    (student) =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const markAll = (status: 'present' | 'absent' | 'late') => {
-    const newData: Record<string, 'present' | 'absent' | 'late'> = {};
-    students.forEach(student => {
+  const markAll = (status: AttendanceStatus) => {
+    const newData: Record<string, AttendanceStatus> = {};
+    students.forEach((student) => {
       newData[student.id] = status;
     });
     setAttendanceData(newData);
   };
 
-  const markStudent = (studentId: string, status: 'present' | 'absent' | 'late') => {
-    setAttendanceData(prev => ({
+  const markStudent = (studentId: string, status: AttendanceStatus) => {
+    setAttendanceData((prev) => ({
       ...prev,
-      [studentId]: status
+      [studentId]: status,
     }));
   };
 
@@ -77,19 +139,20 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
         });
         return;
       }
-      const date = new Date().toISOString().split('T')[0];
+      const date = todayIso();
       const entries = Object.entries(attendanceData).filter(([, status]) => status !== 'present');
 
       if (entries.length === 0) {
+        // Tous présents : rien à persister, on conserve l’affichage des totaux.
+        const allPresent: Record<string, AttendanceStatus> = {};
+        students.forEach((s) => {
+          allPresent[s.id] = 'present';
+        });
+        setAttendanceData(allPresent);
         toast({ title: t('quick.savedTitle'), description: t('quick.allPresentBody') });
-        setAttendanceData({});
         return;
       }
 
-      // PRS-003 : chaque saisie porte un identifiant généré une seule fois
-      // ici (`clientId`), envoyé tel quel que la synchronisation ait lieu
-      // immédiatement ou après une période hors ligne — c'est ce qui rend la
-      // resynchronisation sans doublon, côté serveur (POST /absences/bulk).
       const attendanceList: Omit<StrkAttendance, 'id' | 'created_at' | 'updated_at'>[] = entries.map(
         ([studentId, status]) => ({
           student_id: studentId,
@@ -130,27 +193,31 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
           title: t('quick.savedTitle'),
           description: t('quick.savedBody', { count: results.length }),
         });
-        // Profite de la connexion présente pour vider une éventuelle file
-        // laissée par une session précédente hors ligne.
         void flushPendingAttendance();
       }
 
-      setAttendanceData({});
+      // Après enregistrement : absents/retards saisis + le reste présents.
+      const next: Record<string, AttendanceStatus> = {};
+      students.forEach((s) => {
+        const status = attendanceData[s.id];
+        next[s.id] = status === 'absent' || status === 'late' ? status : 'present';
+      });
+      setAttendanceData(next);
     } catch (error) {
       console.error('Error submitting attendance:', error);
       toast({
         title: tc('status.error'),
         description: error instanceof ApiError && error.message ? error.message : t('quick.saveError'),
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getStatusCounts = () => {
+  const statusCounts = useMemo(() => {
     const counts = { present: 0, absent: 0, late: 0, unmarked: 0 };
-    students.forEach(student => {
+    students.forEach((student) => {
       const status = attendanceData[student.id];
       if (status) {
         counts[status]++;
@@ -159,9 +226,9 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
       }
     });
     return counts;
-  };
+  }, [students, attendanceData]);
 
-  const statusCounts = getStatusCounts();
+  const markedCount = Object.keys(attendanceData).length;
 
   return (
     <Card className="w-full">
@@ -173,12 +240,9 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
           </span>
           <OfflineStatusBadge />
         </CardTitle>
-        <CardDescription>
-          {t('quick.description')}
-        </CardDescription>
+        <CardDescription>{t('quick.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Statistiques */}
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center">
             <div className="text-lg font-bold text-green-600">{statusCounts.present}</div>
@@ -198,22 +262,20 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
           </div>
         </div>
 
-        {/* Actions rapides */}
         <div className="flex gap-2">
-          <Button onClick={() => markAll('present')} variant="outline" size="sm" className="flex-1">
+          <Button type="button" onClick={() => markAll('present')} variant="outline" size="sm" className="flex-1">
             <CheckCircle className="h-4 w-4 mr-1" />
             {t('quick.allPresent')}
           </Button>
-          <Button onClick={() => markAll('absent')} variant="outline" size="sm" className="flex-1">
+          <Button type="button" onClick={() => markAll('absent')} variant="outline" size="sm" className="flex-1">
             <XCircle className="h-4 w-4 mr-1" />
             {t('quick.allAbsent')}
           </Button>
-          <Button onClick={() => setAttendanceData({})} variant="outline" size="sm" className="flex-1">
+          <Button type="button" onClick={() => setAttendanceData({})} variant="outline" size="sm" className="flex-1">
             {tc('actions.reset')}
           </Button>
         </div>
 
-        {/* Recherche */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -224,46 +286,55 @@ export const QuickAttendance = ({ classId, institutionId, students, courseId, on
           />
         </div>
 
-        {/* Liste des étudiants */}
         <div className="max-h-96 overflow-y-auto space-y-2">
-          {filteredStudents.map(student => (
-            <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex-1">
-                <div className="font-medium">{student.name}</div>
-                <div className="text-sm text-muted-foreground">{student.studentNumber}</div>
+          {isHydrating ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">{tc('actions.loading')}</p>
+          ) : (
+            filteredStudents.map((student) => (
+              <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium">{student.name}</div>
+                  <div className="text-sm text-muted-foreground">{student.studentNumber}</div>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    onClick={() => markStudent(student.id, 'present')}
+                    variant={attendanceData[student.id] === 'present' ? 'default' : 'outline'}
+                    size="sm"
+                    aria-label={t('quick.present')}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => markStudent(student.id, 'late')}
+                    variant={attendanceData[student.id] === 'late' ? 'default' : 'outline'}
+                    size="sm"
+                    aria-label={t('quick.late')}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => markStudent(student.id, 'absent')}
+                    variant={attendanceData[student.id] === 'absent' ? 'default' : 'outline'}
+                    size="sm"
+                    aria-label={t('quick.absent')}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  onClick={() => markStudent(student.id, 'present')}
-                  variant={attendanceData[student.id] === 'present' ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => markStudent(student.id, 'late')}
-                  variant={attendanceData[student.id] === 'late' ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  <Clock className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => markStudent(student.id, 'absent')}
-                  variant={attendanceData[student.id] === 'absent' ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
-        {/* Soumission */}
-        <Button 
-          onClick={submitAttendance} 
-          className="w-full" 
-          disabled={isSubmitting || Object.keys(attendanceData).length === 0}
+        <Button
+          type="button"
+          onClick={submitAttendance}
+          className="w-full"
+          disabled={isSubmitting || isHydrating || markedCount === 0}
         >
           {isSubmitting ? t('quick.submitting') : t('quick.submit')}
         </Button>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,6 +10,7 @@ import {
   Calendar,
   Users,
   ChevronRight,
+  ClipboardCheck,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import {
@@ -19,6 +21,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { roleLabel } from '@/lib/navConfig';
 import type { DashboardMetrics } from '@/services/strkAnalyticsService';
+import {
+  fetchUpcomingAttendanceCalls,
+  type UpcomingAttendanceCall,
+} from '@/services/strkAttendanceService';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
 
@@ -37,6 +43,8 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
   return value;
 };
 
+const POLL_MS = 60_000;
+
 /**
  * Accueil enseignant — cockpit deux clics :
  * À traiter → Pulsation (KPI) → CTA appel + raccourcis.
@@ -50,10 +58,30 @@ const TeacherDashboardHome = ({
 }: TeacherDashboardHomeProps) => {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const [upcomingCalls, setUpcomingCalls] = useState<UpcomingAttendanceCall[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const calls = await fetchUpcomingAttendanceCalls(10);
+      if (!cancelled) setUpcomingCalls(calls);
+    };
+    void load();
+    const id = window.setInterval(() => void load(), POLL_MS);
+    const onFocus = () => void load();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   const absenceCount =
     metricsState === 'ready' || metricsState === 'empty' ? Number(metrics?.absences ?? 0) : 0;
   const hasAbsencesToHandle = metricsState === 'ready' && absenceCount > 0;
+  const hasCallReminders = upcomingCalls.length > 0;
+  const toHandleCount = (hasAbsencesToHandle ? 1 : 0) + upcomingCalls.length;
 
   const attendanceDisplay =
     metricsState === 'loading' || metricsState === 'idle'
@@ -71,6 +99,9 @@ const TeacherDashboardHome = ({
     month: 'long',
     day: 'numeric',
   });
+
+  const callHref = (call: UpcomingAttendanceCall) =>
+    `/teacher-attendance?course=${encodeURIComponent(call.courseId)}`;
 
   return (
     <div className="space-y-6 py-4 animate-fade-in md:space-y-8 md:py-6">
@@ -92,35 +123,68 @@ const TeacherDashboardHome = ({
             </p>
             <h2 className="mt-1 font-display text-lg font-semibold text-slate-900">
               {t('alerts.recent')}{' '}
-              <span className="text-slate-400">({hasAbsencesToHandle ? 1 : 0})</span>
+              <span className="text-slate-400">({toHandleCount})</span>
             </h2>
           </div>
-          {hasAbsencesToHandle ? (
+          {hasCallReminders ? (
+            <Button asChild size="sm">
+              <Link to={callHref(upcomingCalls[0])}>{t('quickActions.takeAttendance')}</Link>
+            </Button>
+          ) : hasAbsencesToHandle ? (
             <Button asChild size="sm">
               <Link to="/absences">{t('teacherMobile.absencesCta')}</Link>
             </Button>
           ) : null}
         </div>
 
-        {hasAbsencesToHandle ? (
+        {toHandleCount > 0 ? (
           <ul className="mt-4 divide-y divide-slate-100">
-            <li>
-              <Link
-                to="/absences"
-                className="group flex items-center gap-3 py-3.5 transition-colors hover:bg-slate-50/80"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">
-                  <AlertCircle className="h-5 w-5" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
-                    {t('teacherMobile.absencesToHandle', { count: absenceCount })}
-                  </p>
-                  <p className="truncate text-sm text-slate-500">{t('stats.absences')}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
-              </Link>
-            </li>
+            {upcomingCalls.map((call) => (
+              <li key={`${call.courseId}-${call.startTime}`}>
+                <Link
+                  to={callHref(call)}
+                  className="group flex items-center gap-3 py-3.5 transition-colors hover:bg-slate-50/80"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800">
+                    <ClipboardCheck className="h-5 w-5" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {t('teacherMobile.callInMinutes', {
+                        minutes: call.minutesUntilStart,
+                        course: call.courseName,
+                      })}
+                    </p>
+                    <p className="truncate text-sm text-slate-500">
+                      {t('teacherMobile.callSlotHint', {
+                        time: call.startTime,
+                        className: call.className || t('teacherMobile.callNoClass'),
+                      })}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
+                </Link>
+              </li>
+            ))}
+            {hasAbsencesToHandle ? (
+              <li>
+                <Link
+                  to="/absences"
+                  className="group flex items-center gap-3 py-3.5 transition-colors hover:bg-slate-50/80"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">
+                    <AlertCircle className="h-5 w-5" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {t('teacherMobile.absencesToHandle', { count: absenceCount })}
+                    </p>
+                    <p className="truncate text-sm text-slate-500">{t('stats.absences')}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
+                </Link>
+              </li>
+            ) : null}
           </ul>
         ) : (
           <p className="mt-4 text-sm text-slate-500">{t('alerts.emptyTitle')}</p>
@@ -177,7 +241,13 @@ const TeacherDashboardHome = ({
         <MobilePrimaryCta
           label={t('quickActions.takeAttendance')}
           icon={<UserCheck aria-hidden />}
-          onClick={() => navigate('/teacher-attendance')}
+          onClick={() =>
+            navigate(
+              upcomingCalls[0]
+                ? callHref(upcomingCalls[0])
+                : '/teacher-attendance'
+            )
+          }
         />
         <p className="sr-only">{t('teacherMobile.primaryCtaHint')}</p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
