@@ -193,3 +193,43 @@ export const reviewAbsenceJustification = async (
     return null;
   }
 };
+
+/**
+ * Ouvre le justificatif d’une absence (parent, élève ou direction).
+ * Passe par l’API d’absence — pas `/files/presign-download` (qui refuse les
+ * clés déposées sous le périmètre `user-…` d’un autre compte).
+ */
+export const openAbsenceJustificationFile = async (absenceId: string): Promise<void> => {
+  const meta = await apiClient.get<{
+    mode?: 's3' | 'local';
+    downloadUrl?: string;
+    downloadPath?: string;
+  }>(`/absences/${encodeURIComponent(absenceId)}/justification-file`);
+
+  if (meta.downloadUrl) {
+    window.open(meta.downloadUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (!meta.downloadPath) {
+    throw new Error('Réponse de téléchargement invalide');
+  }
+
+  const { getToken, ApiError } = await import('@/lib/apiClient');
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${meta.downloadPath}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(
+      (body as { error?: string } | null)?.error || 'Impossible d’ouvrir le justificatif',
+      res.status
+    );
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};

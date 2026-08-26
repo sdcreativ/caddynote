@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { useStrkAbsences } from "@/hooks/useStrkAbsences";
 import { JustificationDialog } from "@/components/absences/JustificationDialog";
-import { apiClient } from "@/lib/apiClient";
+import { openAbsenceJustificationFile } from "@/services/strkAbsenceService";
 import { useToast } from "@/hooks/use-toast";
 
 const MyAbsencesPage = () => {
@@ -18,10 +18,9 @@ const MyAbsencesPage = () => {
   const [selectedAbsenceId, setSelectedAbsenceId] = useState<string | undefined>();
   const [justificationDialogOpen, setJustificationDialogOpen] = useState(false);
 
-  const openJustificationFile = async (key: string) => {
+  const openJustificationFile = async (absenceId: string) => {
     try {
-      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
-      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      await openAbsenceJustificationFile(absenceId);
     } catch {
       toast({
         title: 'Erreur',
@@ -202,7 +201,7 @@ const MyAbsencesPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openJustificationFile(absence.justification_file!)}
+                        onClick={() => openJustificationFile(absence.id)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         {t('mine.viewDocument')}

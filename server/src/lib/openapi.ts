@@ -191,6 +191,8 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/absences/bulk', tag: 'Présence', summary: 'Appel en masse', auth: 'bearer', roles: [...staff] },
   { method: 'get', path: '/absences/stats', tag: 'Présence', summary: 'Statistiques d’assiduité', auth: 'bearer' },
   { method: 'patch', path: '/absences/:id/justify', tag: 'Présence', summary: 'Déposer un justificatif (élève/parent)', auth: 'bearer' },
+  { method: 'get', path: '/absences/:id/justification-file', tag: 'Présence', summary: 'Métadonnées de téléchargement du justificatif (accès lié à l’absence)', auth: 'bearer' },
+  { method: 'get', path: '/absences/:id/justification-file/content', tag: 'Présence', summary: 'Contenu binaire du justificatif (local / secours)', auth: 'bearer' },
   { method: 'patch', path: '/absences/:id/review', tag: 'Présence', summary: 'Accepter ou rejeter un justificatif', auth: 'bearer', roles: [...staff] },
 
   { method: 'get', path: '/signatures', tag: 'Signatures', summary: 'Lister les feuilles d’émargement', auth: 'bearer' },

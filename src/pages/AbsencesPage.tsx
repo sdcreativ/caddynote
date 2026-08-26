@@ -19,7 +19,7 @@ import { trackProductEvent } from '@/lib/productTelemetry';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useNavigate } from 'react-router-dom';
 import { hasAnyRole, ATTENDANCE_HUB_ROLES, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
-import { apiClient } from '@/lib/apiClient';
+import { openAbsenceJustificationFile } from '@/services/strkAbsenceService';
 
 const AbsencesPage = () => {
   const { t } = useTranslation('absences');
@@ -104,10 +104,9 @@ const AbsencesPage = () => {
     }
   };
 
-  const openJustificationFile = async (key: string) => {
+  const openJustificationFile = async (absenceId: string) => {
     try {
-      const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>('/files/presign-download', { key });
-      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      await openAbsenceJustificationFile(absenceId);
     } catch {
       toast({
         title: tc('status.error'),
@@ -375,7 +374,7 @@ const AbsencesPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openJustificationFile(absence.justification_file!)}
+                          onClick={() => openJustificationFile(absence.id)}
                           aria-label={t('mine.viewDocument', { defaultValue: 'Voir le justificatif' })}
                         >
                           <Paperclip className="h-4 w-4" />

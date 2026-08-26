@@ -8,7 +8,8 @@ import { rejectUnlessSameInstitution, rejectUnlessStudentAccess, sendForbidden }
 import { notifyGuardiansOfAbsence, runAbsenceAlertCheck } from '../lib/absenceAlertCron.js';
 import { runAttendanceThresholdCheck } from '../lib/attendanceThresholds.js';
 import { logAudit } from '../lib/audit.js';
-import { isOwnedObjectKey } from '../lib/s3.js';
+import { isOwnedObjectKey, isS3Configured, getPresignedDownloadUrl } from '../lib/s3.js';
+import { getStoredObjectBytes } from '../lib/fileStorage.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import {
   filterUpcomingCalls,
@@ -16,6 +17,8 @@ import {
   type UpcomingCallCandidate,
 } from '../lib/attendanceCallReminders.js';
 import { normalizeTimeHhMm } from '../lib/courseSchedule.js';
+import type { JwtPayload } from '../lib/jwt.js';
+import type { Response } from 'express';
 
 export const absencesRouter = Router();
 absencesRouter.use(requireAuth);
@@ -483,4 +486,85 @@ absencesRouter.patch('/:id/review', requireRole(...SUPERVISION_ROLES), async (re
   });
   const [enriched] = await enrichAbsences([absence]);
   res.json({ absence: enriched });
+});
+
+const contentTypeForJustificationKey = (key: string): string => {
+  const lower = key.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'application/pdf';
+};
+
+/** Accès lecture au justificatif : même règle que le dépôt (élève / parent / personnel). */
+const assertCanViewJustificationFile = async (
+  auth: JwtPayload,
+  studentId: string,
+  res: Response
+): Promise<boolean> => {
+  const access = await getStudentAccess(auth, studentId);
+  if (!access.allowed || (access.via === 'guardian' && !access.permissions.canViewAttendance)) {
+    res.status(403).json({ error: 'Permissions insuffisantes' });
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Métadonnées de téléchargement du justificatif.
+ * Autorisation basée sur l’absence (pas sur la propriété S3 de la clé) :
+ * le personnel doit pouvoir ouvrir un fichier déposé par un parent (`user-…`).
+ */
+absencesRouter.get('/:id/justification-file', async (req, res) => {
+  const absence = await prisma.strkAbsence.findUnique({ where: { id: req.params.id } });
+  if (!absence?.justificationFile) {
+    return res.status(404).json({ error: 'Justificatif introuvable' });
+  }
+  if (!(await assertCanViewJustificationFile(req.auth!, absence.studentId, res))) return;
+
+  const key = absence.justificationFile;
+  if (!key.startsWith(`${STORAGE_FOLDER.justificatifs}/`)) {
+    return res.status(400).json({ error: 'Fichier justificatif invalide' });
+  }
+
+  if (isS3Configured()) {
+    try {
+      const downloadUrl = await getPresignedDownloadUrl(key);
+      return res.json({ mode: 's3', downloadUrl, expiresIn: 3600 });
+    } catch (err) {
+      console.error('Presign justificatif S3 :', err);
+      // Repli contenu via l’API si la signature échoue.
+    }
+  }
+
+  res.json({
+    mode: 'local',
+    downloadPath: `/absences/${absence.id}/justification-file/content`,
+  });
+});
+
+/** Contenu binaire (auth Bearer) — utilisé en local ou en secours S3. */
+absencesRouter.get('/:id/justification-file/content', async (req, res) => {
+  const absence = await prisma.strkAbsence.findUnique({ where: { id: req.params.id } });
+  if (!absence?.justificationFile) {
+    return res.status(404).json({ error: 'Justificatif introuvable' });
+  }
+  if (!(await assertCanViewJustificationFile(req.auth!, absence.studentId, res))) return;
+
+  const key = absence.justificationFile;
+  if (!key.startsWith(`${STORAGE_FOLDER.justificatifs}/`)) {
+    return res.status(400).json({ error: 'Fichier justificatif invalide' });
+  }
+
+  try {
+    const bytes = await getStoredObjectBytes(key);
+    const filename = key.split('/').pop() || 'justificatif.pdf';
+    res.setHeader('Content-Type', contentTypeForJustificationKey(key));
+    res.setHeader('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.send(bytes);
+  } catch (err) {
+    console.error('Lecture justificatif :', err);
+    return res.status(404).json({ error: 'Fichier introuvable dans le stockage' });
+  }
 });

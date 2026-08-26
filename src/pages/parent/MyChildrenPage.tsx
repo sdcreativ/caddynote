@@ -25,6 +25,7 @@ import {
   type StrkInvoice,
 } from '@/services/strkFinanceService';
 import { apiClient, ApiError } from '@/lib/apiClient';
+import { openAbsenceJustificationFile } from '@/services/strkAbsenceService';
 import { useToast } from '@/hooks/use-toast';
 import {
   fetchMyAdmissionApplications,
@@ -439,11 +440,7 @@ const MyChildrenPage = () => {
                                 variant="outline"
                                 onClick={async () => {
                                   try {
-                                    const { downloadUrl } = await apiClient.post<{ downloadUrl: string }>(
-                                      '/files/presign-download',
-                                      { key: absence.justification_file }
-                                    );
-                                    window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+                                    await openAbsenceJustificationFile(absence.id);
                                   } catch {
                                     toast({
                                       title: 'Erreur',

@@ -88,8 +88,9 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
       .send(Buffer.from('%PDF-1.4 fake'));
     expect(put.status).toBe(201);
 
+    const absenceId = absenceRes.body.absence.id as string;
     const justify = await request(app)
-      .patch(`/absences/${absenceRes.body.absence.id}/justify`)
+      .patch(`/absences/${absenceId}/justify`)
       .set(authHeader(fx.parentA.token))
       .send({
         justification: 'Rendez-vous médical',
@@ -98,6 +99,38 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
     expect(justify.status).toBe(200);
     expect(justify.body.absence.justificationStatus).toBe('pending');
     expect(justify.body.absence.justificationFile).toBe(put.body.key);
+
+    // Parent et direction ouvrent via l’absence (pas /files/presign-download) :
+    // la clé est sous user-{parentId}, hors périmètre inst-{école} du staff.
+    const parentMeta = await request(app)
+      .get(`/absences/${absenceId}/justification-file`)
+      .set(authHeader(fx.parentA.token));
+    expect(parentMeta.status).toBe(200);
+    expect(parentMeta.body.mode).toBe('local');
+    expect(parentMeta.body.downloadPath).toBe(`/absences/${absenceId}/justification-file/content`);
+
+    const parentBytes = await request(app)
+      .get(`/absences/${absenceId}/justification-file/content`)
+      .set(authHeader(fx.parentA.token));
+    expect(parentBytes.status).toBe(200);
+    expect(parentBytes.headers['content-type']).toMatch(/pdf/);
+    expect(Buffer.compare(parentBytes.body as Buffer, Buffer.from('%PDF-1.4 fake'))).toBe(0);
+
+    const staffMeta = await request(app)
+      .get(`/absences/${absenceId}/justification-file`)
+      .set(authHeader(fx.a.schoolAdmin.token));
+    expect(staffMeta.status).toBe(200);
+    expect(staffMeta.body.downloadPath).toBe(`/absences/${absenceId}/justification-file/content`);
+
+    const staffBytes = await request(app)
+      .get(`/absences/${absenceId}/justification-file/content`)
+      .set(authHeader(fx.a.schoolAdmin.token));
+    expect(staffBytes.status).toBe(200);
+
+    const otherTenant = await request(app)
+      .get(`/absences/${absenceId}/justification-file`)
+      .set(authHeader(fx.b.schoolAdmin.token));
+    expect(otherTenant.status).toBe(403);
   });
 
   // DOC-005 : le type MIME est vérifié avant même la disponibilité de S3
