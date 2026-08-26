@@ -28,6 +28,9 @@ export interface StrkAbsence {
   };
   duration_minutes: number;
   justification_reason?: string;
+  /** Nom du cours (jamais un UUID). */
+  course_name?: string;
+  /** Nom de la classe rattachée au cours. */
   class_name?: string;
   start_time?: string;
   end_time?: string;
@@ -57,9 +60,26 @@ interface ApiAbsence {
   className?: string | null;
 }
 
-const mapApiAbsence = (a: ApiAbsence): StrkAbsence => {
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Libellé affichable : ignore vide / UUID (ancien bug courseId → class_name). */
+export const cleanAbsenceLabel = (value?: string | null): string | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed || UUID_RE.test(trimmed)) return undefined;
+  return trimmed;
+};
+
+/** Libellé « Cours » pour l’UI parent / listes. */
+export const formatAbsenceCourseLabel = (absence: Pick<StrkAbsence, 'course_name' | 'class_name'>): string | undefined => {
+  return absence.course_name || absence.class_name || undefined;
+};
+
+export const mapApiAbsence = (a: ApiAbsence): StrkAbsence => {
   const firstName = a.student?.firstName?.trim() || '';
   const lastName = a.student?.lastName?.trim() || '';
+  const courseName = cleanAbsenceLabel(a.courseName);
+  const className = cleanAbsenceLabel(a.className);
   return {
     id: a.id,
     student_id: a.studentId,
@@ -77,7 +97,8 @@ const mapApiAbsence = (a: ApiAbsence): StrkAbsence => {
     updated_at: a.updatedAt,
     duration_minutes: a.duration,
     justification_reason: a.justification || undefined,
-    class_name: a.courseName || a.className || undefined,
+    course_name: courseName,
+    class_name: className,
     student:
       firstName || lastName || a.student?.email
         ? {

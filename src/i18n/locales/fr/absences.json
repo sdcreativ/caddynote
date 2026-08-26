@@ -73,6 +73,7 @@
     "suffixPending": " - justification en attente",
     "suffixJustified": " justifiée",
     "courseLabel": "Cours : {{name}}",
+    "classLabel": "Classe : {{name}}",
     "studentNameSuffix": " - {{firstName}} {{lastName}}",
     "timeRange": "{{start}} - {{end}}",
     "durationMinutes": "{{count}} minutes",

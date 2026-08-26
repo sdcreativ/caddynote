@@ -20,6 +20,10 @@ export interface StrkAttendance {
   /** PRS-003 : identifiant généré côté client pour une synchronisation hors
    * ligne idempotente (voir `src/lib/offlineDb.ts`/`offlineSync.ts`). */
   client_id?: string;
+  /** Nom affiché (API enrichie). */
+  student_name?: string;
+  course_name?: string;
+  class_name?: string;
 }
 
 export interface ClassRosterStudent {
@@ -122,9 +126,24 @@ interface ApiAbsence {
   createdAt?: string;
   updatedAt?: string;
   clientId?: string | null;
+  student?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  } | null;
+  courseName?: string | null;
+  className?: string | null;
 }
 
-const mapApiAttendance = (a: ApiAbsence): StrkAttendance => ({
+/** Compose le nom élève depuis l’enrichissement API (jamais l’UUID). */
+export const formatAttendanceStudentName = (
+  student?: { firstName?: string | null; lastName?: string | null } | null
+): string | undefined => {
+  const name = [student?.firstName?.trim(), student?.lastName?.trim()].filter(Boolean).join(' ');
+  return name || undefined;
+};
+
+export const mapApiAttendance = (a: ApiAbsence): StrkAttendance => ({
   id: a.id,
   student_id: a.studentId,
   institution_id: a.institutionId,
@@ -140,6 +159,9 @@ const mapApiAttendance = (a: ApiAbsence): StrkAttendance => ({
   created_at: a.createdAt,
   updated_at: a.updatedAt,
   client_id: a.clientId || undefined,
+  student_name: formatAttendanceStudentName(a.student),
+  course_name: a.courseName?.trim() || undefined,
+  class_name: a.className?.trim() || undefined,
 });
 
 export const fetchAttendanceByClass = async (classId: string, date?: string): Promise<StrkAttendance[]> => {

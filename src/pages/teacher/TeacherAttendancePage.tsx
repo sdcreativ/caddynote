@@ -7,23 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, UserCheck, UserX, Clock, Search } from 'lucide-react';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkCourses } from '@/hooks/useStrkCourses';
-import { fetchAttendanceByClass } from '@/services/strkAttendanceService';
+import { fetchAttendanceByClass, type StrkAttendance } from '@/services/strkAttendanceService';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useSearchParams } from 'react-router-dom';
-
-interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  date: string;
-  type: 'absence' | 'lateness';
-  justified?: boolean;
-  reason?: string;
-  course_id?: string;
-  // For display purposes
-  studentName?: string;
-  className?: string;
-}
 
 export default function TeacherAttendancePage() {
   const { user } = useStrkAuth();
@@ -31,7 +18,7 @@ export default function TeacherAttendancePage() {
   const [searchParams] = useSearchParams();
   const courseParam = searchParams.get('course');
   
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<StrkAttendance[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState(courseParam || 'all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -95,8 +82,9 @@ export default function TeacherAttendancePage() {
   };
 
   const filteredRecords = attendanceRecords.filter(record => {
+    const name = record.student_name?.toLowerCase() ?? '';
     const matchesSearch = searchTerm === '' || 
-      (record.studentName && record.studentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      name.includes(searchTerm.toLowerCase()) ||
       record.student_id.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || record.type === filterStatus;
@@ -241,9 +229,11 @@ export default function TeacherAttendancePage() {
                    <div className="flex items-center gap-4">
                      {getStatusIcon(record.type)}
                      <div>
-                       <p className="font-medium">{record.studentName || 'Étudiant'}</p>
+                       <p className="font-medium">{record.student_name || 'Élève inconnu'}</p>
                        <p className="text-sm text-gray-500">
-                         {record.reason && `Raison: ${record.reason}`}
+                         {[record.course_name, record.reason ? `Raison: ${record.reason}` : null]
+                           .filter(Boolean)
+                           .join(' · ')}
                        </p>
                      </div>
                    </div>

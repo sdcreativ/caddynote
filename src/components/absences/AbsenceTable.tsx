@@ -58,6 +58,7 @@ const AbsenceTable = () => {
     const studentName = absence.student ? `${absence.student.first_name} ${absence.student.last_name}`.trim() : '';
     const searchMatch = !search 
       || studentName.toLowerCase().includes(searchLower)
+      || (absence.course_name && absence.course_name.toLowerCase().includes(searchLower))
       || (absence.class_name && absence.class_name.toLowerCase().includes(searchLower))
       || absence.date.includes(searchLower);
     
@@ -142,7 +143,7 @@ const AbsenceTable = () => {
                   <TableCell className="font-medium">
                     {absence.student ? `${absence.student.first_name} ${absence.student.last_name}`.trim() : 'Étudiant inconnu'}
                   </TableCell>
-                  <TableCell>{absence.class_name || 'Classe non définie'}</TableCell>
+                  <TableCell>{absence.course_name || absence.class_name || 'Cours non défini'}</TableCell>
                   <TableCell>{absence.date}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -207,7 +208,7 @@ const AbsenceTable = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Classe</p>
-                  <p>{selectedAbsence.class_name || 'Classe non définie'}</p>
+                  <p>{selectedAbsence.course_name || selectedAbsence.class_name || 'Cours non défini'}</p>
                 </div>
               </div>
               

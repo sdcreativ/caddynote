@@ -21,17 +21,43 @@ describe('Workflow de validation du justificatif (PRS-005)', () => {
     fx = await buildFixture();
   }, 30000);
 
-  const createAbsence = async () => {
+  const createAbsence = async (overrides: Record<string, unknown> = {}) => {
     const res = await request(app).post('/absences').set(auth(fx.a.teacher.token)).send({
       studentId: fx.a.student.id,
       institutionId: fx.a.institutionId,
       type: 'absence',
       date: new Date().toISOString().split('T')[0],
       duration: 60,
+      ...overrides,
     });
     expect(res.status).toBe(201);
     return res.body.absence.id as string;
   };
+
+  it('renvoie le nom du cours (pas l’UUID) à la création et au listage', async () => {
+    const res = await request(app).post('/absences').set(auth(fx.a.teacher.token)).send({
+      studentId: fx.a.student.id,
+      institutionId: fx.a.institutionId,
+      courseId: fx.a.courseId,
+      type: 'lateness',
+      date: '2026-08-20',
+      duration: 15,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.absence.courseId).toBe(fx.a.courseId);
+    expect(res.body.absence.courseName).toBeTruthy();
+    expect(res.body.absence.courseName).not.toBe(fx.a.courseId);
+
+    const list = await request(app)
+      .get(`/absences?studentId=${fx.a.student.id}`)
+      .set(auth(fx.parentA.token));
+    expect(list.status).toBe(200);
+    const row = list.body.absences.find((a: { id: string }) => a.id === res.body.absence.id);
+    expect(row?.courseName).toBe(res.body.absence.courseName);
+    expect(row?.courseName).not.toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+  });
 
   it('une absence nouvellement créée est en statut "none" (aucun justificatif déposé)', async () => {
     const id = await createAbsence();

@@ -399,7 +399,11 @@ const MyChildrenPage = () => {
                                 {absence.type === 'absence' ? 'Absence' : 'Retard'}
                               </CardTitle>
                               <CardDescription>
-                                {absence.class_name && `Cours : ${absence.class_name}`}
+                                {absence.course_name
+                                  ? `Cours : ${absence.course_name}`
+                                  : absence.class_name
+                                    ? `Classe : ${absence.class_name}`
+                                    : null}
                               </CardDescription>
                             </div>
                             <Badge variant={isJustified ? 'default' : hasJustificationPending ? 'secondary' : 'destructive'}>

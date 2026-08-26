@@ -128,7 +128,11 @@ const MyAbsencesPage = () => {
                         })}
                       </CardTitle>
                       <CardDescription className={contentClass}>
-                        {absence.class_name && t('mine.courseLabel', { name: absence.class_name })}
+                        {absence.course_name
+                          ? t('mine.courseLabel', { name: absence.course_name })
+                          : absence.class_name
+                            ? t('mine.classLabel', { name: absence.class_name })
+                            : null}
                         {absence.student?.first_name && t('mine.studentNameSuffix', {
                           firstName: absence.student.first_name,
                           lastName: absence.student.last_name,

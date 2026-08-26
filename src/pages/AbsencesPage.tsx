@@ -356,7 +356,7 @@ const AbsencesPage = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{absence.class_name || t('page.unspecified')}</div>
+                    <div className="text-sm">{absence.course_name || absence.class_name || t('page.unspecified')}</div>
                   </TableCell>
                   <TableCell>
                     {(() => {

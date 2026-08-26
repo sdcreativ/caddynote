@@ -336,7 +336,8 @@ absencesRouter.post('/', requireRole(...SUPERVISION_ROLES), async (req, res) => 
   if (rejectUnlessSameInstitution(res, req.auth!, parsed.data.institutionId)) return;
   const absence = await createIdempotentAbsence(parsed.data, req.auth!.sub);
   await fireAbsenceParentAlert(absence);
-  res.status(201).json({ absence });
+  const [enriched] = await enrichAbsences([absence]);
+  res.status(201).json({ absence: enriched });
 });
 
 // PRS-003 : synchronisation de plusieurs saisies d'appel en une fois (mode
@@ -357,7 +358,7 @@ absencesRouter.post('/bulk', requireRole(...SUPERVISION_ROLES), async (req, res)
     await fireAbsenceParentAlert(absence);
     created.push(absence);
   }
-  res.status(201).json({ absences: created });
+  res.status(201).json({ absences: await enrichAbsences(created) });
 });
 
 absencesRouter.get('/stats', async (req, res) => {
@@ -445,7 +446,8 @@ absencesRouter.patch('/:id/justify', async (req, res) => {
       justificationReviewedBy: null,
     },
   });
-  res.json({ absence: updated });
+  const [enriched] = await enrichAbsences([updated]);
+  res.json({ absence: enriched });
 });
 
 // Acceptation/refus du justificatif : réservé au personnel (workflow de validation).
@@ -479,5 +481,6 @@ absencesRouter.patch('/:id/review', requireRole(...SUPERVISION_ROLES), async (re
     targetId: absence.id,
     ipAddress: req.ip,
   });
-  res.json({ absence });
+  const [enriched] = await enrichAbsences([absence]);
+  res.json({ absence: enriched });
 });

@@ -102,3 +102,37 @@ describe('strkAttendanceService — cache de la liste d’appel (NFR-004)', () =
     expect(result).toEqual([]);
   });
 });
+
+describe('mapApiAttendance — nom élève', () => {
+  it('expose student_name depuis l’enrichissement API', async () => {
+    const { mapApiAttendance } = await import('./strkAttendanceService');
+    const mapped = mapApiAttendance({
+      id: 'a1',
+      studentId: 's1',
+      institutionId: 'i1',
+      date: '2026-08-26',
+      type: 'absence',
+      duration: 60,
+      student: { firstName: 'Esmone', lastName: 'Gnonzion' },
+      courseName: 'Français',
+      className: '5e A',
+    });
+    expect(mapped.student_name).toBe('Esmone Gnonzion');
+    expect(mapped.course_name).toBe('Français');
+    expect(mapped.class_name).toBe('5e A');
+  });
+
+  it('ne fabrique pas de libellé « Étudiant » si le profil est vide', async () => {
+    const { mapApiAttendance } = await import('./strkAttendanceService');
+    const mapped = mapApiAttendance({
+      id: 'a2',
+      studentId: 's2',
+      institutionId: 'i1',
+      date: '2026-08-26',
+      type: 'lateness',
+      duration: 15,
+      student: null,
+    });
+    expect(mapped.student_name).toBeUndefined();
+  });
+});
