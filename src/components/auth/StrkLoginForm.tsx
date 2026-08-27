@@ -449,12 +449,14 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
         {isLoading ? t('login.submitting') : t('login.submit')}
       </Button>
 
-      <p className="text-center text-sm text-slate-500">
-        {t('login.noAccount')}{' '}
-        <Link to="/signup" className="font-semibold text-[#1D70D8] hover:underline">
-          {t('login.signup')}
-        </Link>
-      </p>
+      {!embedded ? (
+        <p className="text-center text-sm text-slate-500">
+          {t('login.noAccount')}{' '}
+          <Link to="/signup" className="font-semibold text-[#1D70D8] hover:underline">
+            {t('login.signup')}
+          </Link>
+        </p>
+      ) : null}
     </form>
   );
 }
