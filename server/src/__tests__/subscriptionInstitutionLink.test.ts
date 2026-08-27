@@ -5,12 +5,10 @@ import { prisma } from '../lib/prisma.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
 /**
- * ORG-001 — lien formule ↔ établissement. `PremiumSubscription.institutionId`
- * existait dans le schéma mais n'était jamais renseigné (webhook Stripe
- * ne le portait pas dans ses métadonnées) ni utilisé par
- * `GET /subscriptions/current` (résolution par userId seul) : un
- * abonnement acheté par un membre du personnel était invisible pour tout
- * le reste de son établissement.
+ * ORG-001 — lien formule ↔ établissement.
+ * Depuis le rattachement auto au plan défaut, chaque établissement de fixture
+ * a déjà un abo trial : les assertions portent sur l’isolation cross-tenant
+ * et le fallback perso quand aucun abo d’établissement n’existe.
  */
 describe('Lien abonnement ↔ établissement (ORG-001)', () => {
   let fx: Fixture;
@@ -31,20 +29,23 @@ describe('Lien abonnement ↔ établissement (ORG-001)', () => {
     });
 
     // Le personnel de l'établissement (pas l'acheteur) doit voir cet
-    // abonnement en interrogeant son propre "current".
+    // abonnement en interrogeant son propre "current" (le plus récent).
     const teacherView = await request(app).get('/subscriptions/current').set(auth(fx.a.teacher.token));
     expect(teacherView.status).toBe(200);
     expect(teacherView.body.subscription?.id).toBe(subscription.id);
 
-    // Un autre établissement ne doit rien voir.
+    // Un autre établissement voit son propre abo (ex. trial auto), jamais celui du tenant A.
     const otherInstitution = await request(app).get('/subscriptions/current').set(auth(fx.b.teacher.token));
     expect(otherInstitution.status).toBe(200);
-    expect(otherInstitution.body.subscription).toBeNull();
+    expect(otherInstitution.body.subscription?.id).not.toBe(subscription.id);
+    expect(otherInstitution.body.subscription?.institutionId).toBe(fx.b.institutionId);
   });
 
   it("à défaut d'abonnement d'établissement, retombe sur l'abonnement personnel de l'appelant", async () => {
-    // fx.b n'a reçu aucun abonnement d'établissement dans ce fichier de
-    // test : son school_admin ne doit voir que son propre abonnement perso.
+    // Retirer les abos liés à l’établissement (dont le trial auto à la création)
+    // pour exercer le fallback userId-only.
+    await prisma.premiumSubscription.deleteMany({ where: { institutionId: fx.b.institutionId } });
+
     const soloAdmin = await prisma.premiumSubscription.create({
       data: {
         userId: fx.b.schoolAdmin.id,
