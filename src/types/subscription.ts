@@ -13,6 +13,9 @@ export interface SubscriptionPlan {
   features: {
     all_features?: boolean;
     basic_reports?: boolean;
+    /** Clé canonique backend */
+    advancedReports?: boolean;
+    /** Alias legacy UI */
     advanced_reports?: boolean;
     analytics?: boolean;
     priority_support?: boolean;
@@ -21,6 +24,21 @@ export interface SubscriptionPlan {
     unlimited_features?: boolean;
     dedicated_support?: boolean;
     email_support?: boolean;
+    finance?: boolean;
+    communications?: boolean;
+    admissions?: boolean;
+    documents?: boolean;
+    canteen?: boolean;
+    lot9_services?: boolean;
+    exercises_ai?: boolean;
+    /** Métadonnées catalogue public */
+    slug?: string;
+    description?: string;
+    featureList?: string[];
+    ctaPath?: string;
+    featured?: boolean;
+    priceLabel?: string;
+    [key: string]: unknown;
   };
   is_trial: boolean;
   is_active: boolean;

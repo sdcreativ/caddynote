@@ -9,6 +9,7 @@ import { OPS_FROZEN_FLAG } from '../lib/subscriptionSuspension.js';
 import { logAudit } from '../lib/audit.js';
 import { optionalEmail, optionalString, optionalUuid } from '../lib/zodHelpers.js';
 import { invalidateDashboardSummaryCache } from '../lib/dashboardCache.js';
+import { ensureInstitutionSubscription } from '../lib/institutionSubscription.js';
 
 export const institutionsRouter = Router();
 
@@ -70,8 +71,26 @@ institutionsRouter.post('/', requireRole('admin'), async (req, res) => {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
   const institution = await prisma.strkInstitution.create({ data: parsed.data });
+  let subscriptionAttach: Awaited<ReturnType<typeof ensureInstitutionSubscription>> | null = null;
+  try {
+    subscriptionAttach = await ensureInstitutionSubscription({
+      institutionId: institution.id,
+      actorUserId: req.auth!.sub,
+      status: 'trial',
+    });
+    await logAudit({
+      actorId: req.auth!.sub,
+      institutionId: institution.id,
+      action: 'institution.subscription.ensure',
+      targetType: 'premium_subscription',
+      targetId: subscriptionAttach.action === 'created' ? subscriptionAttach.subscriptionId : undefined,
+      metadata: subscriptionAttach as unknown as Record<string, unknown>,
+    });
+  } catch (err) {
+    console.error('Rattachement plan défaut échoué à la création établissement:', err);
+  }
   await invalidateDashboardSummaryCache(null);
-  res.status(201).json({ institution });
+  res.status(201).json({ institution, subscriptionAttach });
 });
 
 const updateInstitutionSchema = createInstitutionSchema.partial().extend({

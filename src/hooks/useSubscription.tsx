@@ -4,6 +4,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { subscriptionService } from '@/services/subscriptionService';
 import { Subscription, SubscriptionPlan, SubscriptionLimits, SubscriptionNotification } from '@/types/subscription';
 import { useToast } from '@/hooks/use-toast';
+import { planHasFeature } from '@/lib/planFeatures';
 
 interface SubscriptionContextType {
   subscription: Subscription | null;
@@ -126,8 +127,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasFeature = (feature: string): boolean => {
-    if (!plan) return false;
-    return plan.features[feature as keyof typeof plan.features] === true;
+    if (!plan?.features) return false;
+    return planHasFeature(plan.features as Record<string, unknown>, feature);
   };
 
   // Calculer les limites

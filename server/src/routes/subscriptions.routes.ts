@@ -8,6 +8,8 @@ import { runSubscriptionExpirationCheck } from '../lib/subscriptionCron.js';
 import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
 import { isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
 import { logAudit } from '../lib/audit.js';
+import { syncPublicSubscriptionPlans } from '../lib/publicPlans.js';
+import { backfillInstitutionSubscriptions } from '../lib/institutionSubscription.js';
 
 export const subscriptionsRouter = Router();
 
@@ -121,77 +123,65 @@ subscriptionsRouter.patch('/plans/:id', requireRole('admin'), requirePlatformPer
   res.json({ plan });
 });
 
-/** Initialise les 3 offres de l'accueil si le catalogue est vide. */
+/**
+ * Initialise / resynchronise les 3 offres publiques (marketing + entitlements + quotas soft).
+ * Idempotent : safe à rappeler après déploiement du mix plans.
+ */
 subscriptionsRouter.post('/plans/seed-public', requireRole('admin'), async (_req, res) => {
-  const count = await prisma.subscriptionPlan.count();
-  if (count > 0) {
-    const plans = await prisma.subscriptionPlan.findMany({ orderBy: { sortOrder: 'asc' } });
-    return res.json({ seeded: false, plans });
-  }
-  const defaults = [
-    {
-      name: 'Essentiel',
-      priceMonthly: 0,
-      sortOrder: 1,
-      features: {
-        slug: 'essentiel',
-        description: 'Pour démarrer la transformation numérique.',
-        featureList: ['Gestion des élèves', 'Présences & absences', 'Notes et bulletins', 'Espace parents'],
-        ctaPath: '/contact?subject=Offre%20Essentiel',
-        featured: false,
-        priceLabel: 'Sur devis',
-      },
-    },
-    {
-      name: 'Performance',
-      priceMonthly: 0,
-      sortOrder: 2,
-      features: {
-        slug: 'performance',
-        description: 'Pour piloter un établissement complet.',
-        featureList: [
-          'Tout Essentiel',
-          'Paiements Mobile Money',
-          'Alertes SMS automatisées',
-          'Rapports avancés',
-          'Support prioritaire',
-        ],
-        ctaPath: '/contact?subject=Offre%20Performance',
-        featured: true,
-        priceLabel: 'Sur devis',
-      },
-    },
-    {
-      name: 'Réseau',
-      priceMonthly: 0,
-      sortOrder: 3,
-      features: {
-        slug: 'reseau',
-        description: 'Pour les groupes scolaires multi-sites.',
-        featureList: [
-          'Tout Performance',
-          'Gestion multi-établissements',
-          'Consolidation financière',
-          'API & intégrations',
-          'Accompagnement dédié',
-        ],
-        ctaPath: '/contact?subject=Offre%20R%C3%A9seau',
-        featured: false,
-        priceLabel: 'Personnalisé',
-      },
-    },
-  ];
-  await prisma.subscriptionPlan.createMany({
-    data: defaults.map((d) => ({
-      name: d.name,
-      priceMonthly: d.priceMonthly,
-      sortOrder: d.sortOrder,
-      features: asJson(d.features),
-    })),
-  });
+  const result = await syncPublicSubscriptionPlans();
   const plans = await prisma.subscriptionPlan.findMany({ orderBy: { sortOrder: 'asc' } });
-  res.status(201).json({ seeded: true, plans });
+  res.status(result.seeded ? 201 : 200).json({
+    seeded: result.seeded,
+    synced: result.synced,
+    plans,
+  });
 });
+
+/**
+ * Rattache les établissements sans abo active/trial/grace au plan défaut (Performance).
+ * `dryRun: true` (défaut) = prévisualisation sans écriture.
+ */
+subscriptionsRouter.post(
+  '/backfill-institutions',
+  requireRole('admin'),
+  requirePlatformPermission('platform.billing.manage'),
+  async (req, res) => {
+    const parsed = z
+      .object({
+        dryRun: z.boolean().optional().default(true),
+        planId: z.string().uuid().optional(),
+        status: z.enum(['trial', 'active']).optional(),
+      })
+      .safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+    }
+    try {
+      const result = await backfillInstitutionSubscriptions({
+        actorUserId: req.auth!.sub,
+        dryRun: parsed.data.dryRun,
+        planId: parsed.data.planId,
+        status: parsed.data.status,
+      });
+      await logAudit({
+        actorId: req.auth!.sub,
+        action: 'subscriptions.backfill_institutions',
+        targetType: 'premium_subscription',
+        metadata: {
+          dryRun: result.dryRun,
+          planId: result.plan.id,
+          orphanCount: result.orphanCount,
+          createdCount: result.created.length,
+          skippedCount: result.skipped.length,
+        },
+      });
+      res.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Backfill impossible';
+      res.status(400).json({ error: message });
+    }
+  }
+);
 
 // Déclenchement manuel de la tâche planifiée quotidienne (remplace l'edge
 // function `check-expiring-subscriptions`), utile pour tester sans attendre

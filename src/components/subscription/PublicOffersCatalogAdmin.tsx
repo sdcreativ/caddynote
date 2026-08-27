@@ -87,16 +87,17 @@ export function PublicOffersCatalogAdmin() {
   const seedPublic = async () => {
     setSaving(true);
     try {
-      const { seeded, plans: data } = await apiClient.post<{ seeded: boolean; plans: ApiPlan[] }>(
-        '/subscriptions/plans/seed-public',
-        {}
-      );
+      const { seeded, synced, plans: data } = await apiClient.post<{
+        seeded: boolean;
+        synced?: number;
+        plans: ApiPlan[];
+      }>('/subscriptions/plans/seed-public', {});
       setPlans(data);
       toast({
-        title: seeded ? 'Plans initialisés' : 'Catalogue déjà présent',
+        title: seeded ? 'Plans initialisés' : 'Catalogue resynchronisé',
         description: seeded
-          ? 'Les offres Essentiel, Performance et Réseau ont été créées.'
-          : 'Des plans existent déjà — aucune modification.',
+          ? 'Les offres Essentiel, Performance et Réseau ont été créées (marketing + entitlements).'
+          : `${synced ?? 3} offre(s) publique(s) mises à jour (entitlements, quotas soft, textes).`,
       });
     } catch (e) {
       toast({
@@ -213,7 +214,7 @@ export function PublicOffersCatalogAdmin() {
       {plans.length === 0 ? (
         <EmptyState
           title="Aucun plan configuré"
-          description="Initialisez le catalogue public (3 offres de l’accueil) ou créez un plan manuellement."
+          description="Initialisez ou resynchronisez le catalogue public (3 offres : marketing, entitlements et quotas soft)."
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

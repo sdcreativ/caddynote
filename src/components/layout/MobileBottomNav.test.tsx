@@ -17,7 +17,7 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(screen.getByRole('button', { name: 'Accueil' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Présences' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cahier / cours' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Plus' }));
     expect(onOpenMore).toHaveBeenCalledTimes(1);
@@ -34,7 +34,7 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('Direction : Accueil · Élèves · Présences · Messages · Plus', () => {
+  it('Direction : Accueil · Élèves · Présences · Finances · Plus', () => {
     render(
       <MemoryRouter initialEntries={['/students']}>
         <MobileBottomNav role="school_admin" onOpenMore={vi.fn()} />
@@ -42,6 +42,7 @@ describe('MobileBottomNav (enseignant)', () => {
     );
     expect(screen.getByRole('button', { name: 'Élèves' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Présences' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finances' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });

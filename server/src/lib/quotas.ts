@@ -30,9 +30,12 @@ const LIMIT_FIELD: Record<QuotaType, keyof SubscriptionPlan> = {
   aiPerMonth: 'maxAiPerMonth',
 };
 
+/** Statuts pour lesquels le plan souscrit reste applicable (entitlements + quotas). */
+export const ACTIVE_PLAN_STATUSES = ['active', 'trial', 'grace'] as const;
+
 export const getActivePlan = async (institutionId: string): Promise<SubscriptionPlan | null> => {
   const subscription = await prisma.premiumSubscription.findFirst({
-    where: { institutionId, status: 'active' },
+    where: { institutionId, status: { in: [...ACTIVE_PLAN_STATUSES] } },
     include: { plan_: true },
     orderBy: { createdAt: 'desc' },
   });

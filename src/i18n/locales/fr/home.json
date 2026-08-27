@@ -93,7 +93,7 @@
         "Paiements Mobile Money",
         "Alertes SMS automatisées",
         "Rapports avancés",
-        "Support prioritaire"
+        "Support prioritaire (accompagnement)"
       ]
     },
     "reseau": {
@@ -101,9 +101,9 @@
       "description": "Pour les groupes scolaires multi-sites.",
       "features": [
         "Tout Performance",
-        "Gestion multi-établissements",
-        "Consolidation financière",
-        "API & intégrations",
+        "Réseau multi-établissements (mise en place accompagnée)",
+        "Vue consolidée des effectifs",
+        "API & intégrations sur devis",
         "Accompagnement dédié"
       ]
     }

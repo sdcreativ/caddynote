@@ -68,6 +68,76 @@ interface Subscription {
   stripeCustomerId?: string | null;
 }
 
+type BackfillResponse = {
+  dryRun: boolean;
+  plan: { id: string; name: string; slug: string };
+  orphanCount: number;
+  created: Array<{ institutionId: string; planName?: string; action: string }>;
+  skipped: Array<{ institutionId: string; reason?: string }>;
+};
+
+const InstitutionSubscriptionBackfillCard = ({ onDone }: { onDone: () => void }) => {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [lastPreview, setLastPreview] = useState<BackfillResponse | null>(null);
+
+  const runBackfill = async (dryRun: boolean) => {
+    setBusy(true);
+    try {
+      const result = await apiClient.post<BackfillResponse>('/subscriptions/backfill-institutions', {
+        dryRun,
+        status: 'trial',
+      });
+      setLastPreview(result);
+      toast({
+        title: dryRun ? 'Prévisualisation' : 'Rattachement effectué',
+        description: dryRun
+          ? `${result.orphanCount} établissement(s) orphelin(s) → plan ${result.plan.name}.`
+          : `${result.created.length} abo(s) créé(s) sur ${result.plan.name} (${result.skipped.length} ignoré(s)).`,
+      });
+      if (!dryRun) onDone();
+    } catch (e) {
+      toast({
+        title: 'Backfill impossible',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Rattacher les établissements sans plan</CardTitle>
+        <CardDescription>
+          Les écoles sans abonnement active/trial/grace sont rattachées au plan défaut (Performance),
+          sans écraser les abonnements existants. Prévisualisez avant d’appliquer.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap items-center gap-3">
+        <Button type="button" variant="outline" disabled={busy} onClick={() => void runBackfill(true)}>
+          Prévisualiser (dry-run)
+        </Button>
+        <Button
+          type="button"
+          disabled={busy || !lastPreview || lastPreview.orphanCount === 0}
+          onClick={() => void runBackfill(false)}
+        >
+          Appliquer le rattachement
+        </Button>
+        {lastPreview ? (
+          <p className="w-full text-sm text-muted-foreground">
+            Dernier résultat : {lastPreview.orphanCount} orphelin(s) → {lastPreview.plan.name}
+            {lastPreview.dryRun ? ' (simulation)' : ` · ${lastPreview.created.length} créé(s)`}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+};
+
 const SubscriptionManager = () => {
   const { toast } = useToast();
   const { alerts: subscriptionAlerts } = useSubscriptionAlerts();
@@ -576,6 +646,8 @@ const SubscriptionManager = () => {
           )}
         </CardContent>
       </Card>
+
+      <InstitutionSubscriptionBackfillCard onDone={fetchSubscriptions} />
 
       <SubscriptionPlansAdmin />
 

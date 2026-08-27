@@ -127,9 +127,12 @@ const SubscriptionPlansAdmin = () => {
   const onSeed = async () => {
     setBusy(true);
     try {
-      const res = await apiClient.post<{ seeded: boolean }>('/subscriptions/plans/seed-public', {});
+      const res = await apiClient.post<{ seeded: boolean; synced?: number }>('/subscriptions/plans/seed-public', {});
       toast({
-        title: res.seeded ? 'Catalogue initialisé' : 'Catalogue déjà présent',
+        title: res.seeded ? 'Catalogue initialisé' : 'Catalogue resynchronisé',
+        description: res.seeded
+          ? 'Essentiel / Performance / Réseau créés.'
+          : `${res.synced ?? 3} offre(s) mises à jour (entitlements + quotas).`,
       });
       await load();
     } catch (e) {
