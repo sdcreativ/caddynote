@@ -23,6 +23,7 @@ interface StatCardProps {
   color?: 'default' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
   className?: string;
   footer?: ReactNode;
+  onClick?: () => void;
 }
 
 const StatCard = ({
@@ -34,6 +35,7 @@ const StatCard = ({
   color = 'default',
   className,
   footer,
+  onClick,
 }: StatCardProps) => {
   const { t } = useTranslation('dashboard');
   const getColorClasses = () => {
@@ -56,7 +58,26 @@ const StatCard = ({
   const iconColorClass = color !== 'default' ? `text-${color}-500` : 'text-gray-500';
 
   return (
-    <Card className={cn('overflow-hidden transition-all hover:shadow-md', className)}>
+    <Card
+      className={cn(
+        'overflow-hidden transition-all hover:shadow-md',
+        onClick && 'cursor-pointer focus-within:ring-2 focus-within:ring-blue-500/40',
+        className
+      )}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>

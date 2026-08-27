@@ -153,6 +153,32 @@ const SuperAdminOverview = () => {
         </Button>
       </div>
 
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Actions rapides
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/institutions">Établissements</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/subscriptions">Abonnements</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/support-ops">Support ops</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/habilitations">Habilitations</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/analytics">Analytics</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/logs">Audit / logs</Link>
+          </Button>
+        </div>
+      </div>
+
       {/* System Status */}
       <div className="flex items-center justify-between">
         <div>

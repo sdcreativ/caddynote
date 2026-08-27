@@ -20,6 +20,8 @@ import {
 } from '@/components/dashboard/MobileActionPrimitives';
 import { Button } from '@/components/ui/button';
 import { roleLabel } from '@/lib/navConfig';
+import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { useStrkCourses } from '@/hooks/useStrkCourses';
 import type { DashboardMetrics } from '@/services/strkAnalyticsService';
 import {
   fetchUpcomingAttendanceCalls,
@@ -44,6 +46,7 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 const POLL_MS = 60_000;
+const URGENT_CALL_MINUTES = 10;
 
 /**
  * Accueil enseignant — cockpit deux clics :
@@ -58,12 +61,20 @@ const TeacherDashboardHome = ({
 }: TeacherDashboardHomeProps) => {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const { user } = useStrkAuth();
+  const { courses, loadCoursesByTeacher } = useStrkCourses();
   const [upcomingCalls, setUpcomingCalls] = useState<UpcomingAttendanceCall[]>([]);
+
+  useEffect(() => {
+    if (user?.id && (user.role === 'teacher' || user.role === 'head_teacher')) {
+      void loadCoursesByTeacher(user.id);
+    }
+  }, [user, loadCoursesByTeacher]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const calls = await fetchUpcomingAttendanceCalls(10);
+      const calls = await fetchUpcomingAttendanceCalls(URGENT_CALL_MINUTES);
       if (!cancelled) setUpcomingCalls(calls);
     };
     void load();
@@ -100,8 +111,26 @@ const TeacherDashboardHome = ({
     day: 'numeric',
   });
 
-  const callHref = (call: UpcomingAttendanceCall) =>
-    `/teacher-attendance?course=${encodeURIComponent(call.courseId)}`;
+  const callHref = (courseId: string) =>
+    `/teacher-attendance?course=${encodeURIComponent(courseId)}`;
+
+  const notebookHref = (courseId: string) => `/courses/${encodeURIComponent(courseId)}#cahier`;
+
+  /** Créneaux urgents, sinon 1–2 cours du catalogue pour éviter un hub vide. */
+  const nextCourseActions =
+    upcomingCalls.length > 0
+      ? upcomingCalls.slice(0, 2).map((call) => ({
+          id: call.courseId,
+          name: call.courseName,
+          callTo: callHref(call.courseId),
+          notebookTo: notebookHref(call.courseId),
+        }))
+      : courses.slice(0, 2).map((course) => ({
+          id: course.id,
+          name: course.name,
+          callTo: callHref(course.id),
+          notebookTo: notebookHref(course.id),
+        }));
 
   return (
     <div className="space-y-6 py-4 animate-fade-in md:space-y-8 md:py-6">
@@ -128,7 +157,7 @@ const TeacherDashboardHome = ({
           </div>
           {hasCallReminders ? (
             <Button asChild size="sm">
-              <Link to={callHref(upcomingCalls[0])}>{t('quickActions.takeAttendance')}</Link>
+              <Link to={callHref(upcomingCalls[0].courseId)}>{t('quickActions.takeAttendance')}</Link>
             </Button>
           ) : hasAbsencesToHandle ? (
             <Button asChild size="sm">
@@ -142,7 +171,7 @@ const TeacherDashboardHome = ({
             {upcomingCalls.map((call) => (
               <li key={`${call.courseId}-${call.startTime}`}>
                 <Link
-                  to={callHref(call)}
+                  to={callHref(call.courseId)}
                   className="group flex items-center gap-3 py-3.5 transition-colors hover:bg-slate-50/80"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800">
@@ -193,7 +222,12 @@ const TeacherDashboardHome = ({
 
       {/* Q2 — Pulsation */}
       <div className="grid grid-cols-2 gap-3 md:hidden">
-        <MobileCompactStat title={t('stats.students')} value={studentsDisplay} tone="blue" />
+        <MobileCompactStat
+          title={t('stats.students')}
+          value={studentsDisplay}
+          tone="blue"
+          onClick={() => navigate('/teaching')}
+        />
         <MobileCompactStat
           title={t('stats.attendance')}
           value={attendanceDisplay}
@@ -203,8 +237,14 @@ const TeacherDashboardHome = ({
               ? t('empty.noAttendanceData')
               : undefined
           }
+          onClick={() => navigate('/teacher-attendance')}
         />
-        <MobileCompactStat title={t('stats.absences')} value={absencesDisplay} tone="rose" />
+        <MobileCompactStat
+          title={t('stats.absences')}
+          value={absencesDisplay}
+          tone="rose"
+          onClick={() => navigate('/absences')}
+        />
       </div>
 
       <div className="hidden gap-4 md:grid md:grid-cols-3">
@@ -213,6 +253,7 @@ const TeacherDashboardHome = ({
           value={studentsDisplay}
           description={metricsState === 'error' ? t('empty.metricsUnavailable') : undefined}
           icon={<Users className="h-5 w-5" />}
+          onClick={() => navigate('/teaching')}
         />
         <StatCard
           title={t('stats.attendance')}
@@ -224,16 +265,18 @@ const TeacherDashboardHome = ({
           }
           icon={<UserCheck className="h-5 w-5" />}
           color="green"
+          onClick={() => navigate('/teacher-attendance')}
         />
         <StatCard
           title={t('stats.absences')}
           value={absencesDisplay}
           icon={<AlertCircle className="h-5 w-5" />}
           color="red"
+          onClick={() => navigate('/absences')}
         />
       </div>
 
-      {/* Q3 — Deux clics : CTA primaire + raccourcis */}
+      {/* Q3 — Deux clics : CTA primaire + prochains cours + raccourcis */}
       <div className="space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('teacherMobile.shortcutsTitle')}
@@ -244,12 +287,41 @@ const TeacherDashboardHome = ({
           onClick={() =>
             navigate(
               upcomingCalls[0]
-                ? callHref(upcomingCalls[0])
-                : '/teacher-attendance'
+                ? callHref(upcomingCalls[0].courseId)
+                : nextCourseActions[0]
+                  ? nextCourseActions[0].callTo
+                  : '/teacher-attendance'
             )
           }
         />
         <p className="sr-only">{t('teacherMobile.primaryCtaHint')}</p>
+
+        {nextCourseActions.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500">
+              {hasCallReminders
+                ? t('teacherMobile.nextCoursesTitle')
+                : t('teacherMobile.pickCourseHint')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {nextCourseActions.map((course) => (
+                <div key={course.id} className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" size="sm" className="rounded-full">
+                    <Link to={course.callTo}>
+                      {t('teacherMobile.callCourse', { course: course.name })}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="sm" className="rounded-full">
+                    <Link to={course.notebookTo}>
+                      {t('teacherMobile.notebookCourse', { course: course.name })}
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <MobileQuickTile
             label={t('quickActions.grades')}
@@ -260,7 +332,11 @@ const TeacherDashboardHome = ({
           <MobileQuickTile
             label={t('quickActions.teaching')}
             icon={<BookOpen aria-hidden />}
-            onClick={() => navigate('/teaching')}
+            onClick={() =>
+              navigate(
+                nextCourseActions[0] ? nextCourseActions[0].notebookTo : '/teaching'
+              )
+            }
             className="md:min-h-[5.5rem]"
           />
           <MobileQuickTile

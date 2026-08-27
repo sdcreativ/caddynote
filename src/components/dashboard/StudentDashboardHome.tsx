@@ -7,6 +7,8 @@ import {
   MessageSquare,
   ClipboardCheck,
   ChevronRight,
+  Calendar,
+  School,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import {
@@ -95,11 +97,17 @@ const StudentDashboardHome = ({
         href: '/assignments',
         icon: <BookOpen aria-hidden />,
       }
-    : {
-        label: t('studentMobile.primaryCta'),
-        href: '/my-grades',
-        icon: <GraduationCap aria-hidden />,
-      };
+    : hasAbsences
+      ? {
+          label: t('studentMobile.primaryCtaAbsences'),
+          href: '/my-absences',
+          icon: <ClipboardCheck aria-hidden />,
+        }
+      : {
+          label: t('studentMobile.primaryCta'),
+          href: '/my-grades',
+          icon: <GraduationCap aria-hidden />,
+        };
 
   if (state === 'error') {
     return (
@@ -184,17 +192,20 @@ const StudentDashboardHome = ({
           value={String(kpiValue(state, grades))}
           tone="blue"
           hint={state === 'empty' ? t('empty.studentNoGrades') : undefined}
+          onClick={() => navigate('/my-grades')}
         />
         <MobileCompactStat
           title={t('stats.homework')}
           value={String(kpiValue(state, homework))}
           tone="amber"
           hint={state === 'empty' ? t('empty.studentNoHomework') : undefined}
+          onClick={() => navigate('/assignments')}
         />
         <MobileCompactStat
           title={t('stats.absences30d')}
           value={String(kpiValue(state, absences))}
           tone="rose"
+          onClick={() => navigate('/my-absences')}
         />
       </div>
 
@@ -204,18 +215,21 @@ const StudentDashboardHome = ({
           value={kpiValue(state, grades)}
           description={state === 'empty' ? t('empty.studentNoGrades') : undefined}
           icon={<GraduationCap className="h-5 w-5" />}
+          onClick={() => navigate('/my-grades')}
         />
         <StatCard
           title={t('stats.absences30d')}
           value={kpiValue(state, absences)}
           icon={<AlertCircle className="h-5 w-5" />}
           color="red"
+          onClick={() => navigate('/my-absences')}
         />
         <StatCard
           title={t('stats.homework')}
           value={kpiValue(state, homework)}
           description={state === 'empty' ? t('empty.studentNoHomework') : undefined}
           icon={<BookOpen className="h-5 w-5" />}
+          onClick={() => navigate('/assignments')}
         />
       </div>
 
@@ -230,7 +244,7 @@ const StudentDashboardHome = ({
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('studentMobile.primaryCtaHint')}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <MobileQuickTile
             label={t('quickActions.myGrades')}
             icon={<GraduationCap aria-hidden />}
@@ -244,6 +258,12 @@ const StudentDashboardHome = ({
             className="md:min-h-[5.5rem]"
           />
           <MobileQuickTile
+            label={t('quickActions.myCourses')}
+            icon={<School aria-hidden />}
+            onClick={() => navigate('/my-courses')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
             label={t('quickActions.absences')}
             icon={<ClipboardCheck aria-hidden />}
             onClick={() => navigate('/my-absences')}
@@ -254,6 +274,12 @@ const StudentDashboardHome = ({
             icon={<MessageSquare aria-hidden />}
             onClick={() => navigate('/messages')}
             className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('quickActions.calendar')}
+            icon={<Calendar aria-hidden />}
+            onClick={() => navigate('/calendar')}
+            className="md:min-h-[5.5rem] col-span-2 md:col-span-1"
           />
         </div>
       </div>

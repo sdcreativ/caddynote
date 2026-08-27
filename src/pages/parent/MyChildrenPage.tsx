@@ -78,6 +78,9 @@ const MyChildrenPage = () => {
     const tabParam = searchParams.get('tab');
     if (tabParam === 'finance' && selectedChild?.canViewBilling) return 'finance';
     if (tabParam === 'services') return 'services';
+    if (tabParam === 'grades' && selectedChild?.canViewGrades) return 'grades';
+    if (tabParam === 'attendance' && selectedChild?.canViewAttendance) return 'attendance';
+    if (tabParam === 'health' && selectedChild?.canViewHealth) return 'health';
     if (selectedChild?.canViewAttendance) return 'attendance';
     if (selectedChild?.canViewGrades) return 'grades';
     return 'services';
@@ -94,6 +97,12 @@ const MyChildrenPage = () => {
       navigate('/my-children?tab=finance', { replace: true });
     } else if (value === 'services') {
       navigate('/my-children?tab=services', { replace: true });
+    } else if (value === 'grades') {
+      navigate('/my-children?tab=grades', { replace: true });
+    } else if (value === 'attendance') {
+      navigate('/my-children?tab=attendance', { replace: true });
+    } else if (value === 'health') {
+      navigate('/my-children?tab=health', { replace: true });
     } else if (searchParams.get('tab')) {
       navigate('/my-children', { replace: true });
     }

@@ -54,6 +54,13 @@ const CourseDetailPage = () => {
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash !== '#cahier') return;
+    const el = document.getElementById('cahier');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [id, lessons.length]);
+
   const handleDownload = async (material: CourseMaterial) => {
     if (!material.fileKey) {
       if (material.content) {
@@ -142,7 +149,7 @@ const CourseDetailPage = () => {
         )}
       </div>
 
-      <Card>
+      <Card id="cahier">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <BookOpen className="h-5 w-5" /> {t('detail.lessonsTitle')}

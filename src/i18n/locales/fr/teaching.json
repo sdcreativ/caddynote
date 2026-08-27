@@ -1,8 +1,8 @@
 {
   "forbiddenTitle": "Accès non autorisé",
   "forbiddenBody": "Cette section est réservée aux enseignants.",
-  "title": "Mes Cours",
-  "subtitle": "Consultez vos cours assignés et votre planning",
+  "title": "Cahier / cours",
+  "subtitle": "Ouvrez un cours pour le cahier de textes, les ressources et l’appel.",
   "planning": "Planning",
   "newCourse": "Nouveau cours",
   "activeCourses": "Cours actifs",

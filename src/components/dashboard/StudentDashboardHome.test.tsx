@@ -37,8 +37,33 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
     expect(screen.getAllByRole('button', { name: /Voir mes devoirs/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Mes notes/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Devoirs$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /^Mes cours$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Absences$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('oriente le CTA vers les absences s’il n’y a pas de devoirs', () => {
+    render(
+      <MemoryRouter>
+        <StudentDashboardHome
+          userName="Sam"
+          grades={8}
+          absences={2}
+          homework={0}
+          state="ready"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/2 absence\(s\) sur 30 jours/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Voir mes absences/i }).length).toBeGreaterThanOrEqual(
+      1
+    );
+    expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
+      'href',
+      '/my-absences'
+    );
   });
 
   it('affiche un empty calme et CTA notes sans devoirs ni absences', () => {

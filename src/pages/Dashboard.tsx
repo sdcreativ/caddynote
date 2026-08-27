@@ -43,9 +43,11 @@ const Dashboard = () => {
   } | null>(null);
   const [studentState, setStudentState] = useState<LoadState>('idle');
 
-  const [parentKpis, setParentKpis] = useState<{ invoicesOpen: number; unpaidCents: number } | null>(
-    null
-  );
+  const [parentKpis, setParentKpis] = useState<{
+    invoicesOpen: number;
+    unpaidCents: number;
+    unjustifiedAbsences: number;
+  } | null>(null);
   const [parentState, setParentState] = useState<LoadState>('idle');
 
   const [accountantKpis, setAccountantKpis] = useState<{
@@ -162,15 +164,27 @@ const Dashboard = () => {
     void (async () => {
       try {
         const billable = guardian.children.filter((c) => c.canViewBilling);
-        if (billable.length === 0) {
-          setParentKpis({ invoicesOpen: 0, unpaidCents: 0 });
-          setParentState('ready');
-          return;
-        }
-        const lists = await Promise.all(billable.map((c) => fetchInvoicesByStudent(c.studentId)));
-        const all = lists.flat();
-        const summary = summarizeOpenInvoices(all);
-        setParentKpis(summary);
+        const attendanceKids = guardian.children.filter((c) => c.canViewAttendance);
+
+        const [invoiceLists, absenceLists] = await Promise.all([
+          billable.length > 0
+            ? Promise.all(billable.map((c) => fetchInvoicesByStudent(c.studentId)))
+            : Promise.resolve([] as Awaited<ReturnType<typeof fetchInvoicesByStudent>>[]),
+          attendanceKids.length > 0
+            ? Promise.all(attendanceKids.map((c) => fetchAbsencesByStudent(c.studentId)))
+            : Promise.resolve([] as Awaited<ReturnType<typeof fetchAbsencesByStudent>>[]),
+        ]);
+
+        const summary = summarizeOpenInvoices(invoiceLists.flat());
+        const unjustifiedAbsences = absenceLists
+          .flat()
+          .filter(
+            (a) =>
+              a.type === 'absence' &&
+              (a.justification_status === 'none' || a.justification_status === 'rejected')
+          ).length;
+
+        setParentKpis({ ...summary, unjustifiedAbsences });
         setParentState('ready');
       } catch {
         setParentKpis(null);
@@ -192,6 +206,7 @@ const Dashboard = () => {
         totalInstitutions={totalInstitutions}
         totalStudents={totalStudents}
         totalTeachers={totalTeachers}
+        institutionId={user.institutionId}
       />
     );
   }
@@ -220,12 +235,20 @@ const Dashboard = () => {
   }
 
   if (user?.role === 'parent') {
+    const selected = guardian.selectedChild;
+    const selectedChildName = selected
+      ? [selected.firstName, selected.lastName].filter(Boolean).join(' ')
+      : null;
     return (
       <ParentDashboardHome
         userName={user.name?.split(' ')[0] ?? ''}
         childrenCount={guardian.children.length}
         invoicesOpen={parentKpis?.invoicesOpen ?? null}
         unpaidCents={parentKpis?.unpaidCents ?? null}
+        unjustifiedAbsences={parentKpis?.unjustifiedAbsences ?? null}
+        selectedChildName={selectedChildName}
+        canViewAttendance={Boolean(selected?.canViewAttendance)}
+        canViewGrades={Boolean(selected?.canViewGrades)}
         state={guardian.isLoading ? 'loading' : parentState}
         loadError={guardian.error}
       />

@@ -46,9 +46,10 @@
     "takeAttendance": "Faire l'appel",
     "grades": "Notes",
     "availability": "Disponibilités",
-    "teaching": "Mes cours",
+    "teaching": "Cahier de textes",
     "calendar": "Calendrier",
     "myGrades": "Mes notes",
+    "myCourses": "Mes cours",
     "homework": "Devoirs",
     "myChildren": "Mes enfants",
     "students": "Élèves",
@@ -69,7 +70,11 @@
     "callReminder": "Appel du jour non fait — démarrez depuis le bouton ci-dessous",
     "callInMinutes": "Appel dans {{minutes}} min — {{course}}",
     "callSlotHint": "Début {{time}} · {{className}}",
-    "callNoClass": "Classe non renseignée"
+    "callNoClass": "Classe non renseignée",
+    "nextCoursesTitle": "Prochains cours",
+    "callCourse": "Appel · {{course}}",
+    "notebookCourse": "Cahier · {{course}}",
+    "pickCourseHint": "Choisissez un cours pour démarrer l’appel ou le cahier."
   },
   "directionMobile": {
     "primaryCta": "Gérer les élèves",
@@ -77,20 +82,26 @@
     "primaryCtaAdmissions": "Traiter les admissions",
     "primaryCtaAbsences": "Voir les absences",
     "primaryCtaPayments": "Voir les paiements",
-    "shortcutsTitle": "Aller où"
+    "primaryCtaCall": "Faire l’appel",
+    "shortcutsTitle": "Aller où",
+    "classesCourses": "Classes & cours"
   },
   "parentMobile": {
     "primaryCta": "Voir mes enfants",
     "primaryCtaFinance": "Régler les frais",
-    "primaryCtaHint": "Deux clics pour le suivi famille ou le paiement",
+    "primaryCtaAbsences": "Justifier les absences",
+    "primaryCtaHint": "Deux clics pour le suivi famille, les absences ou le paiement",
     "shortcutsTitle": "Aller où",
     "unpaidToHandle": "{{count}} facture(s) — {{amount}} à régler",
+    "absencesToHandle": "{{count}} absence(s) à justifier",
+    "absencesToHandleHint": "Déposez un justificatif depuis l’espace enfants",
     "admissionStatus": "Préinscription · {{status}}"
   },
   "studentMobile": {
     "primaryCta": "Mes notes",
     "primaryCtaHomework": "Voir mes devoirs",
-    "primaryCtaHint": "Deux clics pour notes ou devoirs",
+    "primaryCtaAbsences": "Voir mes absences",
+    "primaryCtaHint": "Deux clics pour devoirs, absences ou notes",
     "shortcutsTitle": "Aller où",
     "homeworkToHandle": "{{count}} devoir(s) en cours",
     "absencesToHandle": "{{count}} absence(s) sur 30 jours"
@@ -111,8 +122,14 @@
   "teamCockpit": {
     "toHandleTitle": "Ops plateforme",
     "toHandleEmpty": "Rien d’urgent — la console reste le point d’entrée ops.",
+    "toHandleLoading": "Chargement des priorités ops…",
     "shortcutsTitle": "Aller où",
+    "opsRowTitle": "Raccourcis ops",
+    "institutionRowTitle": "Contexte établissement",
+    "institutionRowHint": "Raccourcis métier pour l’établissement lié à votre compte.",
+    "noInstitutionHint": "Sans établissement lié, les modules élèves / finance / documents restent masqués (évite les erreurs d’accès).",
     "primaryCtaHint": "Console Super Admin : abonnements, tenants et santé système",
+    "primaryCtaUrgent": "Traiter la priorité ops",
     "byRoleTitle": "Fonctionnalités par rôle",
     "byRoleHint": "Raccourcis groupés selon le métier que vous pilotez côté établissements.",
     "roles": {
@@ -131,8 +148,13 @@
       "audit": "Journal d’audit",
       "exports": "Exports",
       "plans": "Offres",
+      "plansCatalog": "Plans (catalogue)",
+      "subscriptionsOps": "Abonnements (ops)",
       "communications": "Communications",
-      "support": "Support"
+      "support": "Support",
+      "supportOps": "Support ops",
+      "habilitations": "Habilitations",
+      "analytics": "Analytics"
     }
   },
   "statCard": {
@@ -205,7 +227,7 @@
     "seeAll": "Tout voir",
     "primaryCta": "Traiter maintenant",
     "emptyTitle": "Rien à traiter aujourd’hui",
-    "emptyBody": "Les préinscriptions, absences et paiements à traiter apparaîtront ici."
+    "emptyBody": "Les absences à justifier, préinscriptions et paiements apparaîtront ici."
   },
   "agenda": {
     "today": "Aujourd'hui",

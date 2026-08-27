@@ -1,4 +1,6 @@
 import { apiClient } from '@/lib/apiClient';
+import { fetchSupportTickets } from '@/services/strkSupportService';
+import { fetchStrkInstitutions } from '@/services/strkInstitutionService';
 
 export type DiagnosticsPayload = {
   status: string;
@@ -211,6 +213,112 @@ export const fetchBillingMetrics = async () =>
     stripeLinkedCount: number;
     notice: string;
   }>('/admin/billing-metrics');
+
+export type DunningQueueItem = {
+  subscriptionId: string;
+  institutionId: string | null;
+  status: string;
+  expiresAt: string;
+  plan: string;
+  userEmail: string | null;
+  userName: string | null;
+  daysPastDue: number;
+};
+
+export const fetchDunningQueue = async (): Promise<DunningQueueItem[]> => {
+  const { items } = await apiClient.get<{ items: DunningQueueItem[] }>('/admin/dunning-queue');
+  return items ?? [];
+};
+
+/** Item actionnable pour le cockpit équipe (À traiter). */
+export type PlatformOpsItem = {
+  id: string;
+  kind: 'ticket' | 'dunning' | 'frozen' | 'security' | 'comms';
+  title: string;
+  detail?: string;
+  href: string;
+};
+
+/**
+ * Agrège tickets ouverts, dunning, tenants gelés et signaux ops.
+ * Best-effort : une source en échec (permission / réseau) n’empêche pas les autres.
+ */
+export const fetchPlatformOpsQueue = async (): Promise<PlatformOpsItem[]> => {
+  const items: PlatformOpsItem[] = [];
+
+  const [ticketsSettled, dunningSettled, institutionsSettled, opsSettled] = await Promise.allSettled([
+    fetchSupportTickets({ status: 'open' }),
+    fetchDunningQueue(),
+    fetchStrkInstitutions(),
+    fetchOpsMetrics(),
+  ]);
+
+  if (ticketsSettled.status === 'fulfilled') {
+    const open = ticketsSettled.value.filter((t) =>
+      ['open', 'in_progress', 'waiting_on_customer'].includes(t.status)
+    );
+    if (open.length > 0) {
+      const first = open[0];
+      items.push({
+        id: `tickets-${open.length}`,
+        kind: 'ticket',
+        title: `${open.length} ticket(s) support ouverts`,
+        detail: first.subject,
+        href: '/super-admin/support-ops',
+      });
+    }
+  }
+
+  if (dunningSettled.status === 'fulfilled' && dunningSettled.value.length > 0) {
+    const n = dunningSettled.value.length;
+    const first = dunningSettled.value[0];
+    items.push({
+      id: `dunning-${n}`,
+      kind: 'dunning',
+      title: `${n} abonnement(s) en grâce / suspendus`,
+      detail: first.userName || first.userEmail || first.plan,
+      href: '/super-admin/subscriptions',
+    });
+  }
+
+  if (institutionsSettled.status === 'fulfilled') {
+    const frozen = institutionsSettled.value.filter(
+      (inst) => inst.featureOverrides?.['__ops_frozen'] === true
+    );
+    if (frozen.length > 0) {
+      items.push({
+        id: `frozen-${frozen.length}`,
+        kind: 'frozen',
+        title: `${frozen.length} établissement(s) gelé(s)`,
+        detail: frozen[0]?.name,
+        href: '/institutions',
+      });
+    }
+  }
+
+  if (opsSettled.status === 'fulfilled') {
+    const ops = opsSettled.value;
+    if (ops.security.failedAuthLast24h >= 20) {
+      items.push({
+        id: 'security-auth',
+        kind: 'security',
+        title: `${ops.security.failedAuthLast24h} échecs d’auth (24 h)`,
+        detail: 'Voir l’observabilité',
+        href: '/super-admin/observability',
+      });
+    }
+    if (ops.communications.failedLast24h >= 5) {
+      items.push({
+        id: 'comms-failed',
+        kind: 'comms',
+        title: `${ops.communications.failedLast24h} communications échouées (24 h)`,
+        href: '/super-admin/observability',
+      });
+    }
+  }
+
+  return items;
+};
 
 export const fetchProductTelemetry = async (days = 30) =>
   apiClient.get<{

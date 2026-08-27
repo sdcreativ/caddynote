@@ -99,9 +99,29 @@ describe('EstablishmentOverview (cockpit Direction)', () => {
     expect(screen.getAllByRole('button', { name: /Gérer les élèves/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Élèves$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Présences$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /^Absences$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Admissions$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Classes & cours/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: /^Finances$/i })).not.toBeInTheDocument();
+  });
+
+  it('propose Faire l’appel quand la présence du jour est absente ou basse', () => {
+    mockDashboard = {
+      ...baseDashboard,
+      attendanceToday: { rate: null },
+      alerts: [],
+      alertCount: 0,
+    };
+
+    render(
+      <MemoryRouter>
+        <EstablishmentOverview />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByRole('button', { name: /Faire l’appel/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('affiche paiements et finance lorsque la collecte a des données', () => {

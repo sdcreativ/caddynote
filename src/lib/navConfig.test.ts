@@ -52,8 +52,16 @@ describe('navConfig (NFR-009)', () => {
     const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
     expect(hrefs).toContain('/attendance');
     expect(hrefs).not.toContain('/absences');
+    expect(hrefs).toContain('/admissions/admin');
+    expect(hrefs).toContain('/finance');
     expect(hrefs).toContain('/classes');
     expect(hrefs).toContain('/teachers');
+    expect(hrefs).not.toContain('/grades');
+    const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
+    expect(advancedHrefs).toContain('/grades');
+    expect(advancedHrefs).toContain('/users');
+    expect(advancedHrefs).not.toContain('/admissions/admin');
+    expect(advancedHrefs).not.toContain('/finance');
   });
 
   it('Enseignant : menu jour 1 allégé (+ section Plus)', () => {
@@ -89,14 +97,14 @@ describe('navConfig (NFR-009)', () => {
     }
   });
 
-  it('Enseignant : barre du bas mobile = Accueil · Présences · Notes · Messages · Plus', () => {
+  it('Enseignant : barre du bas mobile = Accueil · Présences · Notes · Cahier · Plus', () => {
     for (const role of ['teacher', 'head_teacher'] as const) {
       const items = mobileBottomNavForRole(role);
       expect(items).toHaveLength(5);
       expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
       expect(items![1]).toMatchObject({ kind: 'link', href: '/teacher-attendance' });
       expect(items![2]).toMatchObject({ kind: 'link', href: '/grades' });
-      expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
+      expect(items![3]).toMatchObject({ kind: 'link', href: '/teaching' });
       expect(items![4]).toMatchObject({ kind: 'more' });
       for (const item of items!) {
         expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
@@ -108,6 +116,16 @@ describe('navConfig (NFR-009)', () => {
     expect(mobileBottomNavForRole('secretary')).not.toBeNull();
     expect(mobileBottomNavForRole('supervisor')).not.toBeNull();
     expect(mobileBottomNavForRole('accountant')).toBeNull();
+  });
+
+  it('Équipe CaddyNote : barre du bas = Accueil · Établissements · Console · Support · Plus', () => {
+    const items = mobileBottomNavForRole('admin');
+    expect(items).toHaveLength(5);
+    expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
+    expect(items![1]).toMatchObject({ kind: 'link', href: '/institutions' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/super-admin' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/super-admin/support-ops' });
+    expect(items![4]).toMatchObject({ kind: 'more' });
   });
 
   it('isNavHrefActive gère dashboard et préfixes', () => {
@@ -123,13 +141,13 @@ describe('navConfig (NFR-009)', () => {
     expect(isNavHrefActive('/my-children', '/my-children?tab=finance', '')).toBe(false);
   });
 
-  it('Direction : barre du bas mobile = Accueil · Élèves · Présences · Messages · Plus', () => {
+  it('Direction : barre du bas mobile = Accueil · Élèves · Présences · Finances · Plus', () => {
     const items = mobileBottomNavForRole('school_admin');
     expect(items).toHaveLength(5);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/students' });
     expect(items![2]).toMatchObject({ kind: 'link', href: '/attendance' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/finance' });
     expect(items![4]).toMatchObject({ kind: 'more' });
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);

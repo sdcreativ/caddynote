@@ -149,7 +149,7 @@ export function mobileBottomNavForRole(
   switch (role) {
     case 'teacher':
     case 'head_teacher':
-      // Accueil · Présences · Notes · Messages · Plus (ouvre la sidebar)
+      // Accueil · Présences · Notes · Cahier · Plus (messages dans la sidebar)
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         {
@@ -159,11 +159,11 @@ export function mobileBottomNavForRole(
           icon: ClipboardCheck,
         },
         { kind: 'link', titleKey: 'items.notes', href: '/grades', icon: GraduationCap },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'items.teaching', href: '/teaching', icon: School },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'school_admin':
-      // Accueil · Élèves · Présences · Messages · Plus
+      // Accueil · Élèves · Présences · Finances · Plus (messages / admissions en sidebar + tuiles)
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
@@ -173,7 +173,16 @@ export function mobileBottomNavForRole(
           href: '/attendance',
           icon: ClipboardCheck,
         },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'items.finance', href: '/finance', icon: Receipt },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'admin':
+      // Accueil · Établissements · Console · Support ops · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        { kind: 'link', titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
+        { kind: 'link', titleKey: 'items.platformConsole', href: '/super-admin', icon: Shield },
+        { kind: 'link', titleKey: 'items.support', href: '/super-admin/support-ops', icon: LifeBuoy },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'parent':
@@ -277,7 +286,7 @@ export function isNavHrefActive(pathname: string, href: string, search = ''): bo
 export function navSectionsForRole(role: string | null | undefined): NavSection[] {
   switch (role) {
     case 'school_admin':
-      // Jour 1 : ≤ ~10 entrées visibles. Modules métier conservés sous « Plus ».
+      // Jour 1 : ≤ ~10 entrées. Admissions / Finance remontées ; Notes & Utilisateurs sous Plus.
       return [
         {
           labelKey: 'sections.workspace',
@@ -286,7 +295,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.students', href: '/students', icon: Users, badgeKey: 'students' },
             // Hub Présences (Appel | Justificatifs) — routes /attendance + /absences
             { titleKey: 'items.attendance', href: '/attendance', icon: ClipboardCheck, badgeKey: 'alerts' },
-            { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
+            { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
           ],
         },
@@ -295,7 +304,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
             { titleKey: 'items.teachers', href: '/teachers', icon: Users },
-            { titleKey: 'items.users', href: '/users', icon: UserCog },
+            { titleKey: 'items.finance', href: '/finance', icon: Receipt },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
         },
@@ -304,12 +313,12 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           collapsible: true,
           defaultCollapsed: true,
           items: [
+            { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
+            { titleKey: 'items.users', href: '/users', icon: UserCog },
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
             { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
-            { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
-            { titleKey: 'items.finance', href: '/finance', icon: Receipt },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
             { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.services', href: '/services', icon: Bus },

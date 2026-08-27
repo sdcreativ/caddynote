@@ -10,9 +10,24 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
 });
 
 const fetchUpcoming = vi.fn();
+const loadCoursesByTeacher = vi.fn();
 
 vi.mock('@/services/strkAttendanceService', () => ({
   fetchUpcomingAttendanceCalls: (...args: unknown[]) => fetchUpcoming(...args),
+}));
+
+vi.mock('@/hooks/useStrkAuth', () => ({
+  useStrkAuth: () => ({ user: { id: 't1', role: 'teacher' } }),
+}));
+
+vi.mock('@/hooks/useStrkCourses', () => ({
+  useStrkCourses: () => ({
+    courses: [
+      { id: 'c-math', name: 'Mathématiques', class_id: 'cl1' },
+      { id: 'c-hist', name: 'Histoire', class_id: 'cl1' },
+    ],
+    loadCoursesByTeacher,
+  }),
 }));
 
 const metrics: DashboardMetrics = {
@@ -29,6 +44,7 @@ const metrics: DashboardMetrics = {
 describe('TeacherDashboardHome (cockpit deux clics)', () => {
   beforeEach(() => {
     fetchUpcoming.mockResolvedValue([]);
+    loadCoursesByTeacher.mockReset();
   });
 
   it('expose À traiter, KPI et CTA Faire l’appel + raccourcis', async () => {
@@ -57,9 +73,34 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
 
     expect(screen.getAllByRole('button', { name: /Faire l'appel/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Notes$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Mes cours/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Cahier de textes/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('propose des raccourcis Appel / Cahier par cours quand aucun créneau urgent', async () => {
+    render(
+      <MemoryRouter>
+        <TeacherDashboardHome
+          userName="Ada"
+          role="teacher"
+          metrics={{ ...metrics, absences: 0 }}
+          metricsState="ready"
+          totalStudents={120}
+        />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /Appel · Mathématiques/i })).toHaveAttribute(
+        'href',
+        '/teacher-attendance?course=c-math'
+      );
+    });
+    expect(screen.getByRole('link', { name: /Cahier · Mathématiques/i })).toHaveAttribute(
+      'href',
+      '/courses/c-math#cahier'
+    );
   });
 
   it('affiche un empty calme quand il n’y a pas d’absences ni de rappel', async () => {

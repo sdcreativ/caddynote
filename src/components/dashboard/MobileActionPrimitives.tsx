@@ -59,19 +59,38 @@ export function MobileCompactStat({
   value,
   tone,
   hint,
+  onClick,
 }: {
   title: string;
   value: string;
   tone: CompactTone;
   hint?: string;
+  onClick?: () => void;
 }) {
-  return (
-    <div className={cn('rounded-2xl border px-4 py-4', TONE_BOX[tone])}>
+  const body = (
+    <>
       <p className={cn('text-sm font-semibold', TONE_TITLE[tone])}>{title}</p>
       <p className="mt-1.5 text-2xl font-bold tabular-nums leading-none">{value}</p>
       {hint ? <p className={cn('mt-1.5 text-xs font-medium', TONE_TITLE[tone])}>{hint}</p> : null}
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'rounded-2xl border px-4 py-4 text-left touch-manipulation transition hover:brightness-[0.98]',
+          TONE_BOX[tone]
+        )}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={cn('rounded-2xl border px-4 py-4', TONE_BOX[tone])}>{body}</div>;
 }
 
 /** Bouton CTA principal plein largeur (mobile). */

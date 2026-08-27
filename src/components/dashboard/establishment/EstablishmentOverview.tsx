@@ -13,6 +13,8 @@ import {
   ClipboardCheck,
   MessageSquare,
   Receipt,
+  Calendar,
+  GraduationCap,
 } from 'lucide-react';
 import {
   MobileCompactStat,
@@ -31,6 +33,8 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { hasAnyRole, DIRECTION_ROLES } from '@/lib/roles';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
+
+const LOW_ATTENDANCE_THRESHOLD = 95;
 
 const formatMoneyShort = (cents: number, currency: string) => {
   const amount = cents / 100;
@@ -89,9 +93,20 @@ export function EstablishmentOverview() {
   const showFinanceBlock = financeActive;
   const showSecondary = showAttendanceChart || showAgenda || showFinanceBlock;
 
+  const needsCallAttention =
+    data.studentCount > 0 &&
+    (data.attendanceToday.rate == null || data.attendanceToday.rate < LOW_ATTENDANCE_THRESHOLD);
+
   const firstAlert = data.alerts[0];
   const primaryCta = (() => {
     if (!firstAlert) {
+      if (needsCallAttention) {
+        return {
+          label: t('directionMobile.primaryCtaCall'),
+          href: '/attendance',
+          icon: <ClipboardCheck aria-hidden />,
+        };
+      }
       return {
         label: t('directionMobile.primaryCta'),
         href: '/students',
@@ -101,23 +116,25 @@ export function EstablishmentOverview() {
     if (firstAlert.kind === 'admission') {
       return {
         label: t('directionMobile.primaryCtaAdmissions'),
-        href: '/admissions/admin',
+        href: firstAlert.href || '/admissions/admin',
         icon: <School aria-hidden />,
       };
     }
     if (firstAlert.kind === 'payment') {
       return {
         label: t('directionMobile.primaryCtaPayments'),
-        href: '/finance',
+        href: firstAlert.href || '/finance',
         icon: <Receipt aria-hidden />,
       };
     }
     return {
       label: t('directionMobile.primaryCtaAbsences'),
-      href: '/absences',
+      href: firstAlert.href || '/absences',
       icon: <ClipboardCheck aria-hidden />,
     };
   })();
+
+  const alertsHref = firstAlert?.href || (data.alertCount > 0 ? '/absences' : '/absences');
 
   const kpiColsClass = financeActive
     ? 'md:grid-cols-2 xl:grid-cols-5'
@@ -185,17 +202,25 @@ export function EstablishmentOverview() {
           title={t('overview.enrolledStudents')}
           value={String(data.studentCount)}
           tone="blue"
+          onClick={() => navigate('/students')}
         />
-        <MobileCompactStat title={t('overview.attendanceToday')} value={attendanceValue} tone="emerald" />
+        <MobileCompactStat
+          title={t('overview.attendanceToday')}
+          value={attendanceValue}
+          tone="emerald"
+          onClick={() => navigate('/attendance')}
+        />
         <MobileCompactStat
           title={t('overview.admissionsPending')}
           value={String(data.admissionsPendingCount)}
           tone="amber"
+          onClick={() => navigate('/admissions/admin')}
         />
         <MobileCompactStat
           title={t('overview.alertsToHandle')}
           value={String(data.alertCount)}
           tone="rose"
+          onClick={() => navigate(alertsHref)}
         />
         {financeActive ? (
           <MobileCompactStat
@@ -203,6 +228,7 @@ export function EstablishmentOverview() {
             value={paymentsValue}
             tone="violet"
             hint={t('overview.thisMonth')}
+            onClick={() => navigate('/finance')}
           />
         ) : null}
       </div>
@@ -222,6 +248,7 @@ export function EstablishmentOverview() {
           hintTone={data.studentsDelta > 0 ? 'up' : 'neutral'}
           icon={<Users className="h-5 w-5" />}
           iconClassName="bg-blue-50 text-blue-600"
+          onClick={() => navigate('/students')}
         />
         <KpiCard
           title={t('overview.attendanceToday')}
@@ -234,6 +261,7 @@ export function EstablishmentOverview() {
           hintTone="neutral"
           icon={<UserCheck className="h-5 w-5" />}
           iconClassName="bg-emerald-50 text-emerald-600"
+          onClick={() => navigate('/attendance')}
         />
         <KpiCard
           title={t('overview.admissionsPending')}
@@ -246,6 +274,7 @@ export function EstablishmentOverview() {
           hintTone={data.admissionsPendingCount > 0 ? 'alert' : 'neutral'}
           icon={<School className="h-5 w-5" />}
           iconClassName="bg-sky-50 text-sky-600"
+          onClick={() => navigate('/admissions/admin')}
         />
         <KpiCard
           title={t('overview.alertsToHandle')}
@@ -254,6 +283,7 @@ export function EstablishmentOverview() {
           hintTone={data.alertCount > 0 ? 'alert' : 'neutral'}
           icon={<AlertTriangle className="h-5 w-5" />}
           iconClassName="bg-rose-50 text-rose-600"
+          onClick={() => navigate(alertsHref)}
         />
         {financeActive ? (
           <KpiCard
@@ -263,13 +293,14 @@ export function EstablishmentOverview() {
             hintTone="neutral"
             icon={<Wallet className="h-5 w-5" />}
             iconClassName="bg-violet-50 text-violet-600"
+            onClick={() => navigate('/finance')}
           />
         ) : null}
       </div>
 
       {/* Q3 — Aller où */}
       <div className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 md:hidden">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('directionMobile.shortcutsTitle')}
         </p>
         <MobilePrimaryCta
@@ -278,7 +309,7 @@ export function EstablishmentOverview() {
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('directionMobile.primaryCtaHint')}</p>
-        <div className={`grid grid-cols-2 gap-3 ${financeActive ? 'md:grid-cols-4 lg:grid-cols-5' : 'md:grid-cols-4'}`}>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <MobileQuickTile
             label={t('quickActions.students')}
             icon={<Users aria-hidden />}
@@ -292,9 +323,27 @@ export function EstablishmentOverview() {
             className="md:min-h-[5.5rem]"
           />
           <MobileQuickTile
+            label={t('quickActions.absences')}
+            icon={<AlertTriangle aria-hidden />}
+            onClick={() => navigate('/absences')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
             label={t('quickActions.admissions')}
             icon={<School aria-hidden />}
             onClick={() => navigate('/admissions/admin')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('directionMobile.classesCourses')}
+            icon={<GraduationCap aria-hidden />}
+            onClick={() => navigate('/classes')}
+            className="md:min-h-[5.5rem]"
+          />
+          <MobileQuickTile
+            label={t('quickActions.calendar')}
+            icon={<Calendar aria-hidden />}
+            onClick={() => navigate('/calendar')}
             className="md:min-h-[5.5rem]"
           />
           <MobileQuickTile

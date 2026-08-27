@@ -10,6 +10,9 @@ import {
   CreditCard,
   School,
   ChevronRight,
+  AlertCircle,
+  GraduationCap,
+  ClipboardCheck,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import {
@@ -33,6 +36,10 @@ type ParentDashboardHomeProps = {
   childrenCount: number;
   invoicesOpen: number | null;
   unpaidCents: number | null;
+  unjustifiedAbsences?: number | null;
+  selectedChildName?: string | null;
+  canViewAttendance?: boolean;
+  canViewGrades?: boolean;
   state: LoadState;
   loadError?: string | null;
 };
@@ -61,6 +68,10 @@ const ParentDashboardHome = ({
   childrenCount,
   invoicesOpen,
   unpaidCents,
+  unjustifiedAbsences = null,
+  selectedChildName = null,
+  canViewAttendance = true,
+  canViewGrades = true,
   state,
   loadError,
 }: ParentDashboardHomeProps) => {
@@ -98,6 +109,8 @@ const ParentDashboardHome = ({
 
   const hasUnpaid = state === 'ready' && (unpaidCents ?? 0) > 0;
   const openInvoices = state === 'ready' ? Number(invoicesOpen ?? 0) : 0;
+  const unjustifiedCount = state === 'ready' ? Number(unjustifiedAbsences ?? 0) : 0;
+  const hasUnjustified = unjustifiedCount > 0;
   const activeAdmissions = admissions.filter((a) => a.status !== 'cancelled');
 
   const toHandle: ToHandleItem[] = [];
@@ -111,6 +124,15 @@ const ParentDashboardHome = ({
       subtitle: t('stats.remainingToPay'),
       href: '/my-children?tab=finance',
       tone: 'amber',
+    });
+  }
+  if (hasUnjustified) {
+    toHandle.push({
+      id: 'absences',
+      title: t('parentMobile.absencesToHandle', { count: unjustifiedCount }),
+      subtitle: t('parentMobile.absencesToHandleHint'),
+      href: '/my-children?tab=attendance',
+      tone: 'rose',
     });
   }
   for (const app of activeAdmissions.slice(0, 3)) {
@@ -129,11 +151,17 @@ const ParentDashboardHome = ({
         href: '/my-children?tab=finance',
         icon: <CreditCard aria-hidden />,
       }
-    : {
-        label: t('parentMobile.primaryCta'),
-        href: '/my-children',
-        icon: <Users aria-hidden />,
-      };
+    : hasUnjustified
+      ? {
+          label: t('parentMobile.primaryCtaAbsences'),
+          href: '/my-children?tab=attendance',
+          icon: <ClipboardCheck aria-hidden />,
+        }
+      : {
+          label: t('parentMobile.primaryCta'),
+          href: '/my-children',
+          icon: <Users aria-hidden />,
+        };
 
   const toneClass = (tone: ToHandleItem['tone']) => {
     if (tone === 'sky') return 'bg-sky-100 text-sky-800';
@@ -215,6 +243,11 @@ const ParentDashboardHome = ({
         <p className="text-base text-slate-600 md:text-slate-500">
           {roleLabel('parent')} • {dateLabel}
         </p>
+        {selectedChildName ? (
+          <p className="text-sm font-medium text-slate-700">
+            {t('stats.forChild', { name: selectedChildName })}
+          </p>
+        ) : null}
       </header>
 
       {/* Q1 — À traiter */}
@@ -249,8 +282,10 @@ const ParentDashboardHome = ({
                   >
                     {item.tone === 'sky' ? (
                       <School className="h-5 w-5" aria-hidden />
-                    ) : (
+                    ) : item.tone === 'amber' ? (
                       <CreditCard className="h-5 w-5" aria-hidden />
+                    ) : (
+                      <AlertCircle className="h-5 w-5" aria-hidden />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -273,32 +308,59 @@ const ParentDashboardHome = ({
           title={t('stats.children')}
           value={String(kpiValue(state, childrenCount))}
           tone="blue"
+          onClick={() => navigate('/my-children')}
         />
-        <MobileCompactStat title={t('stats.remainingToPay')} value={unpaidDisplay} tone="violet" />
+        <MobileCompactStat
+          title={t('stats.remainingToPay')}
+          value={unpaidDisplay}
+          tone="violet"
+          onClick={() => navigate('/my-children?tab=finance')}
+        />
         <MobileCompactStat
           title={t('stats.openInvoices')}
           value={String(kpiValue(state, invoicesOpen))}
           tone="amber"
+          onClick={() => navigate('/my-children?tab=finance')}
         />
+        {canViewAttendance ? (
+          <MobileCompactStat
+            title={t('stats.absences')}
+            value={String(kpiValue(state, unjustifiedAbsences))}
+            tone="rose"
+            onClick={() => navigate('/my-children?tab=attendance')}
+          />
+        ) : null}
       </div>
 
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
+      <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title={t('stats.children')}
           value={kpiValue(state, childrenCount)}
           icon={<Users className="h-5 w-5" />}
+          onClick={() => navigate('/my-children')}
         />
         <StatCard
           title={t('stats.openInvoices')}
           value={kpiValue(state, invoicesOpen)}
           icon={<FileText className="h-5 w-5" />}
+          onClick={() => navigate('/my-children?tab=finance')}
         />
         <StatCard
           title={t('stats.remainingToPay')}
           value={unpaidDisplay}
           icon={<Award className="h-5 w-5" />}
           color="purple"
+          onClick={() => navigate('/my-children?tab=finance')}
         />
+        {canViewAttendance ? (
+          <StatCard
+            title={t('stats.absences')}
+            value={kpiValue(state, unjustifiedAbsences)}
+            icon={<AlertCircle className="h-5 w-5" />}
+            color="red"
+            onClick={() => navigate('/my-children?tab=attendance')}
+          />
+        ) : null}
       </div>
 
       {/* Q3 — Deux clics */}
@@ -312,13 +374,29 @@ const ParentDashboardHome = ({
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('parentMobile.primaryCtaHint')}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <MobileQuickTile
             label={t('quickActions.myChildren')}
             icon={<Users aria-hidden />}
             onClick={() => navigate('/my-children')}
             className="md:min-h-[5.5rem]"
           />
+          {canViewAttendance ? (
+            <MobileQuickTile
+              label={t('quickActions.absences')}
+              icon={<ClipboardCheck aria-hidden />}
+              onClick={() => navigate('/my-children?tab=attendance')}
+              className="md:min-h-[5.5rem]"
+            />
+          ) : null}
+          {canViewGrades ? (
+            <MobileQuickTile
+              label={t('quickActions.grades')}
+              icon={<GraduationCap aria-hidden />}
+              onClick={() => navigate('/my-children?tab=grades')}
+              className="md:min-h-[5.5rem]"
+            />
+          ) : null}
           <MobileQuickTile
             label={t('quickActions.finance')}
             icon={<CreditCard aria-hidden />}
@@ -335,7 +413,7 @@ const ParentDashboardHome = ({
             label={t('quickActions.calendar')}
             icon={<Calendar aria-hidden />}
             onClick={() => navigate('/calendar')}
-            className="md:min-h-[5.5rem]"
+            className="md:min-h-[5.5rem] col-span-2 md:col-span-1"
           />
         </div>
       </div>
