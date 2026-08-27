@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from '@/lib/apiClient';
+import { apiClient, ApiError, getToken } from '@/lib/apiClient';
 
 export interface AdmissionInstitution {
   id: string;
@@ -456,22 +456,37 @@ export const fetchAdmissionRejectionReasons = () =>
 
 export const downloadAdmissionPacketItem = async (applicationId: string, itemId: string) => {
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  const token = localStorage.getItem('strk_access_token') || localStorage.getItem('accessToken');
+  const token = getToken();
   const res = await fetch(`${API_BASE}/admissions/${applicationId}/packet/items/${itemId}/download`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new ApiError('Téléchargement impossible', res.status);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new ApiError(body?.error || 'Téléchargement impossible', res.status);
+  }
   const contentType = res.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
-    const body = (await res.json()) as { url?: string };
-    if (body.url) {
-      window.open(body.url, '_blank', 'noopener,noreferrer');
+    const body = (await res.json()) as { url?: string; downloadUrl?: string; fileName?: string };
+    const signedUrl = body.url || body.downloadUrl;
+    if (signedUrl) {
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
       return;
     }
+    throw new ApiError('URL de téléchargement absente', 502);
   }
   const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition') || '';
+  const match = /filename="([^"]+)"/i.exec(disposition);
+  const filename = match?.[1] || 'piece';
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
 
 export const fetchAdmissionItemVersions = (applicationId: string, itemId: string) =>

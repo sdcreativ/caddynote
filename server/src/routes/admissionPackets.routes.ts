@@ -1018,19 +1018,29 @@ export const registerAdmissionPacketStaffRoutes = (router: Router) => {
 
     // Avec chiffrement applicatif, toujours servir via l'API (déchiffrement).
     // Sans chiffrement + S3 : URL signée possible.
-    const { isAtRestEncryptionEnabled } = await import('../lib/fileStorage.js');
+    const { isAtRestEncryptionEnabled, getStoredObjectBytes } = await import('../lib/fileStorage.js');
     if (isS3Configured() && !isAtRestEncryptionEnabled()) {
-      const url = await getPresignedDownloadUrl(item.fileKey, 300);
-      return res.json({ mode: 's3', url, fileName: item.fileName, contentType: item.contentType });
+      try {
+        const url = await getPresignedDownloadUrl(item.fileKey, 300);
+        return res.json({ mode: 's3', url, fileName: item.fileName, contentType: item.contentType });
+      } catch (err) {
+        console.error('Presign admission piece failed:', err);
+        return res.status(502).json({ error: 'Impossible de générer le lien de téléchargement' });
+      }
     }
 
-    const bytes = await getStoredObjectBytes(item.fileKey);
-    res.setHeader('Content-Type', item.contentType || 'application/octet-stream');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${(item.fileName || 'piece').replace(/"/g, '')}"`
-    );
-    res.send(Buffer.from(bytes));
+    try {
+      const bytes = await getStoredObjectBytes(item.fileKey);
+      res.setHeader('Content-Type', item.contentType || 'application/octet-stream');
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${(item.fileName || 'piece').replace(/"/g, '')}"`
+      );
+      res.send(Buffer.from(bytes));
+    } catch (err) {
+      console.error('Lecture pièce admission échouée:', err);
+      return res.status(404).json({ error: 'Fichier introuvable sur le stockage' });
+    }
   });
 
   // Historique des versions
