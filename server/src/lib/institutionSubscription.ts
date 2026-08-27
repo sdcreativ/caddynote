@@ -44,8 +44,7 @@ export const resolveDefaultSubscriptionPlan = async (planId?: string) => {
     });
     match =
       refreshed.find((p) => planSlug(p.features) === DEFAULT_PLAN_SLUG) ||
-      refreshed.find((p) => p.name.toLowerCase() === 'performance') ||
-      null;
+      refreshed.find((p) => p.name.toLowerCase() === 'performance');
   }
 
   if (!match) {
