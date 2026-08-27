@@ -1,4 +1,5 @@
 import { apiClient, ApiError, getToken } from '@/lib/apiClient';
+import { inferUploadContentType } from '@/lib/s3Upload';
 
 export interface AdmissionInstitution {
   id: string;
@@ -273,8 +274,73 @@ export const reviewAdmissionPacketItem = (
 export const reuseAdmissionPacket = (applicationId: string) =>
   apiClient.post<{ reused: number; packet: AdmissionPacket }>(`/admissions/${applicationId}/packet/reuse`, {});
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
+const uploadAdmissionBinary = async (
+  key: string,
+  uploadPath: string,
+  file: File,
+  contentType: string
+) => {
+  const uploaded = await fetch(`${API_BASE}${uploadPath}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType, 'X-Object-Key': key },
+    body: file,
+  });
+  if (!uploaded.ok) {
+    const errBody = await uploaded.json().catch(() => null);
+    throw new ApiError(
+      (errBody as { error?: string } | null)?.error || 'Échec de l’envoi de la pièce',
+      uploaded.status,
+      undefined,
+      (errBody as { code?: string } | null)?.code
+    );
+  }
+};
+
+const uploadAdmissionViaPresign = async (
+  presign: {
+    mode?: 's3' | 'local';
+    key: string;
+    url?: string;
+    fields?: Record<string, string>;
+    uploadPath?: string;
+  },
+  file: File,
+  contentType: string
+) => {
+  if (presign.mode === 'local' || (!presign.url && !presign.fields)) {
+    if (!presign.uploadPath) throw new ApiError('Réponse d’upload invalide (chemin manquant)', 502);
+    await uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
+    return;
+  }
+
+  if (!presign.url || !presign.fields) {
+    throw new ApiError('Réponse d’upload invalide', 502);
+  }
+
+  try {
+    const form = new FormData();
+    for (const [name, value] of Object.entries(presign.fields)) form.append(name, value);
+    form.append('file', file);
+    const uploaded = await fetch(presign.url, { method: 'POST', body: form });
+    if (!uploaded.ok) {
+      throw new Error(`S3 upload failed (${uploaded.status})`);
+    }
+  } catch (err) {
+    // CORS / réseau / policy S3 : même clé via l’API (stockage S3 côté serveur).
+    if (presign.uploadPath) {
+      await uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
+      return;
+    }
+    throw err instanceof ApiError
+      ? err
+      : new ApiError('Échec de l’envoi de la pièce vers le stockage', 502);
+  }
+};
+
 export const attachAdmissionPacketItem = async (token: string, itemId: string, file: File) => {
-  const contentType = file.type || 'application/pdf';
+  const contentType = inferUploadContentType(file);
   const presign = await apiClient.post<{
     mode?: 's3' | 'local';
     key: string;
@@ -287,28 +353,7 @@ export const attachAdmissionPacketItem = async (token: string, itemId: string, f
     { skipAuth: true }
   );
 
-  if (presign.mode === 'local' || (!presign.url && presign.uploadPath)) {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    const uploaded = await fetch(`${API_BASE}${presign.uploadPath}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType, 'X-Object-Key': presign.key },
-      body: file,
-    });
-    if (!uploaded.ok) {
-      const errBody = await uploaded.json().catch(() => null);
-      throw new ApiError(
-        (errBody as { error?: string } | null)?.error || 'Échec de l’envoi de la pièce',
-        uploaded.status
-      );
-    }
-  } else {
-    if (!presign.url || !presign.fields) throw new Error('Réponse d’upload invalide');
-    const form = new FormData();
-    for (const [name, value] of Object.entries(presign.fields)) form.append(name, value);
-    form.append('file', file);
-    const uploaded = await fetch(presign.url, { method: 'POST', body: form });
-    if (!uploaded.ok) throw new Error('Échec de l’envoi de la pièce');
-  }
+  await uploadAdmissionViaPresign(presign, file, contentType);
 
   return apiClient.post<AdmissionPacket>(
     `/admissions/status/${token}/packet/items/${itemId}/attach`,
@@ -324,7 +369,7 @@ export const clearAdmissionPacketItem = (token: string, itemId: string) =>
   });
 
 export const attachAdmissionDocument = async (token: string, label: string, file: File) => {
-  const contentType = file.type || 'application/pdf';
+  const contentType = inferUploadContentType(file);
   const presign = await apiClient.post<{
     mode?: 's3' | 'local';
     key: string;
@@ -341,39 +386,7 @@ export const attachAdmissionDocument = async (token: string, label: string, file
     { skipAuth: true }
   );
 
-  if (presign.mode === 'local' || (!presign.url && presign.uploadPath)) {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    const uploaded = await fetch(`${API_BASE}${presign.uploadPath}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': contentType,
-        'X-Object-Key': presign.key,
-      },
-      body: file,
-    });
-    if (!uploaded.ok) {
-      const errBody = await uploaded.json().catch(() => null);
-      throw new ApiError(
-        (errBody as { error?: string } | null)?.error || 'Échec de l’envoi de la pièce',
-        uploaded.status,
-        undefined,
-        (errBody as { code?: string } | null)?.code
-      );
-    }
-  } else {
-    if (!presign.url || !presign.fields) {
-      throw new Error('Réponse d’upload invalide');
-    }
-    const form = new FormData();
-    for (const [name, value] of Object.entries(presign.fields)) {
-      form.append(name, value);
-    }
-    form.append('file', file);
-    const uploaded = await fetch(presign.url, { method: 'POST', body: form });
-    if (!uploaded.ok) {
-      throw new Error('Échec de l’envoi de la pièce');
-    }
-  }
+  await uploadAdmissionViaPresign(presign, file, contentType);
 
   return apiClient.post<{ application: AdmissionApplication }>(
     `/admissions/status/${token}/documents`,

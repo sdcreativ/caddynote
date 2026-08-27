@@ -113,13 +113,13 @@ describe('Admissions — workflow & stockage (§5.12)', () => {
         .send({ filename: 'id.pdf', contentType: 'application/pdf' });
 
       expect(presign.status).toBe(200);
+      expect(presign.body.uploadPath).toContain('/documents/direct-upload');
       if (presign.body.mode === 's3') {
         expect(presign.body.url).toBeTruthy();
         expect(presign.body.fields).toBeTruthy();
       } else {
         expect(presign.body.mode).toBe('local');
         expect(presign.body.key).toMatch(/^inscription\//);
-        expect(presign.body.uploadPath).toContain('/documents/direct-upload');
 
         const pdf = Buffer.from('%PDF-1.4 local-test');
         const put = await request(app)

@@ -486,6 +486,7 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
       fields,
       maxSizeBytes: ADMISSION_DOCUMENT_MAX_BYTES,
       expiresIn: 300,
+      uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
     });
   }
 
@@ -498,16 +499,13 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
 });
 
 /**
- * Upload binaire local (repli sans S3). Le corps n’est pas du JSON — express.json
- * laisse passer le flux pour les Content-Type hors application/json.
+ * Upload binaire via l’API (local ou S3 serveur). Évite les échecs CORS du
+ * POST navigateur → S3 ; chiffre via putStoredObject si FILE_ENCRYPTION_KEY.
  */
 admissionsPublicRouter.put('/status/:token/documents/direct-upload', submitLimiter, async (req, res) => {
   const application = await loadByToken(req.params.token);
   if (!application) {
     return res.status(404).json({ error: 'Dossier introuvable' });
-  }
-  if (isS3Configured()) {
-    return res.status(400).json({ error: 'Utilisez l’upload S3 signé sur cette instance.' });
   }
 
   const keyHeader = typeof req.headers['x-object-key'] === 'string' ? req.headers['x-object-key'] : '';

@@ -166,7 +166,15 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
 
     if (isS3Configured()) {
       const { url, fields } = await createPresignedUploadPost(key, parsed.data.contentType, maxSize);
-      return res.json({ mode: 's3', key, url, fields, maxSizeBytes: maxSize });
+      return res.json({
+        mode: 's3',
+        key,
+        url,
+        fields,
+        maxSizeBytes: maxSize,
+        // Repli navigateur → API (CORS S3 / chiffrement applicatif).
+        uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
+      });
     }
 
     res.json({
