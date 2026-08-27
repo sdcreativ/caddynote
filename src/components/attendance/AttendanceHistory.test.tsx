@@ -28,6 +28,10 @@ describe('AttendanceHistory', () => {
         type: 'absence',
         duration: 60,
         justified: false,
+        course_name: 'Maths',
+        start_time: '08:00',
+        end_time: '09:00',
+        teacher_name: 'Mme Diop',
       },
       {
         id: 'a2',
@@ -38,6 +42,8 @@ describe('AttendanceHistory', () => {
         duration: 15,
         justified: true,
         reason: 'Bus',
+        course_name: 'Histoire',
+        teacher_name: 'M. Fall',
       },
     ]);
 
@@ -48,6 +54,11 @@ describe('AttendanceHistory', () => {
     });
     expect(screen.getByText('Jean Dupont')).toBeInTheDocument();
     expect(screen.getByText(/Bus/i)).toBeInTheDocument();
+    expect(screen.getByText(/Maths/)).toBeInTheDocument();
+    expect(screen.getByText(/Histoire/)).toBeInTheDocument();
+    expect(screen.getByText(/Mme Diop/)).toBeInTheDocument();
+    expect(screen.getByText(/M\. Fall/)).toBeInTheDocument();
+    expect(screen.getByText(/2 séances/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Rechercher un élève/i), {
       target: { value: 'Awa' },

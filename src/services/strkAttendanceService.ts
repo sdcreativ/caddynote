@@ -24,6 +24,13 @@ export interface StrkAttendance {
   student_name?: string;
   course_name?: string;
   class_name?: string;
+  /** Horaires du créneau (HH:MM) si connus. */
+  start_time?: string;
+  end_time?: string;
+  /** Enseignant du cours / créneau. */
+  teacher_name?: string;
+  /** Qui a enregistré l’appel. */
+  recorded_by_name?: string;
 }
 
 export interface ClassRosterStudent {
@@ -133,6 +140,10 @@ interface ApiAbsence {
   } | null;
   courseName?: string | null;
   className?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  teacherName?: string | null;
+  recordedByName?: string | null;
 }
 
 /** Compose le nom élève depuis l’enrichissement API (jamais l’UUID). */
@@ -162,6 +173,10 @@ export const mapApiAttendance = (a: ApiAbsence): StrkAttendance => ({
   student_name: formatAttendanceStudentName(a.student),
   course_name: a.courseName?.trim() || undefined,
   class_name: a.className?.trim() || undefined,
+  start_time: a.startTime?.trim() || undefined,
+  end_time: a.endTime?.trim() || undefined,
+  teacher_name: a.teacherName?.trim() || undefined,
+  recorded_by_name: a.recordedByName?.trim() || undefined,
 });
 
 /**

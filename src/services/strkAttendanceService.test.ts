@@ -116,10 +116,18 @@ describe('mapApiAttendance — nom élève', () => {
       student: { firstName: 'Esmone', lastName: 'Gnonzion' },
       courseName: 'Français',
       className: '5e A',
+      startTime: '08:00',
+      endTime: '09:00',
+      teacherName: 'Mme Diop',
+      recordedByName: 'Mme Diop',
     });
     expect(mapped.student_name).toBe('Esmone Gnonzion');
     expect(mapped.course_name).toBe('Français');
     expect(mapped.class_name).toBe('5e A');
+    expect(mapped.start_time).toBe('08:00');
+    expect(mapped.end_time).toBe('09:00');
+    expect(mapped.teacher_name).toBe('Mme Diop');
+    expect(mapped.recorded_by_name).toBe('Mme Diop');
   });
 
   it('ne fabrique pas de libellé « Étudiant » si le profil est vide', async () => {

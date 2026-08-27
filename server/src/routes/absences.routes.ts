@@ -23,21 +23,51 @@ import type { Response } from 'express';
 export const absencesRouter = Router();
 absencesRouter.use(requireAuth);
 
-/** Enrichit les absences avec prénom/nom élève + libellé cours (pas d’FK join Prisma sur le listage brut). */
-const enrichAbsences = async <T extends { studentId: string; courseId: string | null }>(absences: T[]) => {
+/** Enrichit les absences : élève, cours/classe, horaire de créneau, enseignant. */
+const enrichAbsences = async <
+  T extends {
+    studentId: string;
+    courseId: string | null;
+    createdBy?: string | null;
+    date: Date;
+  },
+>(
+  absences: T[]
+) => {
   if (absences.length === 0) return [];
   const studentIds = [...new Set(absences.map((a) => a.studentId))];
   const courseIds = [...new Set(absences.map((a) => a.courseId).filter((id): id is string => !!id))];
+  const creatorIds = [
+    ...new Set(absences.map((a) => a.createdBy).filter((id): id is string => !!id)),
+  ];
 
   const [profiles, courses] = await Promise.all([
     prisma.strkProfile.findMany({
-      where: { id: { in: studentIds } },
+      where: { id: { in: [...new Set([...studentIds, ...creatorIds])] } },
       select: { id: true, firstName: true, lastName: true, email: true },
     }),
     courseIds.length
       ? prisma.strkCourse.findMany({
           where: { id: { in: courseIds } },
-          select: { id: true, name: true, class: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            scheduleTime: true,
+            duration: true,
+            scheduleDay: true,
+            class: { select: { name: true } },
+            teacher: { select: { profile: { select: { firstName: true, lastName: true } } } },
+            schedules: {
+              where: { isActive: true },
+              select: {
+                dayOfWeek: true,
+                startTime: true,
+                endTime: true,
+                teacherId: true,
+                teacher: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
         })
       : Promise.resolve([]),
   ]);
@@ -45,9 +75,44 @@ const enrichAbsences = async <T extends { studentId: string; courseId: string | 
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const courseById = new Map(courses.map((c) => [c.id, c]));
 
+  const formatPersonName = (
+    p?: { firstName?: string | null; lastName?: string | null } | null
+  ): string | null => {
+    const name = [p?.firstName?.trim(), p?.lastName?.trim()].filter(Boolean).join(' ');
+    return name || null;
+  };
+
+  const addMinutesToHhMm = (hhmm: string, minutes: number): string | null => {
+    const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(hhmm);
+    if (!m) return null;
+    const total = Number(m[1]) * 60 + Number(m[2]) + minutes;
+    const h = Math.floor(((total % (24 * 60)) + 24 * 60) % (24 * 60) / 60);
+    const min = ((total % 60) + 60) % 60;
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  };
+
   return absences.map((a) => {
     const profile = profileById.get(a.studentId);
     const course = a.courseId ? courseById.get(a.courseId) : undefined;
+    const creator = a.createdBy ? profileById.get(a.createdBy) : undefined;
+    const dayOfWeek = a.date.getDay();
+
+    let startTime: string | null = null;
+    let endTime: string | null = null;
+    let teacherName: string | null = formatPersonName(course?.teacher?.profile);
+
+    const matchingSchedule = course?.schedules.find((s) => s.dayOfWeek === dayOfWeek);
+    if (matchingSchedule) {
+      startTime = normalizeTimeHhMm(matchingSchedule.startTime);
+      endTime = normalizeTimeHhMm(matchingSchedule.endTime);
+      teacherName = formatPersonName(matchingSchedule.teacher) || teacherName;
+    } else if (course?.scheduleTime) {
+      startTime = normalizeTimeHhMm(course.scheduleTime);
+      if (startTime && course.duration && course.duration > 0) {
+        endTime = addMinutesToHhMm(startTime, course.duration);
+      }
+    }
+
     return {
       ...a,
       student: profile
@@ -59,6 +124,10 @@ const enrichAbsences = async <T extends { studentId: string; courseId: string | 
         : null,
       courseName: course?.name ?? null,
       className: course?.class?.name ?? null,
+      startTime,
+      endTime,
+      teacherName,
+      recordedByName: formatPersonName(creator),
     };
   });
 };
