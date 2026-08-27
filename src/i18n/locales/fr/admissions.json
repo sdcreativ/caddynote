@@ -22,6 +22,12 @@
     "feeAmount": "Frais {{amount}} {{currency}}",
     "feePaid": " · payés",
     "feePending": " · en attente",
+    "feePaidShort": "Payés",
+    "feePendingShort": "Frais en attente",
+    "moreActions": "Actions",
+    "filters": {
+      "status": "Statut du dossier"
+    },
     "needsInfo": "À compléter",
     "accept": "Accepter",
     "reject": "Refuser",
@@ -54,7 +60,10 @@
       "submitted": "Soumis",
       "needs_info": "À compléter",
       "conditionally_accepted": "Accepté sous condition",
-      "enrolled": "Inscrits",
+      "enrolled": "Inscrit",
+      "rejected": "Refusé",
+      "cancelled": "Annulé",
+      "draft": "Brouillon",
       "all": "Tous"
     }
   },
