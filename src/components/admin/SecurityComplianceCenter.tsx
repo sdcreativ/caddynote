@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Shield,
+import { 
+  Shield, 
   Trash2,
   RefreshCw,
   MonitorSmartphone,
@@ -9,7 +9,7 @@ import {
   UserX,
   Info,
   BookOpen,
-  UserCheck,
+  UserCheck, 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
-import {
+import { 
   listSessions,
   revokeOtherSessions,
   revokeSession,
@@ -113,7 +113,7 @@ const SecurityComplianceCenter = () => {
       toast({ title: `${n} session(s) révoquée(s)` });
       await load();
     } catch (e) {
-      toast({
+    toast({
         title: 'Échec',
         description: e instanceof ApiError ? e.message : 'Erreur',
         variant: 'destructive',
@@ -131,11 +131,11 @@ const SecurityComplianceCenter = () => {
         description: `${result.candidates.length} candidat(s) à la rétention.`,
       });
     } catch (e) {
-      toast({
+    toast({
         title: 'Purge impossible',
         description: e instanceof ApiError ? e.message : 'Erreur',
         variant: 'destructive',
-      });
+    });
     } finally {
       setPurgeBusy(false);
     }
@@ -143,7 +143,7 @@ const SecurityComplianceCenter = () => {
 
   const onPurgeDestructive = async () => {
     if (!purgeEnabled) {
-      toast({
+    toast({
         title: 'Purge désactivée',
         description: 'FILE_PURGE_ENABLED doit être true côté API.',
         variant: 'destructive',
@@ -342,16 +342,16 @@ const SecurityComplianceCenter = () => {
         </Card>
       )}
 
-      <Card>
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Download className="h-4 w-4" /> DSAR — export / désactivation
-          </CardTitle>
+            </CardTitle>
           <CardDescription>
             Export JSON administratif. Soft-delete = désactivation. Anonymisation DSAR =
             remplacement PII irréversible (historique métier conservé).
           </CardDescription>
-        </CardHeader>
+          </CardHeader>
         <CardContent className="space-y-3">
           <div className="max-w-lg space-y-2">
             <Label htmlFor="dsar-user">ID utilisateur (UUID)</Label>
@@ -444,7 +444,7 @@ const SecurityComplianceCenter = () => {
             >
               Révoquer sessions cible
             </Button>
-          </div>
+            </div>
           {targetSessions.length > 0 && (
             <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
               {targetSessions.map((s) => (
@@ -459,17 +459,17 @@ const SecurityComplianceCenter = () => {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-4 w-4" /> Consentements (opt-out)
-          </CardTitle>
+            </CardTitle>
           <CardDescription>Registre COM-003 — canaux désactivés par les utilisateurs.</CardDescription>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent>
           {consents.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun opt-out enregistré.</p>
           ) : (
@@ -484,10 +484,10 @@ const SecurityComplianceCenter = () => {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
+        <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -500,7 +500,7 @@ const SecurityComplianceCenter = () => {
                 : ''}
               .
             </CardDescription>
-          </div>
+            </div>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -560,9 +560,9 @@ const SecurityComplianceCenter = () => {
             >
               Enregistrer
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+      </div>
+            </CardHeader>
+            <CardContent>
           <ul className="space-y-3 text-sm">
             {ropa.map((e, idx) => (
               <li key={e.id} className="space-y-2 rounded-md border p-3">
@@ -615,17 +615,17 @@ const SecurityComplianceCenter = () => {
               </li>
             ))}
           </ul>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
+          <Card>
+            <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4" /> Sessions actives (votre compte)
           </CardTitle>
           <CardDescription>GET/DELETE /auth/sessions — révocation serveur (IAM-004). MFA obligatoire pour rôles sensibles côté API.</CardDescription>
-        </CardHeader>
-        <CardContent>
+            </CardHeader>
+            <CardContent>
           {sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucune session.</p>
           ) : (
@@ -662,8 +662,8 @@ const SecurityComplianceCenter = () => {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
     </div>
   );
 };
