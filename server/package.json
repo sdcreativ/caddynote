@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "purge:demo": "tsx scripts/which-db.ts && tsx scripts/purge-demo-data.ts",
+    "wipe:staging": "tsx scripts/which-db.ts && tsx scripts/staging-hard-wipe.ts",
     "smoke:mailpit": "tsx scripts/smoke-mailpit.ts",
     "seed:pilot": "tsx scripts/which-db.ts && tsx scripts/seed-pilot.ts",
     "recette:lot1": "tsx scripts/recette-lot1.ts",
