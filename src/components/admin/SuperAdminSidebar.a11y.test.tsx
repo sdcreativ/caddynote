@@ -9,6 +9,18 @@ vi.mock('@/hooks/useStrkAuth', () => ({
   }),
 }));
 
+vi.mock('@/hooks/usePlatformPermissions', () => ({
+  usePlatformPermissions: () => ({
+    loading: false,
+    roleCodes: [],
+    permissions: [],
+    legacyFullAccess: true,
+    hasPermission: () => true,
+    canSeeSection: () => true,
+    reload: vi.fn(),
+  }),
+}));
+
 import SuperAdminSidebar from './SuperAdminSidebar';
 
 /**

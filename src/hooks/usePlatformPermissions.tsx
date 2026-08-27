@@ -38,24 +38,30 @@ export const usePlatformPermissions = () => {
   const [data, setData] = useState<PlatformMeScopes | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (signal?: { cancelled: boolean }) => {
     if (user?.role !== 'admin') {
-      setData(null);
+      if (!signal?.cancelled) setData(null);
       return;
     }
-    setLoading(true);
+    if (!signal?.cancelled) setLoading(true);
     try {
       const res = await apiClient.get<PlatformMeScopes>('/admin/me/scopes');
-      setData(res);
+      if (!signal?.cancelled) setData(res);
     } catch {
-      setData({ scopes: [], roleCodes: [], permissions: [], legacyFullAccess: false });
+      if (!signal?.cancelled) {
+        setData({ scopes: [], roleCodes: [], permissions: [], legacyFullAccess: false });
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.cancelled) setLoading(false);
     }
   }, [user?.role]);
 
   useEffect(() => {
-    void reload();
+    const signal = { cancelled: false };
+    void reload(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, [reload]);
 
   const permissions = new Set(data?.permissions ?? []);
