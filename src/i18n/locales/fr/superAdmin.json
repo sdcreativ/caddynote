@@ -1,15 +1,18 @@
 {
-  "navAria": "Navigation console plateforme",
+  "navAria": "Navigation ops plateforme",
   "logoAria": "CaddyNote — Super Admin",
   "spaces": "Espaces",
-  "console": "Console plateforme",
-  "businessPilotage": "Pilotage métier",
+  "hereLabel": "Vous êtes ici",
+  "console": "Ops plateforme",
+  "consoleHint": "Gérer CaddyNote : établissements, abonnements, support et technique.",
+  "businessPilotage": "Aller à l’espace établissement",
+  "businessPilotageHint": "Tableau de bord et outils d’une école (élèves, finances…).",
   "sectionsAria": "Sections",
   "addClass": "Ajouter une classe",
   "roleLabel": "Super administrateur",
   "logout": "Déconnexion",
   "groups": {
-    "pilotage": "Pilotage",
+    "pilotage": "Accueil ops",
     "referentiel": "Référentiel",
     "supervision": "Supervision",
     "analyse": "Analyse",
@@ -52,5 +55,17 @@
   "supportOps": {
     "title": "Support ops",
     "subtitle": "Recherche, inbox tickets, reset MFA / mot de passe, timeline, file contact."
+  },
+  "notificationsBell": {
+    "label": "Notifications",
+    "aria": "Notifications",
+    "ariaCount": "{{count}} notification(s)",
+    "demoAria": "{{count}} demande(s) de démo",
+    "demoSummary_one": "1 demande de démo",
+    "demoSummary_other": "{{count}} demandes de démo",
+    "contactSummary_one": "1 message contact",
+    "contactSummary_other": "{{count}} messages contact",
+    "empty": "Aucune notification pour le moment",
+    "openSupportOps": "Ouvrir Support ops"
   }
 }

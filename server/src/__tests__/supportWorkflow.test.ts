@@ -91,7 +91,21 @@ describe('Support / contact — recette §5.16', () => {
     });
     expect(contact.status).toBe(201);
     expect(contact.body.id).toBeTruthy();
+    expect(contact.body.isDemo).toBe(true);
     contactIds.push(contact.body.id);
+
+    const notifs = await prisma.notification.findMany({
+      where: {
+        title: 'Nouvelle demande de démo',
+        OR: [
+          { userId: fx.globalAdmin.id },
+          { data: { path: ['contactId'], equals: contact.body.id } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
+    expect(notifs.length).toBeGreaterThanOrEqual(1);
 
     const inbox = await request(app)
       .get('/admin/contact-messages?status=new')
@@ -119,6 +133,45 @@ describe('Support / contact — recette §5.16', () => {
     // déjà converted — on accepte closed
     expect(closed.status).toBe(200);
     expect(closed.body.message.status).toBe('closed');
+  });
+
+  it('P2 — provision-demo crée établissement + school_admin + trial', async () => {
+    const stamp = Date.now();
+    const contact = await request(app).post('/contact').send({
+      name: 'Marie Kouassi',
+      email: `marie.demo.${stamp}@example.test`,
+      subject: 'Demande de démonstration',
+      message: 'Nous voulons tester CaddyNote pour notre école privée.',
+    });
+    expect(contact.status).toBe(201);
+    contactIds.push(contact.body.id);
+
+    const provisioned = await request(app)
+      .post(`/admin/contact-messages/${contact.body.id}/provision-demo`)
+      .set(auth(fx.globalAdmin.token))
+      .send({
+        institutionName: `École Démo ${stamp}`,
+        institutionType: 'private_school',
+        adminEmail: `admin.demo.${stamp}@example.test`,
+        adminFirstName: 'Marie',
+        adminLastName: 'Kouassi',
+      });
+    expect(provisioned.status).toBe(201);
+    expect(provisioned.body.institution?.name).toContain('École Démo');
+    expect(provisioned.body.admin?.email).toBe(`admin.demo.${stamp}@example.test`);
+    expect(provisioned.body.tempPassword).toBeTruthy();
+    expect(provisioned.body.message?.convertedInstitutionId).toBe(provisioned.body.institution.id);
+    if (provisioned.body.ticketId) ticketIds.push(provisioned.body.ticketId);
+
+    const again = await request(app)
+      .post(`/admin/contact-messages/${contact.body.id}/provision-demo`)
+      .set(auth(fx.globalAdmin.token))
+      .send({
+        institutionName: `École Démo ${stamp}`,
+        institutionType: 'private_school',
+      });
+    expect(again.status).toBe(200);
+    expect(again.body.alreadyProvisioned).toBe(true);
   });
 
   it('P2 — school_admin ne lit pas la file contact ops', async () => {

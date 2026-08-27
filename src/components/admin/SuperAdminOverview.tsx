@@ -20,6 +20,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -37,6 +38,7 @@ const COLORS = [
 ];
 
 const SuperAdminOverview = () => {
+  const { t } = useTranslation('superAdmin');
   // RPT-001 : filtre établissement sur la vue de supervision /super-admin.
   const [institutionId, setInstitutionId] = useState<string | undefined>(undefined);
   const { metrics, loading: metricsLoading } = useSystemMetrics(institutionId);
@@ -140,17 +142,19 @@ const SuperAdminOverview = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold">Console plateforme</p>
-          <p className="text-sm text-muted-foreground">
-            Supervision technique : métriques, logs, alertes et utilisateurs globaux.
-          </p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t('hereLabel')}</p>
+          <p className="text-sm font-semibold">{t('console')}</p>
+          <p className="text-sm text-muted-foreground">{t('consoleHint')}</p>
         </div>
-        <Button asChild variant="outline" className="shrink-0">
-          <Link to="/dashboard">
-            <Briefcase className="mr-2 h-4 w-4" aria-hidden />
-            Pilotage métier
-          </Link>
-        </Button>
+        <div className="shrink-0 space-y-1 sm:max-w-xs sm:text-right">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link to="/dashboard">
+              <Briefcase className="mr-2 h-4 w-4" aria-hidden />
+              {t('businessPilotage')}
+            </Link>
+          </Button>
+          <p className="text-xs text-muted-foreground">{t('businessPilotageHint')}</p>
+        </div>
       </div>
 
       <div className="space-y-2">

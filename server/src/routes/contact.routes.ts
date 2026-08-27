@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendEmail, isEmailConfigured } from '../lib/email.js';
 import { logAudit } from '../lib/audit.js';
+import {
+  isDemoContactSubject,
+  notifyPlatformAdminsOfContact,
+} from '../lib/contactDemo.js';
 
 /**
  * Formulaire contact public — plus de simulation côté front : persistance
@@ -38,25 +42,43 @@ contactPublicRouter.post('/', contactLimiter, async (req, res) => {
       ipAddress: req.ip,
     },
   });
+  const isDemo = isDemoContactSubject(parsed.data.subject);
   const inbox = process.env.CONTACT_INBOX || process.env.SMTP_FROM;
   if (inbox && isEmailConfigured()) {
     await sendEmail({
       to: inbox,
-      subject: `[Contact CaddyNote] ${parsed.data.subject}`,
-      html: `<p><strong>De :</strong> ${parsed.data.name} &lt;${parsed.data.email}&gt;</p><p>${parsed.data.message.replace(/\n/g, '<br/>')}</p>`,
-      text: `${parsed.data.name} <${parsed.data.email}>\n\n${parsed.data.message}`,
+      subject: isDemo
+        ? `[Démo CaddyNote] ${parsed.data.subject}`
+        : `[Contact CaddyNote] ${parsed.data.subject}`,
+      html: `<p><strong>De :</strong> ${parsed.data.name} &lt;${parsed.data.email}&gt;</p><p>${parsed.data.message.replace(/\n/g, '<br/>')}</p><p><a href="/super-admin/support-ops">Ouvrir Support ops</a></p>`,
+      text: `${parsed.data.name} <${parsed.data.email}>\n\n${parsed.data.message}\n\n→ Support ops : /super-admin/support-ops`,
     });
   } else {
-    console.log(`📬 [contact] ${parsed.data.email} — ${parsed.data.subject} (id=${row.id})`);
+    console.log(
+      `📬 [contact${isDemo ? '/demo' : ''}] ${parsed.data.email} — ${parsed.data.subject} (id=${row.id})`
+    );
   }
+
+  try {
+    await notifyPlatformAdminsOfContact({
+      contactId: row.id,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      subject: parsed.data.subject,
+      isDemo,
+    });
+  } catch (err) {
+    console.error('Notification ops contact échouée:', err);
+  }
+
   await logAudit({
     institutionId: null,
     actorId: null,
-    action: 'contact.message_received',
+    action: isDemo ? 'contact.demo_received' : 'contact.message_received',
     targetType: 'contact_message',
     targetId: row.id,
-    metadata: { email: parsed.data.email, subject: parsed.data.subject },
+    metadata: { email: parsed.data.email, subject: parsed.data.subject, isDemo },
     ipAddress: req.ip,
   });
-  res.status(201).json({ success: true, id: row.id });
+  res.status(201).json({ success: true, id: row.id, isDemo });
 });

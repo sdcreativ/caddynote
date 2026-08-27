@@ -48,8 +48,8 @@
   "items": {
     "overview": "Vue d'ensemble",
     "dashboard": "Tableau de bord",
-    "platformConsole": "Console plateforme",
-    "businessSteering": "Pilotage métier",
+    "platformConsole": "Ops plateforme",
+    "businessSteering": "Espace établissement",
     "students": "Élèves",
     "attendance": "Présences",
     "absences": "Absences",

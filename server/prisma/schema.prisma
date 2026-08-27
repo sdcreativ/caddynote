@@ -2791,18 +2791,19 @@ model StrkHrStaffRecord {
 }
 
 model StrkContactMessage {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String
-  email              String
-  subject            String
-  message            String
-  ipAddress          String?   @map("ip_address")
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String
+  email                   String
+  subject                 String
+  message                 String
+  ipAddress               String?   @map("ip_address")
   /** new | acknowledged | converted | closed */
-  status             String    @default("new")
-  convertedTicketId  String?   @map("converted_ticket_id") @db.Uuid
-  handledAt          DateTime? @map("handled_at")
-  handledBy          String?   @map("handled_by") @db.Uuid
-  createdAt          DateTime  @default(now()) @map("created_at")
+  status                  String    @default("new")
+  convertedTicketId       String?   @map("converted_ticket_id") @db.Uuid
+  convertedInstitutionId  String?   @map("converted_institution_id") @db.Uuid
+  handledAt               DateTime? @map("handled_at")
+  handledBy               String?   @map("handled_by") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at")
 
   @@index([status])
   @@map("strk_contact_messages")

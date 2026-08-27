@@ -31,6 +31,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { adminSearch } from '@/services/strkOpsService';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import TenantHealthDialog from '@/components/admin/TenantHealthDialog';
+import ProvisionDemoFromContactDialog from '@/components/admin/ProvisionDemoFromContactDialog';
 import {
   fetchSupportTickets,
   fetchSupportTicket,
@@ -100,6 +101,7 @@ const SupportOpsCenter = () => {
   const [newEscalate, setNewEscalate] = useState(true);
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [contactMessages, setContactMessages] = useState<ContactOpsMessage[]>([]);
+  const [provisionContact, setProvisionContact] = useState<ContactOpsMessage | null>(null);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -393,7 +395,8 @@ const SupportOpsCenter = () => {
           <div>
             <CardTitle className="text-base">File contact public</CardTitle>
             <CardDescription>
-              Messages `/contact` non traités — convertir en ticket support ops.
+              Messages `/contact` non traités — créer une session démo en un clic, ou convertir en
+              ticket.
             </CardDescription>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={() => void loadContactInbox()}>
@@ -404,18 +407,32 @@ const SupportOpsCenter = () => {
           {contactMessages.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun message en attente.</p>
           ) : (
-            <ul className="max-h-56 space-y-2 overflow-y-auto text-sm">
-              {contactMessages.map((m) => (
+            <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
+              {contactMessages.map((m) => {
+                const isDemo = /d[eé]mo|d[eé]monstration|pr[eé]sentation|essai/i.test(m.subject);
+                return (
                 <li key={m.id} className="rounded-md border p-3 space-y-2">
-                  <div className="font-medium">{m.subject}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-medium">{m.subject}</div>
+                    {isDemo ? <Badge variant="secondary">Démo</Badge> : null}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {m.name} &lt;{m.email}&gt; · {new Date(m.createdAt).toLocaleString('fr-FR')}
                   </div>
                   <p className="line-clamp-2 text-muted-foreground">{m.message}</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
+                      disabled={busy}
+                      onClick={() => setProvisionContact(m)}
+                    >
+                      Créer la session démo
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
                       disabled={busy}
                       onClick={() =>
                         void (async () => {
@@ -464,7 +481,8 @@ const SupportOpsCenter = () => {
                     </Button>
                   </div>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           )}
         </CardContent>
@@ -818,6 +836,18 @@ const SupportOpsCenter = () => {
         open={!!healthInstitutionId}
         onOpenChange={(open) => {
           if (!open) setHealthInstitutionId(null);
+        }}
+      />
+      <ProvisionDemoFromContactDialog
+        contact={provisionContact}
+        open={!!provisionContact}
+        onOpenChange={(open) => {
+          if (!open) setProvisionContact(null);
+        }}
+        onProvisioned={(result) => {
+          void loadContactInbox();
+          void loadTickets();
+          if (result.ticketId) void openTicket(result.ticketId);
         }}
       />
     </div>

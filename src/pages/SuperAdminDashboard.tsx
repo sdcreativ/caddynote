@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import SuperAdminSidebar from "@/components/admin/SuperAdminSidebar";
@@ -23,6 +24,9 @@ import SupportOpsCenter from "@/components/admin/SupportOpsCenter";
 import PlatformHabilitationsCenter from "@/components/admin/PlatformHabilitationsCenter";
 import { usePlatformPermissions } from "@/hooks/usePlatformPermissions";
 import { CreateClassDialog } from '@/components/admin/CreateClassDialog';
+import { SuperAdminNotificationsBell } from '@/components/admin/SuperAdminNotificationsBell';
+import { RealtimeNotifications } from '@/components/notifications/RealtimeNotifications';
+import { Toaster } from '@/components/ui/toaster';
 import { trackProductEvent } from '@/lib/productTelemetry';
 
 export const SUPER_ADMIN_SECTIONS = [
@@ -58,6 +62,7 @@ const isValidSection = (value: string | undefined): value is SuperAdminSection =
 
 const SuperAdminDashboard = () => {
   const { user } = useStrkAuth();
+  const { t } = useTranslation('superAdmin');
   const { canSeeSection } = usePlatformPermissions();
   const navigate = useNavigate();
   const { section: sectionParam } = useParams<{ section?: string }>();
@@ -66,6 +71,7 @@ const SuperAdminDashboard = () => {
     [sectionParam]
   );
   const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
+  const [demoRequestCount, setDemoRequestCount] = useState(0);
 
   useEffect(() => {
     if (!sectionParam) return;
@@ -187,8 +193,25 @@ const SuperAdminDashboard = () => {
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         onCreateClass={() => setShowCreateClassDialog(true)}
+        demoRequestCount={demoRequestCount}
       />
       <main className="min-h-screen lg:ml-[272px]">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-[#F5F7FB]/95 px-6 py-3 backdrop-blur sm:px-8">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">{t('console')}</p>
+            {demoRequestCount > 0 ? (
+              <p className="truncate text-xs font-medium text-amber-700">
+                {t('notificationsBell.demoSummary', { count: demoRequestCount })}
+              </p>
+            ) : (
+              <p className="truncate text-xs text-slate-500">{t('consoleHint')}</p>
+            )}
+          </div>
+          <SuperAdminNotificationsBell
+            onOpenSupportOps={() => setActiveSection('support-ops')}
+            onDemoCountChange={setDemoRequestCount}
+          />
+        </header>
         <div className="mx-auto w-full max-w-[1400px] p-6 sm:p-8">{renderContent()}</div>
       </main>
 
@@ -196,6 +219,8 @@ const SuperAdminDashboard = () => {
         open={showCreateClassDialog}
         onOpenChange={setShowCreateClassDialog}
       />
+      <RealtimeNotifications />
+      <Toaster />
     </div>
   );
 };

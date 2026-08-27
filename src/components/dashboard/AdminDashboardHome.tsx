@@ -336,7 +336,11 @@ const AdminDashboardHome = ({
           icon={<Shield aria-hidden />}
           onClick={() => navigate(primaryHref)}
         />
-        <p className="sr-only">{t('teamCockpit.primaryCtaHint')}</p>
+        {!opsItems[0] ? (
+          <p className="text-xs text-slate-500">{t('spaces.toPlatformConsoleHint')}</p>
+        ) : (
+          <p className="sr-only">{t('teamCockpit.primaryCtaHint')}</p>
+        )}
 
         <div>
           <p className="mb-2 text-sm font-medium text-slate-600">{t('teamCockpit.opsRowTitle')}</p>

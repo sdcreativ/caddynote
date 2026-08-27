@@ -23,7 +23,7 @@ describe('SuperAdminSidebar a11y (§7)', () => {
           <SuperAdminSidebar activeSection="overview" onSectionChange={() => undefined} />
         </MemoryRouter>
       );
-      expect(getByLabelText('Navigation console plateforme')).toBeInTheDocument();
+      expect(getByLabelText('Navigation ops plateforme')).toBeInTheDocument();
       expect(getByRole('button', { name: /Vue d'ensemble/i })).toBeInTheDocument();
       expect(getByRole('button', { name: /Support ops/i })).toBeInTheDocument();
     },

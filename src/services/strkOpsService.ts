@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
-import { fetchSupportTickets } from '@/services/strkSupportService';
+import { fetchContactOpsMessages, fetchSupportTickets } from '@/services/strkSupportService';
 import { fetchStrkInstitutions } from '@/services/strkInstitutionService';
 
 export type DiagnosticsPayload = {
@@ -233,25 +233,45 @@ export const fetchDunningQueue = async (): Promise<DunningQueueItem[]> => {
 /** Item actionnable pour le cockpit équipe (À traiter). */
 export type PlatformOpsItem = {
   id: string;
-  kind: 'ticket' | 'dunning' | 'frozen' | 'security' | 'comms';
+  kind: 'ticket' | 'dunning' | 'frozen' | 'security' | 'comms' | 'contact';
   title: string;
   detail?: string;
   href: string;
 };
 
 /**
- * Agrège tickets ouverts, dunning, tenants gelés et signaux ops.
+ * Agrège tickets ouverts, dunning, tenants gelés, contacts et signaux ops.
  * Best-effort : une source en échec (permission / réseau) n’empêche pas les autres.
  */
 export const fetchPlatformOpsQueue = async (): Promise<PlatformOpsItem[]> => {
   const items: PlatformOpsItem[] = [];
 
-  const [ticketsSettled, dunningSettled, institutionsSettled, opsSettled] = await Promise.allSettled([
-    fetchSupportTickets({ status: 'open' }),
-    fetchDunningQueue(),
-    fetchStrkInstitutions(),
-    fetchOpsMetrics(),
-  ]);
+  const [ticketsSettled, dunningSettled, institutionsSettled, opsSettled, contactsSettled] =
+    await Promise.allSettled([
+      fetchSupportTickets({ status: 'open' }),
+      fetchDunningQueue(),
+      fetchStrkInstitutions(),
+      fetchOpsMetrics(),
+      fetchContactOpsMessages('new'),
+    ]);
+
+  if (contactsSettled.status === 'fulfilled' && contactsSettled.value.length > 0) {
+    const contacts = contactsSettled.value;
+    const demos = contacts.filter((m) =>
+      /d[eé]mo|d[eé]monstration|pr[eé]sentation|essai/i.test(m.subject)
+    );
+    const first = demos[0] ?? contacts[0];
+    items.push({
+      id: `contacts-${contacts.length}`,
+      kind: 'contact',
+      title:
+        demos.length > 0
+          ? `${demos.length} demande(s) de démo en attente`
+          : `${contacts.length} message(s) contact en attente`,
+      detail: `${first.name} — ${first.subject}`,
+      href: '/super-admin/support-ops',
+    });
+  }
 
   if (ticketsSettled.status === 'fulfilled') {
     const open = ticketsSettled.value.filter((t) =>

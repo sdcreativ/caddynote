@@ -98,6 +98,7 @@ export type ContactOpsMessage = {
   message: string;
   status: string;
   convertedTicketId: string | null;
+  convertedInstitutionId?: string | null;
   createdAt: string;
 };
 
@@ -112,6 +113,38 @@ export const convertContactToTicket = async (
   id: string
 ): Promise<{ ticket: SupportTicket; message: ContactOpsMessage; alreadyConverted?: boolean }> =>
   apiClient.post(`/admin/contact-messages/${id}/convert`, {});
+
+export type ProvisionDemoPayload = {
+  institutionName: string;
+  institutionType:
+    | 'school'
+    | 'high_school'
+    | 'middle_school'
+    | 'university'
+    | 'training_center'
+    | 'elementary_school'
+    | 'private_school';
+  adminEmail?: string;
+  adminFirstName?: string;
+  adminLastName?: string;
+  adminPhone?: string;
+};
+
+export type ProvisionDemoResult = {
+  alreadyProvisioned?: boolean;
+  institution: { id: string; name: string; type: string; email: string | null };
+  admin: { id: string; email: string; firstName: string; lastName: string };
+  tempPassword: string;
+  emailSent: boolean;
+  smsSent: boolean;
+  ticketId: string | null;
+  message: ContactOpsMessage;
+};
+
+export const provisionDemoFromContact = async (
+  id: string,
+  payload: ProvisionDemoPayload
+): Promise<ProvisionDemoResult> => apiClient.post(`/admin/contact-messages/${id}/provision-demo`, payload);
 
 export const updateContactOpsMessage = async (
   id: string,

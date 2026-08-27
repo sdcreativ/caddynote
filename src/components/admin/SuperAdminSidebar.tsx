@@ -34,6 +34,8 @@ interface SuperAdminSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   onCreateClass?: () => void;
+  /** Demandes de démo en file contact (badge Support ops). */
+  demoRequestCount?: number;
 }
 
 type NavItemDef = {
@@ -99,7 +101,12 @@ const NAV_GROUPS: NavGroupDef[] = [
   },
 ];
 
-const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: SuperAdminSidebarProps) => {
+const SuperAdminSidebar = ({
+  activeSection,
+  onSectionChange,
+  onCreateClass,
+  demoRequestCount = 0,
+}: SuperAdminSidebarProps) => {
   const { t } = useTranslation('superAdmin');
   const { user, logout } = useStrkAuth();
   const { canSeeSection } = usePlatformPermissions();
@@ -133,13 +140,18 @@ const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: Su
 
         <div className="mt-4 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t('spaces')}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-900">{t('console')}</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500">{t('hereLabel')}</p>
+          <p className="text-sm font-semibold text-slate-900">{t('console')}</p>
+          <p className="mt-1 text-xs leading-snug text-slate-500">{t('consoleHint')}</p>
           <Link
             to="/dashboard"
-            className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#1D70D8] shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+            className="mt-3 flex w-full flex-col gap-0.5 rounded-xl bg-white px-3 py-2.5 text-left shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
           >
-            <Briefcase className="h-4 w-4 shrink-0" aria-hidden />
-            {t('businessPilotage')}
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#1D70D8]">
+              <Briefcase className="h-4 w-4 shrink-0" aria-hidden />
+              {t('businessPilotage')}
+            </span>
+            <span className="pl-6 text-xs leading-snug text-slate-500">{t('businessPilotageHint')}</span>
           </Link>
         </div>
       </div>
@@ -178,6 +190,11 @@ const SuperAdminSidebar = ({ activeSection, onSectionChange, onCreateClass }: Su
                         aria-hidden
                       />
                       <span className="truncate">{title}</span>
+                      {item.value === 'support-ops' && demoRequestCount > 0 ? (
+                        <span className="ml-auto shrink-0 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+                          {demoRequestCount > 99 ? '99+' : demoRequestCount}
+                        </span>
+                      ) : null}
                     </button>
                     {item.value === 'classes' && onCreateClass && (
                       <button

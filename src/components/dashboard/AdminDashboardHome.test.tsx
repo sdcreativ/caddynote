@@ -46,16 +46,14 @@ describe('AdminDashboardHome (équipe CaddyNote)', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Bonjour, Alex/i })).toBeInTheDocument();
-    expect(screen.getByText(/Ops plateforme/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ops plateforme/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Raccourcis ops/i)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText(/Rien d’urgent/i)).toBeInTheDocument();
     });
 
-    expect(screen.getAllByRole('button', { name: /Console plateforme/i }).length).toBeGreaterThanOrEqual(
-      1
-    );
+    expect(screen.getAllByRole('button', { name: /Ops plateforme/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Console$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Établissements$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Abonnements \(ops\)/i }).length).toBeGreaterThanOrEqual(

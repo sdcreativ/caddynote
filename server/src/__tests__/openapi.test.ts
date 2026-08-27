@@ -27,6 +27,7 @@ describe('OpenAPI (chap. 22.2)', () => {
       'get /diagnostics',
       'get /admin/contact-messages',
       'post /admin/contact-messages/:id/convert',
+      'post /admin/contact-messages/:id/provision-demo',
       'get /admin/dunning-queue',
       'get /institutions/:id/onboarding',
       'post /institutions/:id/offboard/export',

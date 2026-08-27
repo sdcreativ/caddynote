@@ -1,12 +1,13 @@
 {
   "hello": "Bonjour, {{name}}",
   "spaces": {
-    "businessTitle": "Pilotage métier",
-    "businessHint": "Vue multi-établissements : élèves, finances, communications.",
-    "toPlatformConsole": "Console plateforme"
+    "businessTitle": "Espace établissement",
+    "businessHint": "Tableau de bord et outils d’une école (élèves, finances, communications).",
+    "toPlatformConsole": "Ops plateforme",
+    "toPlatformConsoleHint": "Gérer CaddyNote : établissements, abonnements, support et technique."
   },
   "roleHints": {
-    "admin": "Vue consolidée plateforme — la console Super Admin gère abonnements et ops.",
+    "admin": "Espace établissement — pour l’ops CaddyNote, ouvrez Ops plateforme.",
     "staff": "Indicateurs de votre établissement (effectif, présence, absences).",
     "student": "Vos notes, absences récentes et devoirs en cours.",
     "parent": "Suivi de l’enfant sélectionné (facturation et accès famille).",

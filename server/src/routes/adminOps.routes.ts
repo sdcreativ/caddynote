@@ -1026,3 +1026,55 @@ adminOpsRouter.post('/contact-messages/:id/convert', requirePlatformPerm('suppor
 
   res.status(201).json({ ticket, message });
 });
+
+adminOpsRouter.post(
+  '/contact-messages/:id/provision-demo',
+  requirePlatformPerm('support'),
+  async (req, res) => {
+    const parsed = z
+      .object({
+        institutionName: z.string().min(1).max(200),
+        institutionType: z.enum([
+          'school',
+          'high_school',
+          'middle_school',
+          'university',
+          'training_center',
+          'elementary_school',
+          'private_school',
+        ]),
+        adminEmail: z.string().email().optional(),
+        adminFirstName: z.string().min(1).max(100).optional(),
+        adminLastName: z.string().min(1).max(100).optional(),
+        adminPhone: z.string().max(40).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+    }
+
+    try {
+      const { provisionDemoFromContact } = await import('../lib/contactDemo.js');
+      const result = await provisionDemoFromContact({
+        contactId: req.params.id,
+        actorId: req.auth!.sub,
+        institutionName: parsed.data.institutionName,
+        institutionType: parsed.data.institutionType,
+        adminEmail: parsed.data.adminEmail,
+        adminFirstName: parsed.data.adminFirstName,
+        adminLastName: parsed.data.adminLastName,
+        adminPhone: parsed.data.adminPhone,
+        ipAddress: req.ip,
+      });
+      return res.status(result.alreadyProvisioned ? 200 : 201).json(result);
+    } catch (err) {
+      const status = typeof err === 'object' && err && 'status' in err ? Number((err as { status: number }).status) : 500;
+      const message = err instanceof Error ? err.message : 'Erreur de provisionnement';
+      if (status >= 400 && status < 500) {
+        return res.status(status).json({ error: message });
+      }
+      console.error('provision-demo error:', err);
+      return res.status(500).json({ error: 'Erreur lors de la création de la session démo' });
+    }
+  }
+);

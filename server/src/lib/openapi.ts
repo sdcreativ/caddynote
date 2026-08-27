@@ -448,6 +448,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'get', path: '/admin/contact-messages', tag: 'Ops admin', summary: 'File messages contact public', auth: 'bearer', roles: ['admin'] },
   { method: 'patch', path: '/admin/contact-messages/:id', tag: 'Ops admin', summary: 'Mettre à jour un message contact', auth: 'bearer', roles: ['admin'] },
   { method: 'post', path: '/admin/contact-messages/:id/convert', tag: 'Ops admin', summary: 'Convertir un contact en ticket', auth: 'bearer', roles: ['admin'], statuses: [200, 404] },
+  { method: 'post', path: '/admin/contact-messages/:id/provision-demo', tag: 'Ops admin', summary: 'Créer établissement + admin depuis un contact démo', auth: 'bearer', roles: ['admin'], statuses: [200, 201, 404, 409] },
 
   { method: 'post', path: '/subscriptions/:id/admin/sync-stripe', tag: 'Abonnement', summary: 'Sync abo depuis Stripe (422 si DB only)', auth: 'bearer', roles: ['admin'], statuses: [200, 404, 422, 501] },
   { method: 'post', path: '/subscriptions/:id/admin/billing-portal', tag: 'Abonnement', summary: 'Portail Stripe customer (ops)', auth: 'bearer', roles: ['admin'], statuses: [200, 422, 501] },

@@ -66,14 +66,17 @@ export const RealtimeNotifications = ({ onNewNotification }: RealtimeNotificatio
 
   const handleNewNotification = (notification: StrkNotification) => {
     const variant = getNotificationVariant(notification.type);
+    const actionUrl =
+      notification.action_url ||
+      (notification as StrkNotification & { actionUrl?: string }).actionUrl;
 
     toast({
       title: notification.title,
       description: notification.message,
       variant: variant as any,
-      action: notification.action_url ? (
+      action: actionUrl ? (
         <a
-          href={notification.action_url}
+          href={actionUrl}
           className="text-sm font-medium hover:underline"
         >
           {t('view')}
