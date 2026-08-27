@@ -54,4 +54,31 @@ describe('SuperAdminNotificationsBell', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
+
+  it('mode icon : bulle sans libellé texte', async () => {
+    fetchContact.mockResolvedValue([
+      {
+        id: 'c2',
+        name: 'Jean',
+        email: 'j@example.test',
+        subject: 'Demande de démo',
+        message: 'Test',
+        status: 'new',
+        convertedTicketId: null,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <SuperAdminNotificationsBell variant="icon" />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /1 demande/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Notifications')).not.toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
 });

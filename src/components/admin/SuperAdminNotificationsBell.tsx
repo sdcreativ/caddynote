@@ -49,6 +49,8 @@ export type SuperAdminNotificationsBellProps = {
   onOpenSupportOps?: () => void;
   onDemoCountChange?: (count: number) => void;
   className?: string;
+  /** `icon` = cloche compacte (navbar dashboard) ; `button` = libellé + badge (Super Admin). */
+  variant?: 'button' | 'icon';
 };
 
 /**
@@ -58,6 +60,7 @@ export const SuperAdminNotificationsBell = ({
   onOpenSupportOps,
   onDemoCountChange,
   className,
+  variant = 'button',
 }: SuperAdminNotificationsBellProps) => {
   const { t } = useTranslation('superAdmin');
   const { user } = useStrkAuth();
@@ -123,36 +126,54 @@ export const SuperAdminNotificationsBell = ({
     if (n.actionUrl) navigate(n.actionUrl);
   };
 
+  const ariaLabel =
+    demoCount > 0
+      ? t('notificationsBell.demoAria', { count: demoCount })
+      : badgeCount > 0
+        ? t('notificationsBell.ariaCount', { count: badgeCount })
+        : t('notificationsBell.aria');
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            'relative gap-2 rounded-full border-slate-200 bg-white px-3 font-medium text-slate-700 shadow-sm',
-            className
-          )}
-          aria-label={
-            demoCount > 0
-              ? t('notificationsBell.demoAria', { count: demoCount })
-              : badgeCount > 0
-                ? t('notificationsBell.ariaCount', { count: badgeCount })
-                : t('notificationsBell.aria')
-          }
-        >
-          <Bell className="h-4 w-4" aria-hidden />
-          <span className="hidden sm:inline">{t('notificationsBell.label')}</span>
-          {badgeCount > 0 ? (
-            <Badge
-              variant="destructive"
-              className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[11px] tabular-nums"
-            >
-              {badgeCount > 99 ? '99+' : badgeCount}
-            </Badge>
-          ) : null}
-        </Button>
+        {variant === 'icon' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn('relative rounded-full text-slate-600', className)}
+            aria-label={ariaLabel}
+          >
+            <Bell className="h-5 w-5" aria-hidden />
+            {badgeCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-white">
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </span>
+            ) : null}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              'relative gap-2 rounded-full border-slate-200 bg-white px-3 font-medium text-slate-700 shadow-sm',
+              className
+            )}
+            aria-label={ariaLabel}
+          >
+            <Bell className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">{t('notificationsBell.label')}</span>
+            {badgeCount > 0 ? (
+              <Badge
+                variant="destructive"
+                className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[11px] tabular-nums"
+              >
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </Badge>
+            ) : null}
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[22rem] rounded-2xl p-2">
         <DropdownMenuLabel className="flex items-center justify-between px-2 py-1.5">

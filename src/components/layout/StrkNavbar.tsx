@@ -34,6 +34,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { SuperAdminNotificationsBell } from '@/components/admin/SuperAdminNotificationsBell';
 
 interface StrkNavbarProps {
   onToggleSidebar?: () => void;
@@ -148,6 +149,11 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
 
           {isSchoolShell ? (
             <SchoolNotifications />
+          ) : user?.role === 'admin' ? (
+            <SuperAdminNotificationsBell
+              variant="icon"
+              onOpenSupportOps={() => navigate('/super-admin/support-ops')}
+            />
           ) : (
             <Button variant="ghost" size="icon" className="rounded-full text-slate-600" aria-label={t('notifications')}>
               <Bell className="h-5 w-5" />
