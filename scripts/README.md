@@ -38,7 +38,17 @@ Sinon le push à 03:00 échouera (agent SSH vide sous `launchd`).
 ### Logs
 
 - `~/Library/Logs/caddynote-nightly-push.log`
-- notifications macOS en cas de skip / succès / échec
+- notifications macOS : push, puis **succès / échec du déploiement** (workflow CI)
+
+### Suivi CI (une fois)
+
+PAT fine-grained avec **Actions: Read** sur le dépôt :
+
+```bash
+mkdir -p ~/.config/caddynote && chmod 700 ~/.config/caddynote
+printf '%s' 'VOTRE_TOKEN' > ~/.config/caddynote/github_token
+chmod 600 ~/.config/caddynote/github_token
+```
 
 ### Mac en veille à 03:00
 

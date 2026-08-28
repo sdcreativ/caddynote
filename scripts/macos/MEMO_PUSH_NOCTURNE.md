@@ -32,6 +32,34 @@ chmod +x scripts/nightly-push-main.sh scripts/macos/install-nightly-push-launcha
 
 ---
 
+### Notifications (push + déploiement)
+
+Après un push réussi, le script **attend le workflow GitHub « CI CaddyNote »** puis affiche une notification macOS :
+
+- « Réussi — staging à jour (abc1234) »
+- ou « Échoué (failure) — abc1234 »
+
+Pas dans le Terminal : regardez le Centre de notifications, ou :
+
+```bash
+tail -50 ~/Library/Logs/caddynote-nightly-push.log
+```
+
+#### Jeton GitHub (une fois) — requis pour le suivi CI
+
+`gh` n’est pas nécessaire. Créez un [PAT fine-grained](https://github.com/settings/tokens?type=beta) avec permission **Actions: Read** sur le dépôt `caddynote`, puis :
+
+```bash
+mkdir -p ~/.config/caddynote
+chmod 700 ~/.config/caddynote
+printf '%s' 'VOTRE_TOKEN' > ~/.config/caddynote/github_token
+chmod 600 ~/.config/caddynote/github_token
+```
+
+Sans ce fichier (ni `GH_TOKEN` / `GITHUB_TOKEN`), le push fonctionne quand même, mais la notification de déploiement sera un rappel de configuration.
+
+---
+
 ## Tester (simulation, ne pousse pas)
 
 ```bash
