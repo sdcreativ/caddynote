@@ -85,6 +85,9 @@ const SupportOpsCenter = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<SupportTicket | null>(null);
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
+  const [prospect, setProspect] = useState<{ name: string; email: string; subject: string } | null>(
+    null
+  );
   const [replyBody, setReplyBody] = useState('');
   const [replyInternal, setReplyInternal] = useState(false);
   const [targetUserId, setTargetUserId] = useState('');
@@ -131,9 +134,10 @@ const SupportOpsCenter = () => {
     setSelectedTicketId(id);
     setBusy(true);
     try {
-      const { ticket, messages: msgs } = await fetchSupportTicket(id);
+      const { ticket, messages: msgs, prospect: linked } = await fetchSupportTicket(id);
       setTicketDetail(ticket);
       setMessages(msgs || []);
+      setProspect(linked ?? null);
     } catch (e) {
       toast({
         title: 'Ticket indisponible',
@@ -234,9 +238,20 @@ const SupportOpsCenter = () => {
     if (!selectedTicketId || !replyBody.trim()) return;
     setBusy(true);
     try {
-      await replySupportTicket(selectedTicketId, replyBody.trim(), replyInternal);
+      const result = await replySupportTicket(selectedTicketId, replyBody.trim(), replyInternal);
       setReplyBody('');
-      toast({ title: 'Réponse envoyée' });
+      if (!replyInternal && result.prospectEmail) {
+        toast({
+          title: result.prospectEmailed
+            ? 'Réponse envoyée au prospect'
+            : 'Réponse enregistrée (e-mail non envoyé)',
+          description: result.prospectEmailed
+            ? `E-mail remis à ${result.prospectEmail}.`
+            : `Message dans le ticket, mais SMTP non configuré — ${result.prospectEmail} n’a pas reçu d’e-mail.`,
+        });
+      } else {
+        toast({ title: 'Réponse enregistrée' });
+      }
       await openTicket(selectedTicketId);
       await loadTickets();
     } catch (e) {
@@ -692,6 +707,11 @@ const SupportOpsCenter = () => {
                     </li>
                   ))}
                 </ul>
+                {prospect && !replyInternal ? (
+                  <p className="text-xs text-muted-foreground">
+                    Sera aussi envoyé par e-mail à {prospect.name} &lt;{prospect.email}&gt;.
+                  </p>
+                ) : null}
                 <Textarea
                   rows={3}
                   placeholder="Réponse…"

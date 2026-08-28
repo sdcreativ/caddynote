@@ -65,7 +65,11 @@ const SupportPage = () => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<{ ticket: SupportTicket; messages: SupportTicketMessage[] } | null>(null);
+  const [selected, setSelected] = useState<{
+    ticket: SupportTicket;
+    messages: SupportTicketMessage[];
+    prospect?: { name: string; email: string; subject: string };
+  } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
@@ -116,9 +120,19 @@ const SupportPage = () => {
   const handleReply = async () => {
     if (!selectedId || !replyBody.trim()) return;
     try {
-      await replySupportTicket(selectedId, replyBody, replyInternal);
+      const result = await replySupportTicket(selectedId, replyBody, replyInternal);
       setReplyBody("");
       setReplyInternal(false);
+      if (!replyInternal && result.prospectEmail) {
+        toast({
+          title: result.prospectEmailed
+            ? t('toast.replyEmailedTitle')
+            : t('toast.replySavedNoSmtpTitle'),
+          description: result.prospectEmailed
+            ? t('toast.replyEmailedBody', { email: result.prospectEmail })
+            : t('toast.replySavedNoSmtpBody', { email: result.prospectEmail }),
+        });
+      }
       await loadDetail(selectedId);
       await loadTickets();
     } catch (error) {
@@ -255,6 +269,14 @@ const SupportPage = () => {
                 </div>
 
                 <div className="space-y-2 pt-4 border-t">
+                  {isPlatformAdmin && selected.prospect && !replyInternal ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t('prospectEmailHint', {
+                        name: selected.prospect.name,
+                        email: selected.prospect.email,
+                      })}
+                    </p>
+                  ) : null}
                   <Textarea
                     placeholder={t('replyPlaceholder')}
                     value={replyBody}

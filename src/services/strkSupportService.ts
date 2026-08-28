@@ -50,8 +50,18 @@ export const fetchSupportTickets = async (params?: {
   return tickets;
 };
 
-export const fetchSupportTicket = async (id: string): Promise<{ ticket: SupportTicket; messages: SupportTicketMessage[] }> =>
-  apiClient.get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/support/tickets/${id}`);
+export const fetchSupportTicket = async (
+  id: string
+): Promise<{
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+  prospect?: { name: string; email: string; subject: string };
+}> =>
+  apiClient.get<{
+    ticket: SupportTicket;
+    messages: SupportTicketMessage[];
+    prospect?: { name: string; email: string; subject: string };
+  }>(`/support/tickets/${id}`);
 
 export const createSupportTicket = async (data: {
   subject: string;
@@ -69,13 +79,19 @@ export const replySupportTicket = async (
   ticketId: string,
   body: string,
   isInternal = false
-): Promise<SupportTicketMessage> => {
-  const { message } = await apiClient.post<{ message: SupportTicketMessage }>(`/support/tickets/${ticketId}/messages`, {
+): Promise<{
+  message: SupportTicketMessage;
+  prospectEmail: string | null;
+  prospectEmailed: boolean;
+}> =>
+  apiClient.post<{
+    message: SupportTicketMessage;
+    prospectEmail: string | null;
+    prospectEmailed: boolean;
+  }>(`/support/tickets/${ticketId}/messages`, {
     body,
     isInternal,
   });
-  return message;
-};
 
 export const updateSupportTicket = async (
   ticketId: string,

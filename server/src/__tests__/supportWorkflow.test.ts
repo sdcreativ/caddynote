@@ -163,6 +163,35 @@ describe('Support / contact — recette §5.16', () => {
     expect(provisioned.body.message?.convertedInstitutionId).toBe(provisioned.body.institution.id);
     if (provisioned.body.ticketId) ticketIds.push(provisioned.body.ticketId);
 
+    const ticketId = provisioned.body.ticketId as string;
+    expect(ticketId).toBeTruthy();
+
+    const detail = await request(app)
+      .get(`/support/tickets/${ticketId}`)
+      .set(auth(fx.globalAdmin.token));
+    expect(detail.status).toBe(200);
+    expect(detail.body.prospect?.email).toBe(`marie.demo.${stamp}@example.test`);
+
+    const reply = await request(app)
+      .post(`/support/tickets/${ticketId}/messages`)
+      .set(auth(fx.globalAdmin.token))
+      .send({
+        body: 'Bonjour Marie, quel créneau vous conviendrait pour la démo ?',
+        isInternal: false,
+      });
+    expect(reply.status).toBe(201);
+    expect(reply.body.prospectEmail).toBe(`marie.demo.${stamp}@example.test`);
+    // Sans SMTP en CI : message enregistré, e-mail non remis.
+    expect(typeof reply.body.prospectEmailed).toBe('boolean');
+
+    const internal = await request(app)
+      .post(`/support/tickets/${ticketId}/messages`)
+      .set(auth(fx.globalAdmin.token))
+      .send({ body: 'Note ops — ne pas mailer', isInternal: true });
+    expect(internal.status).toBe(201);
+    expect(internal.body.prospectEmail).toBeNull();
+    expect(internal.body.prospectEmailed).toBe(false);
+
     const again = await request(app)
       .post(`/admin/contact-messages/${contact.body.id}/provision-demo`)
       .set(auth(fx.globalAdmin.token))

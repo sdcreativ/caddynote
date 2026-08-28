@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
 import { withSupportSla } from '../lib/supportSla.js';
 import { logAudit } from '../lib/audit.js';
+import { emailProspectSupportReply, findProspectForTicket } from '../lib/supportContactNotify.js';
 
 /**
  * SAA-006 (Lot 10) — support client structuré.
@@ -139,7 +140,14 @@ supportRouter.get('/tickets/:id', async (req, res) => {
     orderBy: { createdAt: 'asc' },
     include: { author: { select: { firstName: true, lastName: true, role: true } } },
   });
-  res.json({ ticket: withSupportSla(ticket), messages });
+  const prospect = isGlobalAdmin(req.auth!) ? await findProspectForTicket(ticket.id) : null;
+  res.json({
+    ticket: withSupportSla(ticket),
+    messages,
+    ...(prospect
+      ? { prospect: { name: prospect.name, email: prospect.email, subject: prospect.subject } }
+      : {}),
+  });
 });
 
 const messageSchema = z.object({
@@ -175,7 +183,21 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
   if (!isInstitutionStaff && ticket.status === 'waiting_on_customer') {
     await prisma.strkSupportTicket.update({ where: { id: ticket.id }, data: { status: 'in_progress' } });
   }
-  res.status(201).json({ message });
+
+  /** Réponse publique plateforme → e-mail au prospect (contact / démo lié). */
+  let prospectEmail: string | null = null;
+  let prospectEmailed = false;
+  if (!parsed.data.isInternal && isGlobalAdmin(req.auth!)) {
+    const notify = await emailProspectSupportReply({
+      ticketId: ticket.id,
+      ticketSubject: ticket.subject,
+      body: parsed.data.body,
+    });
+    prospectEmail = notify.prospectEmail;
+    prospectEmailed = notify.emailed;
+  }
+
+  res.status(201).json({ message, prospectEmail, prospectEmailed });
 });
 
 /**
