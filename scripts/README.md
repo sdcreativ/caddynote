@@ -18,6 +18,23 @@ chmod +x scripts/nightly-push-main.sh scripts/macos/install-nightly-push-launcha
 ./scripts/nightly-push-main.sh --dry-run
 ```
 
+### Clé SSH GitHub (obligatoire pour la nuit)
+
+La clé `~/.ssh/id_github_sdcreativ` est protégée par phrase secrète. Une fois, dans un Terminal :
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_github_sdcreativ
+```
+
+Ajoutez aussi dans `~/.ssh/config` sous `Host github.com` :
+
+```
+UseKeychain yes
+AddKeysToAgent yes
+```
+
+Sinon le push à 03:00 échouera (agent SSH vide sous `launchd`).
+
 ### Logs
 
 - `~/Library/Logs/caddynote-nightly-push.log`
