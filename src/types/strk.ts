@@ -324,7 +324,7 @@ export interface Institution {
   address: string;
   phone: string;
   email: string;
-  logo?: string;
+  logo?: string | null;
   adminId: string;
   /** Surcharges tenant (incl. `__ops_frozen` pour gel ops). */
   featureOverrides?: Record<string, boolean> | null;

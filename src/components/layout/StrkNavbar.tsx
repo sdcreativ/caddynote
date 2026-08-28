@@ -4,8 +4,10 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useEstablishmentDashboardContext } from '@/hooks/useEstablishmentDashboardContext';
 import { Button } from '@/components/ui/button';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
+import { InstitutionBrand } from '@/components/brand/InstitutionBrand';
 import { useTranslation } from 'react-i18next';
 import { isSchoolShellRole } from '@/lib/navConfig';
+import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import {
   Bell,
   LogOut,
@@ -53,7 +55,32 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
   const { t } = useTranslation('nav');
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const { getInstitutionById, institutions } = useStrkInstitutions();
+  const [institutionName, setInstitutionName] = useState('');
+  const [institutionLogo, setInstitutionLogo] = useState<string | null>(null);
   const isSchoolShell = isSchoolShellRole(user?.role);
+
+  useEffect(() => {
+    if (!isSchoolShell || !user?.institutionId) return;
+    const apply = (inst: { name?: string; logo?: string | null } | null) => {
+      if (inst?.name) setInstitutionName(inst.name);
+      setInstitutionLogo(inst?.logo ?? null);
+    };
+    const fromList = institutions.find((i) => i.id === user.institutionId);
+    if (fromList) {
+      apply(fromList);
+    } else {
+      void getInstitutionById(user.institutionId).then(apply);
+    }
+
+    const onUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string; name?: string; logo?: string | null }>).detail;
+      if (!detail?.id || detail.id !== user.institutionId) return;
+      apply(detail);
+    };
+    window.addEventListener('strk:institution-updated', onUpdated);
+    return () => window.removeEventListener('strk:institution-updated', onUpdated);
+  }, [isSchoolShell, user?.institutionId, getInstitutionById, institutions]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -114,15 +141,26 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
           <Menu className="h-5 w-5" />
         </Button>
 
-        <CaddyNoteLogo
-          to="/dashboard"
-          size={28}
-          withWordmark
-          tagline={null}
-          linkClassName="lg:hidden shrink-0"
-          className="[&_.font-display]:text-sm"
-          aria-label={t('logoHome')}
-        />
+        {isSchoolShell && institutionName ? (
+          <InstitutionBrand
+            name={institutionName}
+            logoKey={institutionLogo}
+            to="/dashboard"
+            size={28}
+            className="lg:hidden shrink-0 [&_.font-display]:text-sm"
+            aria-label={t('logoHome')}
+          />
+        ) : (
+          <CaddyNoteLogo
+            to="/dashboard"
+            size={28}
+            withWordmark
+            tagline={null}
+            linkClassName="lg:hidden shrink-0"
+            className="[&_.font-display]:text-sm"
+            aria-label={t('logoHome')}
+          />
+        )}
 
         <button
           type="button"

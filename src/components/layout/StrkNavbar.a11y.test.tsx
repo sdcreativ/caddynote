@@ -15,6 +15,13 @@ vi.mock('@/hooks/useStrkAuth', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useStrkInstitutions', () => ({
+  useStrkInstitutions: () => ({
+    institutions: [],
+    getInstitutionById: vi.fn(async () => null),
+  }),
+}));
+
 vi.mock('@/lib/navConfig', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/navConfig')>();
   return { ...actual, isSchoolShellRole: () => false };

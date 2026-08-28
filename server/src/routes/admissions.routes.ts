@@ -16,6 +16,12 @@ import { isS3Configured, buildObjectKey, createPresignedUploadPost } from '../li
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, isFileStorageAvailable, getStoredObjectBytes, deleteStoredObject, putStoredObject } from '../lib/fileStorage.js';
 import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
+import {
+  ImageOptimizeError,
+  isOptimizableImageMime,
+  maybeOptimizeUploadedImage,
+  withWebpExtension,
+} from '../lib/imageOptimize.js';
 import { logAudit } from '../lib/audit.js';
 import { isCinetPayConfigured, initiatePayment } from '../lib/cinetpay.js';
 import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
@@ -475,7 +481,23 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
     return res.status(400).json({ error: `Type de fichier non autorisé (autorisés : ${ADMISSION_DOCUMENT_TYPES.join(', ')})` });
   }
   const scope = `inst-${application.institutionId}-app-${application.id}`;
-  const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, parsed.data.filename);
+  const willOptimize = isOptimizableImageMime(parsed.data.contentType);
+  const filenameForKey = willOptimize
+    ? withWebpExtension(parsed.data.filename)
+    : parsed.data.filename;
+  const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, filenameForKey);
+  const uploadPath = `/admissions/status/${req.params.token}/documents/direct-upload`;
+
+  // Images : toujours via l’API pour conversion WebP.
+  if (willOptimize) {
+    return res.json({
+      mode: 'local' as const,
+      key,
+      maxSizeBytes: ADMISSION_DOCUMENT_MAX_BYTES,
+      uploadPath,
+      optimize: 'webp' as const,
+    });
+  }
 
   if (isS3Configured()) {
     const { url, fields } = await createPresignedUploadPost(key, parsed.data.contentType, ADMISSION_DOCUMENT_MAX_BYTES);
@@ -486,7 +508,7 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
       fields,
       maxSizeBytes: ADMISSION_DOCUMENT_MAX_BYTES,
       expiresIn: 300,
-      uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
+      uploadPath,
     });
   }
 
@@ -494,7 +516,7 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
     mode: 'local' as const,
     key,
     maxSizeBytes: ADMISSION_DOCUMENT_MAX_BYTES,
-    uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
+    uploadPath,
   });
 });
 
@@ -534,8 +556,25 @@ admissionsPublicRouter.put('/status/:token/documents/direct-upload', submitLimit
     return res.status(400).json({ error: 'Fichier vide' });
   }
 
-  await putStoredObject(keyHeader, body, contentType);
-  res.status(201).json({ key: keyHeader, bytes: body.length, mode: 'local' });
+  try {
+    const result = await maybeOptimizeUploadedImage(body, contentType, keyHeader);
+    if (!result.key.startsWith(expectedPrefix)) {
+      return res.status(403).json({ error: 'Clé de fichier invalide pour ce dossier' });
+    }
+    await putStoredObject(result.key, result.body, result.contentType);
+    return res.status(201).json({
+      key: result.key,
+      bytes: result.body.length,
+      mode: 'local',
+      contentType: result.contentType,
+      optimized: result.optimized,
+    });
+  } catch (err) {
+    if (err instanceof ImageOptimizeError) {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
 });
 
 const attachDocumentSchema = z.object({ label: z.string().min(1), fileKey: z.string().min(1) });

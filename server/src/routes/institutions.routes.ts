@@ -10,6 +10,7 @@ import { logAudit } from '../lib/audit.js';
 import { optionalEmail, optionalString, optionalUuid } from '../lib/zodHelpers.js';
 import { invalidateDashboardSummaryCache } from '../lib/dashboardCache.js';
 import { ensureInstitutionSubscription } from '../lib/institutionSubscription.js';
+import { isOwnedObjectKey } from '../lib/s3.js';
 
 export const institutionsRouter = Router();
 
@@ -62,6 +63,7 @@ const createInstitutionSchema = z.object({
   address: optionalString,
   phone: optionalString,
   email: optionalEmail,
+  logo: optionalString,
 });
 
 // ORG-001 : seul SDCREATIV (admin global) crée un nouveau tenant.
@@ -95,6 +97,8 @@ institutionsRouter.post('/', requireRole('admin'), async (req, res) => {
 
 const updateInstitutionSchema = createInstitutionSchema.partial().extend({
   adminId: optionalUuid,
+  /** `null` retire le logo. */
+  logo: z.union([z.string().min(1).max(1000), z.null()]).optional(),
   // PRS-006 : seuils d'alerte d'assiduité — `null` désactive le suivi pour
   // ce type (absence ou retard), indépendamment l'un de l'autre.
   absenceThreshold: z.number().int().positive().nullable().optional(),
@@ -114,6 +118,12 @@ institutionsRouter.patch('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
   const { adminId, ...rest } = parsed.data;
+  // Logo : clé S3 dossier avatars du tenant uniquement (upload via /files/presign-upload).
+  if (rest.logo) {
+    if (!isOwnedObjectKey(rest.logo, 'avatars', req.params.id, req.auth!.sub)) {
+      return res.status(403).json({ error: 'Ce logo ne provient pas de votre espace de stockage' });
+    }
+  }
   const institution = await prisma.strkInstitution.update({
     where: { id: req.params.id },
     data: { ...rest, adminId },

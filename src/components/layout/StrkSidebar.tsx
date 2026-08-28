@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
+import { InstitutionBrand } from '@/components/brand/InstitutionBrand';
 import { brandTaglineForRole } from '@/lib/brand';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -323,18 +324,34 @@ function SimpleRoleNav({ onNavigate }: { onNavigate: (href: string) => void }) {
 const StrkSidebar: React.FC<StrkSidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user } = useStrkAuth();
-  const { getInstitutionById } = useStrkInstitutions();
+  const { getInstitutionById, institutions } = useStrkInstitutions();
   const [institutionName, setInstitutionName] = useState('');
+  const [institutionLogo, setInstitutionLogo] = useState<string | null>(null);
   const { t } = useTranslation('nav');
 
   const isSchoolShell = isSchoolShellRole(user?.role);
 
   useEffect(() => {
     if (!user?.institutionId) return;
-    void getInstitutionById(user.institutionId).then((inst) => {
+    const apply = (inst: { name?: string; logo?: string | null } | null) => {
       if (inst?.name) setInstitutionName(inst.name);
-    });
-  }, [user?.institutionId, getInstitutionById]);
+      setInstitutionLogo(inst?.logo ?? null);
+    };
+    const fromList = institutions.find((i) => i.id === user.institutionId);
+    if (fromList) {
+      apply(fromList);
+    } else {
+      void getInstitutionById(user.institutionId).then(apply);
+    }
+
+    const onUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string; name?: string; logo?: string | null }>).detail;
+      if (!detail?.id || detail.id !== user.institutionId) return;
+      apply(detail);
+    };
+    window.addEventListener('strk:institution-updated', onUpdated);
+    return () => window.removeEventListener('strk:institution-updated', onUpdated);
+  }, [user?.institutionId, getInstitutionById, institutions]);
 
   const go = (href: string) => {
     if (window.innerWidth < 1024) onClose();
@@ -352,14 +369,25 @@ const StrkSidebar: React.FC<StrkSidebarProps> = ({ isOpen, onClose }) => {
         )}
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
-          <CaddyNoteLogo
-            to="/dashboard"
-            size={36}
-            tagline={brandTaglineForRole(user?.role)}
-            className="[&_.font-display]:text-base [&_.font-display]:font-semibold"
-            aria-label={t('logoHome')}
-            onClick={() => window.innerWidth < 1024 && onClose()}
-          />
+          {isSchoolShell && institutionName ? (
+            <InstitutionBrand
+              name={institutionName}
+              logoKey={institutionLogo}
+              to="/dashboard"
+              size={36}
+              aria-label={t('logoHome')}
+              onClick={() => window.innerWidth < 1024 && onClose()}
+            />
+          ) : (
+            <CaddyNoteLogo
+              to="/dashboard"
+              size={36}
+              tagline={brandTaglineForRole(user?.role)}
+              className="[&_.font-display]:text-base [&_.font-display]:font-semibold"
+              aria-label={t('logoHome')}
+              onClick={() => window.innerWidth < 1024 && onClose()}
+            />
+          )}
           <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden" aria-label={t('closeMenu')}>
             <X className="h-5 w-5" />
           </Button>

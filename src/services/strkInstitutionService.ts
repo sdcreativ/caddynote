@@ -62,7 +62,7 @@ export const createStrkInstitution = async (institution: Omit<Institution, "id">
 
 export const updateStrkInstitution = async (
   id: string,
-  institution: Partial<Institution>
+  institution: Partial<Omit<Institution, 'logo'>> & { logo?: string | null }
 ): Promise<Institution> => {
   const { institution: updated } = await apiClient.patch<{ institution: ApiInstitution }>(
     `/institutions/${id}`,
@@ -73,6 +73,7 @@ export const updateStrkInstitution = async (
       phone: institution.phone,
       email: institution.email,
       adminId: institution.adminId,
+      ...(institution.logo !== undefined ? { logo: institution.logo || null } : {}),
     })
   );
   return mapApiInstitution(updated);

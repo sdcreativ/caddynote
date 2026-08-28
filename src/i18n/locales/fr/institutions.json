@@ -51,7 +51,18 @@
     "phone": "Téléphone",
     "phonePlaceholder": "01 23 45 67 89",
     "email": "Email",
-    "emailPlaceholder": "contact@etablissement.fr"
+    "emailPlaceholder": "contact@etablissement.fr",
+    "logo": "Logo de l'établissement",
+    "logoHint": "Affiché dans le menu latéral à la place du logo CaddyNote. Sans logo, le nom de l'établissement est utilisé.",
+    "logoFallback": "Nom"
+  },
+  "logo": {
+    "choose": "Choisir une image",
+    "uploading": "Envoi…",
+    "remove": "Retirer",
+    "uploadedTitle": "Logo mis à jour",
+    "uploadedBody": "Enregistrez pour appliquer le logo dans le tableau de bord.",
+    "uploadError": "Impossible d'envoyer le logo."
   },
   "delete": {
     "title": "Êtes-vous sûr ?",

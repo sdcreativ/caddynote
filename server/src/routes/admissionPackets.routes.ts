@@ -11,6 +11,7 @@ import { buildObjectKey, createPresignedUploadPost, isS3Configured, getPresigned
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, getStoredObjectBytes, deleteStoredObject, ensureStoredObjectEncrypted } from '../lib/fileStorage.js';
 import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
+import { isOptimizableImageMime, withWebpExtension } from '../lib/imageOptimize.js';
 import { logAudit } from '../lib/audit.js';
 import {
   ensureApplicationPacketItems,
@@ -161,8 +162,23 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
     }
 
     const scope = `inst-${application.institutionId}-app-${application.id}`;
-    const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, parsed.data.filename);
+    const willOptimize = isOptimizableImageMime(parsed.data.contentType);
+    const filenameForKey = willOptimize
+      ? withWebpExtension(parsed.data.filename)
+      : parsed.data.filename;
+    const key = buildObjectKey(STORAGE_FOLDER.inscription, scope, filenameForKey);
     const maxSize = item.documentType.maxSizeBytes || MAX_BYTES;
+    const uploadPath = `/admissions/status/${req.params.token}/documents/direct-upload`;
+
+    if (willOptimize) {
+      return res.json({
+        mode: 'local',
+        key,
+        maxSizeBytes: maxSize,
+        uploadPath,
+        optimize: 'webp' as const,
+      });
+    }
 
     if (isS3Configured()) {
       const { url, fields } = await createPresignedUploadPost(key, parsed.data.contentType, maxSize);
@@ -173,7 +189,7 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
         fields,
         maxSizeBytes: maxSize,
         // Repli navigateur → API (CORS S3 / chiffrement applicatif).
-        uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
+        uploadPath,
       });
     }
 
@@ -181,7 +197,7 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
       mode: 'local',
       key,
       maxSizeBytes: maxSize,
-      uploadPath: `/admissions/status/${req.params.token}/documents/direct-upload`,
+      uploadPath,
     });
   });
 

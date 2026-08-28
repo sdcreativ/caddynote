@@ -188,5 +188,80 @@ describe('Isolation multi-tenant — clés d’objets S3', () => {
       expect(forMaterials.status).toBe(200);
       expect(forMaterials.body.mode).toBe('local');
     });
+
+    it('avatars : force le mode API et convertit l’image en WebP', async () => {
+      const sharp = (await import('sharp')).default;
+      const actor = await registerActor('teacher');
+      const png = await sharp({
+        create: { width: 120, height: 80, channels: 3, background: { r: 10, g: 20, b: 30 } },
+      })
+        .png()
+        .toBuffer();
+
+      const presign = await request(app)
+        .post('/files/presign-upload')
+        .set(auth(actor.token))
+        .send({ folder: 'avatars', filename: 'portrait.png', contentType: 'image/png' });
+      expect(presign.status).toBe(200);
+      expect(presign.body.mode).toBe('local');
+      expect(presign.body.optimize).toBe('webp');
+      expect(presign.body.key).toMatch(/\.webp$/);
+
+      const put = await request(app)
+        .put('/files/direct-upload')
+        .set(auth(actor.token))
+        .set('Content-Type', 'image/png')
+        .set('X-Object-Key', presign.body.key)
+        .send(png);
+      expect(put.status).toBe(201);
+      expect(put.body.optimized).toBe(true);
+      expect(put.body.contentType).toBe('image/webp');
+      expect(put.body.key).toMatch(/\.webp$/);
+      expect(put.body.bytes).toBeGreaterThan(0);
+    });
+
+    it('justificatifs : convertit les images en WebP et laisse les PDF intacts', async () => {
+      const sharp = (await import('sharp')).default;
+      const actor = await registerActor('teacher');
+      const png = await sharp({
+        create: { width: 60, height: 40, channels: 3, background: { r: 200, g: 100, b: 50 } },
+      })
+        .png()
+        .toBuffer();
+
+      const imgPresign = await request(app)
+        .post('/files/presign-upload')
+        .set(auth(actor.token))
+        .send({ folder: 'justificatifs', filename: 'scan.png', contentType: 'image/png' });
+      expect(imgPresign.status).toBe(200);
+      expect(imgPresign.body.optimize).toBe('webp');
+
+      const imgPut = await request(app)
+        .put('/files/direct-upload')
+        .set(auth(actor.token))
+        .set('Content-Type', 'image/png')
+        .set('X-Object-Key', imgPresign.body.key)
+        .send(png);
+      expect(imgPut.status).toBe(201);
+      expect(imgPut.body.optimized).toBe(true);
+      expect(imgPut.body.key).toMatch(/\.webp$/);
+
+      const pdfPresign = await request(app)
+        .post('/files/presign-upload')
+        .set(auth(actor.token))
+        .send({ folder: 'justificatifs', filename: 'cert.pdf', contentType: 'application/pdf' });
+      expect(pdfPresign.status).toBe(200);
+      expect(pdfPresign.body.optimize).toBeUndefined();
+
+      const pdfPut = await request(app)
+        .put('/files/direct-upload')
+        .set(auth(actor.token))
+        .set('Content-Type', 'application/pdf')
+        .set('X-Object-Key', pdfPresign.body.key)
+        .send(Buffer.from('%PDF-1.4 fake'));
+      expect(pdfPut.status).toBe(201);
+      expect(pdfPut.body.optimized).toBe(false);
+      expect(pdfPut.body.key).toMatch(/\.pdf$/);
+    });
   });
 });

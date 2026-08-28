@@ -281,7 +281,7 @@ const uploadAdmissionBinary = async (
   uploadPath: string,
   file: File,
   contentType: string
-) => {
+): Promise<string> => {
   const uploaded = await fetch(`${API_BASE}${uploadPath}`, {
     method: 'PUT',
     headers: { 'Content-Type': contentType, 'X-Object-Key': key },
@@ -296,6 +296,8 @@ const uploadAdmissionBinary = async (
       (errBody as { code?: string } | null)?.code
     );
   }
+  const body = (await uploaded.json().catch(() => null)) as { key?: string } | null;
+  return body?.key || key;
 };
 
 const uploadAdmissionViaPresign = async (
@@ -305,14 +307,15 @@ const uploadAdmissionViaPresign = async (
     url?: string;
     fields?: Record<string, string>;
     uploadPath?: string;
+    optimize?: 'webp';
   },
   file: File,
   contentType: string
-) => {
-  if (presign.mode === 'local' || (!presign.url && !presign.fields)) {
+): Promise<string> => {
+  const isImage = contentType.startsWith('image/') || presign.optimize === 'webp';
+  if (presign.mode === 'local' || (!presign.url && !presign.fields) || isImage) {
     if (!presign.uploadPath) throw new ApiError('Réponse d’upload invalide (chemin manquant)', 502);
-    await uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
-    return;
+    return uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
   }
 
   if (!presign.url || !presign.fields) {
@@ -327,11 +330,11 @@ const uploadAdmissionViaPresign = async (
     if (!uploaded.ok) {
       throw new Error(`S3 upload failed (${uploaded.status})`);
     }
+    return presign.key;
   } catch (err) {
     // CORS / réseau / policy S3 : même clé via l’API (stockage S3 côté serveur).
     if (presign.uploadPath) {
-      await uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
-      return;
+      return uploadAdmissionBinary(presign.key, presign.uploadPath, file, contentType);
     }
     throw err instanceof ApiError
       ? err
@@ -347,17 +350,24 @@ export const attachAdmissionPacketItem = async (token: string, itemId: string, f
     url?: string;
     fields?: Record<string, string>;
     uploadPath?: string;
+    optimize?: 'webp';
   }>(
     `/admissions/status/${token}/packet/items/${itemId}/presign-upload`,
     { filename: file.name, contentType },
     { skipAuth: true }
   );
 
-  await uploadAdmissionViaPresign(presign, file, contentType);
+  const fileKey = await uploadAdmissionViaPresign(presign, file, contentType);
+  const storedContentType = fileKey.endsWith('.webp') ? 'image/webp' : contentType;
 
   return apiClient.post<AdmissionPacket>(
     `/admissions/status/${token}/packet/items/${itemId}/attach`,
-    { fileKey: presign.key, fileName: file.name, contentType, sizeBytes: file.size },
+    {
+      fileKey,
+      fileName: fileKey.endsWith('.webp') ? file.name.replace(/\.[^.]+$/, '.webp') : file.name,
+      contentType: storedContentType,
+      sizeBytes: file.size,
+    },
     { skipAuth: true }
   );
 };
@@ -377,6 +387,7 @@ export const attachAdmissionDocument = async (token: string, label: string, file
     fields?: Record<string, string>;
     uploadPath?: string;
     maxSizeBytes?: number;
+    optimize?: 'webp';
   }>(
     `/admissions/status/${token}/documents/presign-upload`,
     {
@@ -386,11 +397,11 @@ export const attachAdmissionDocument = async (token: string, label: string, file
     { skipAuth: true }
   );
 
-  await uploadAdmissionViaPresign(presign, file, contentType);
+  const fileKey = await uploadAdmissionViaPresign(presign, file, contentType);
 
   return apiClient.post<{ application: AdmissionApplication }>(
     `/admissions/status/${token}/documents`,
-    { label, fileKey: presign.key },
+    { label, fileKey },
     { skipAuth: true }
   );
 };

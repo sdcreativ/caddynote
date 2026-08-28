@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, Edit, Trash2, School } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, School, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,9 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { uploadViaPresignedPost } from '@/lib/s3Upload';
+import { resolveStoredFileDisplayUrl } from '@/lib/storedFileAccess';
+import { ApiError } from '@/lib/apiClient';
 
 const INSTITUTION_TYPE_VALUES: StrkInstitutionType[] = [
   'elementary_school',
@@ -53,7 +56,11 @@ const InstitutionsPage = () => {
     address: '',
     phone: '',
     email: '',
+    logo: '' as string | null,
   });
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
     setFormData({
@@ -62,7 +69,25 @@ const InstitutionsPage = () => {
       address: '',
       phone: '',
       email: '',
+      logo: null,
     });
+    setLogoPreviewUrl(null);
+  };
+
+  const loadLogoPreview = async (key: string | null | undefined) => {
+    if (!key) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    if (key.startsWith('http') || key.startsWith('blob:') || key.startsWith('/') || key.startsWith('data:')) {
+      setLogoPreviewUrl(key);
+      return;
+    }
+    try {
+      setLogoPreviewUrl(await resolveStoredFileDisplayUrl(key));
+    } catch {
+      setLogoPreviewUrl(null);
+    }
   };
 
   const handleAddInstitution = () => {
@@ -77,9 +102,37 @@ const InstitutionsPage = () => {
       address: institution.address || '',
       phone: institution.phone || '',
       email: institution.email || '',
+      logo: institution.logo || null,
     });
     setSelectedInstitution(institution);
     setShowEditDialog(true);
+    void loadLogoPreview(institution.logo);
+  };
+
+  const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const key = await uploadViaPresignedPost('avatars', file);
+      setFormData((prev) => ({ ...prev, logo: key }));
+      await loadLogoPreview(key);
+      toast({ title: t('logo.uploadedTitle'), description: t('logo.uploadedBody') });
+    } catch (error) {
+      toast({
+        title: tc('status.error'),
+        description: error instanceof ApiError ? error.message : t('logo.uploadError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData((prev) => ({ ...prev, logo: null }));
+    setLogoPreviewUrl(null);
   };
 
   const handleSubmitAdd = async () => {
@@ -130,6 +183,7 @@ const InstitutionsPage = () => {
         address: formData.address,
         phone: formData.phone,
         email: formData.email,
+        logo: formData.logo,
       });
 
       if (result) {
@@ -380,6 +434,53 @@ const InstitutionsPage = () => {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>{t('fields.logo')}</Label>
+              <p className="text-xs text-muted-foreground">{t('fields.logoHint')}</p>
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                  {logoPreviewUrl ? (
+                    <img src={logoPreviewUrl} alt="" className="h-full w-full object-contain" />
+                  ) : (
+                    <span className="px-1 text-center text-[10px] font-semibold leading-tight text-slate-500">
+                      {formData.name.trim() || t('fields.logoFallback')}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => void handleLogoChange(e)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingLogo || saving}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {uploadingLogo ? t('logo.uploading') : t('logo.choose')}
+                  </Button>
+                  {formData.logo ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={uploadingLogo || saving}
+                      onClick={handleRemoveLogo}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      {t('logo.remove')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-name">{t('fields.name')}</Label>
               <Input 

@@ -14,6 +14,13 @@ import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
 import { putStoredObject, getFileStorageMode, getStoredObjectBytes, isAtRestEncryptionEnabled } from '../lib/fileStorage.js';
 import { STORAGE_FOLDERS, UPLOAD_FOLDERS, type StorageFolder, type UploadFolder } from '../lib/storageFolders.js';
+import {
+  ImageOptimizeError,
+  isOptimizableImageMime,
+  maxEdgeForFolder,
+  maybeOptimizeUploadedImage,
+  withWebpExtension,
+} from '../lib/imageOptimize.js';
 
 export const filesRouter = Router();
 filesRouter.use(requireAuth);
@@ -67,8 +74,24 @@ filesRouter.post('/presign-upload', async (req, res) => {
     }
   }
   const tenantScope = buildTenantScope(req.auth!.institutionId, req.auth!.sub);
-  const key = buildObjectKey(parsed.data.folder, tenantScope, parsed.data.filename);
+  const willOptimize = isOptimizableImageMime(parsed.data.contentType);
+  const filenameForKey = willOptimize
+    ? withWebpExtension(parsed.data.filename)
+    : parsed.data.filename;
+  const key = buildObjectKey(parsed.data.folder, tenantScope, filenameForKey);
   const uploadPath = '/files/direct-upload';
+
+  // Images : toujours via l’API (conversion WebP) — pas de POST S3 navigateur.
+  if (willOptimize) {
+    return res.json({
+      mode: 'local' as const,
+      key,
+      uploadPath,
+      maxSizeBytes: rules.maxSizeBytes,
+      storageMode: getFileStorageMode(),
+      optimize: 'webp' as const,
+    });
+  }
 
   // S3 direct navigateur + repli API (CORS / instance sans bucket).
   if (isS3Configured()) {
@@ -143,8 +166,33 @@ filesRouter.put('/direct-upload', async (req, res) => {
     return res.status(400).json({ error: 'Fichier vide' });
   }
 
-  await putStoredObject(keyHeader, body, contentType);
-  res.status(201).json({ key: keyHeader, bytes: body.length, mode: getFileStorageMode() });
+  try {
+    const result = await maybeOptimizeUploadedImage(body, contentType, keyHeader, {
+      maxEdgePx: maxEdgeForFolder(folder),
+    });
+    if (result.optimized) {
+      if (
+        !isGlobalAdmin(req.auth!) &&
+        !isOwnedObjectKey(result.key, folder, req.auth!.institutionId, req.auth!.sub) &&
+        !isOwnedObjectKey(result.key, folder, null, req.auth!.sub)
+      ) {
+        return res.status(403).json({ error: 'Accès refusé à cette clé de fichier' });
+      }
+    }
+    await putStoredObject(result.key, result.body, result.contentType);
+    return res.status(201).json({
+      key: result.key,
+      bytes: result.body.length,
+      mode: getFileStorageMode(),
+      contentType: result.contentType,
+      optimized: result.optimized,
+    });
+  } catch (err) {
+    if (err instanceof ImageOptimizeError) {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
 });
 
 const contentTypeForObjectKey = (key: string): string => {

@@ -19,7 +19,12 @@ export const inferUploadContentType = (file: File): string => {
   return EXT_MIME[ext] || file.type || 'application/octet-stream';
 };
 
-const uploadViaDirectApi = async (key: string, uploadPath: string, file: File, contentType: string) => {
+const uploadViaDirectApi = async (
+  key: string,
+  uploadPath: string,
+  file: File,
+  contentType: string
+): Promise<string> => {
   const token = getToken();
   const uploaded = await fetch(`${API_BASE_URL}${uploadPath}`, {
     method: 'PUT',
@@ -37,31 +42,40 @@ const uploadViaDirectApi = async (key: string, uploadPath: string, file: File, c
       uploaded.status
     );
   }
+  const body = (await uploaded.json().catch(() => null)) as { key?: string } | null;
+  return body?.key || key;
 };
 
 /**
  * Upload navigateur → stockage (DOC-005).
  * 1) POST signé S3 si proposé ;
  * 2) sinon / en secours : PUT `/files/direct-upload` (local ou S3 côté API).
+ * Toute image est forcée via l’API et convertie en WebP.
  */
 export const uploadViaPresignedPost = async (folder: string, file: File): Promise<string> => {
   const contentType = inferUploadContentType(file);
+  const isImage = contentType.startsWith('image/');
   const presign = await apiClient.post<{
     mode?: 's3' | 'local';
     key: string;
     url?: string;
     fields?: Record<string, string>;
     uploadPath?: string;
+    optimize?: 'webp';
   }>('/files/presign-upload', {
     folder,
     filename: file.name,
     contentType,
   });
 
-  if (presign.mode === 'local' || (!presign.url && !presign.fields)) {
+  if (
+    presign.mode === 'local' ||
+    (!presign.url && !presign.fields) ||
+    isImage ||
+    presign.optimize === 'webp'
+  ) {
     if (!presign.uploadPath) throw new Error('Réponse d’upload invalide (chemin manquant)');
-    await uploadViaDirectApi(presign.key, presign.uploadPath, file, contentType);
-    return presign.key;
+    return uploadViaDirectApi(presign.key, presign.uploadPath, file, contentType);
   }
 
   if (!presign.url || !presign.fields) {
@@ -82,8 +96,7 @@ export const uploadViaPresignedPost = async (folder: string, file: File): Promis
   } catch (err) {
     // Repli CORS / S3 inaccessible : même clé via l’API.
     if (presign.uploadPath) {
-      await uploadViaDirectApi(presign.key, presign.uploadPath, file, contentType);
-      return presign.key;
+      return uploadViaDirectApi(presign.key, presign.uploadPath, file, contentType);
     }
     throw err;
   }

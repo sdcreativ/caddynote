@@ -77,7 +77,7 @@ export const useStrkInstitutions = () => {
   );
 
   const editInstitution = useCallback(
-    async (id: string, institution: Partial<Institution>): Promise<Institution | null> => {
+    async (id: string, institution: Partial<Omit<Institution, 'logo'>> & { logo?: string | null }): Promise<Institution | null> => {
       setIsLoading(true);
       setError(null);
       try {
@@ -87,6 +87,9 @@ export const useStrkInstitutions = () => {
           title: 'Établissement mis à jour',
           description: "L'établissement a été mis à jour avec succès",
         });
+        window.dispatchEvent(
+          new CustomEvent('strk:institution-updated', { detail: updatedInstitution })
+        );
         return updatedInstitution;
       } catch (err) {
         const message = errorMessage(err, "Impossible de mettre à jour l'établissement");
