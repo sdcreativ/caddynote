@@ -5,11 +5,20 @@ import { Button } from '@/components/ui/button';
 type MfaSecurityBannerProps = {
   onEnable: () => void;
   onDismiss: () => void;
+  /** ISO date de fin de grâce MFA (option A : 7 jours). */
+  graceUntil?: string | null;
 };
 
-/** Bannière non bloquante : conseille d’activer la 2FA (rôles sensibles). */
-export function MfaSecurityBanner({ onEnable, onDismiss }: MfaSecurityBannerProps) {
+/** Bannière non bloquante pendant la grâce MFA (rôles sensibles). */
+export function MfaSecurityBanner({ onEnable, onDismiss, graceUntil }: MfaSecurityBannerProps) {
   const { t } = useTranslation('nav');
+  const deadline =
+    graceUntil &&
+    new Date(graceUntil).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
   return (
     <div
@@ -20,7 +29,9 @@ export function MfaSecurityBanner({ onEnable, onDismiss }: MfaSecurityBannerProp
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
         <div className="min-w-0">
           <p className="text-sm font-semibold">{t('mfaBanner.title')}</p>
-          <p className="text-sm text-amber-900/80">{t('mfaBanner.body')}</p>
+          <p className="text-sm text-amber-900/80">
+            {deadline ? t('mfaBanner.bodyWithDeadline', { date: deadline }) : t('mfaBanner.body')}
+          </p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">

@@ -16,6 +16,7 @@ vi.mock('@/hooks/useStrkAuth', () => ({
     },
     mfaSetupRequired: false,
     mfaRecommended: false,
+    mfaGraceUntil: null,
     mustChangePassword: false,
     clearMustChangePassword: vi.fn(),
     dismissMfaPrompt: vi.fn(),

@@ -47,9 +47,11 @@ interface StrkAuthContextType {
   logout: () => Promise<void>;
   hasRole: (role: StrkUserRole) => boolean;
   signup: (email: string, password: string, userData?: { first_name?: string; last_name?: string; role?: StrkUserRole; phone_number?: string; institution?: string }) => Promise<void>;
-  /** Toujours false (MFA non bloquante) — conservé pour compat. */
+  /** Après expiration de la grâce 7 j — dialog MFA non dismissible. */
   mfaSetupRequired: boolean;
   mfaRecommended: boolean;
+  /** ISO date fin de grâce MFA (bandeau). */
+  mfaGraceUntil: string | null;
   mustChangePassword: boolean;
   clearMustChangePassword: () => void;
   dismissMfaPrompt: () => void;
@@ -70,6 +72,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [mfaSetupRequired, setMfaSetupRequired] = useState(false);
   const [mfaRecommended, setMfaRecommended] = useState(false);
+  const [mfaGraceUntil, setMfaGraceUntil] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [mfaPromptDismissed, setMfaPromptDismissed] = useState(false);
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
@@ -81,10 +84,12 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       mfaSetupRequired?: boolean;
       mfaRecommended?: boolean;
       mustChangePassword?: boolean;
+      mfaGraceUntil?: string | null;
     }) => {
       setMfaSetupRequired(!!flags?.mfaSetupRequired);
       setMfaRecommended(!!flags?.mfaRecommended);
       setMustChangePassword(!!flags?.mustChangePassword);
+      setMfaGraceUntil(flags?.mfaGraceUntil ?? null);
       setMfaPromptDismissed(false);
     },
     []
@@ -95,6 +100,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setMfaSetupRequired(false);
     setMfaRecommended(false);
+    setMfaGraceUntil(null);
     setMustChangePassword(false);
     setMfaPromptDismissed(false);
     setImpersonation({ active: false });
@@ -116,6 +122,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       mfaSetupRequired?: boolean;
       mfaRecommended?: boolean;
       mustChangePassword?: boolean;
+      mfaGraceUntil?: string | null;
       impersonation?: ImpersonationState;
     }>('/auth/me');
     setUser(mapApiProfileToUser(me.user));
@@ -123,6 +130,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       mfaSetupRequired: me.mfaSetupRequired,
       mfaRecommended: me.mfaRecommended,
       mustChangePassword: me.mustChangePassword ?? me.user.mustChangePassword,
+      mfaGraceUntil: me.mfaGraceUntil ?? null,
     });
     setImpersonation(me.impersonation?.active ? me.impersonation : { active: false });
     return me;
@@ -301,6 +309,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     setUser((current) => (current ? { ...current, mfaEnabled: true } : current));
     setMfaSetupRequired(false);
     setMfaRecommended(false);
+    setMfaGraceUntil(null);
     setMfaPromptDismissed(false);
   }, []);
 
@@ -313,7 +322,12 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const showMfaBanner =
-    mfaRecommended && !mustChangePassword && !mfaPromptDismissed && !!user && !user.mfaEnabled;
+    mfaRecommended &&
+    !mfaSetupRequired &&
+    !mustChangePassword &&
+    !mfaPromptDismissed &&
+    !!user &&
+    !user.mfaEnabled;
 
   const value: StrkAuthContextType = {
     user,
@@ -327,8 +341,9 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     hasRole,
     signup,
-    mfaSetupRequired: false,
+    mfaSetupRequired: mfaSetupRequired && !mustChangePassword,
     mfaRecommended: showMfaBanner,
+    mfaGraceUntil,
     mustChangePassword,
     clearMustChangePassword,
     dismissMfaPrompt,

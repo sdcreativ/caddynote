@@ -13,6 +13,7 @@ export const PUBLIC_PROFILE_SELECT = {
   groupId: true,
   mfaEnabled: true,
   mustChangePassword: true,
+  mfaGraceUntil: true,
   isActive: true,
   deactivatedAt: true,
   createdAt: true,

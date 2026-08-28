@@ -7,6 +7,9 @@ import {
   isMfaRequiredRole,
   isMfaSetupExempt,
   MFA_REQUIRED_ROLES,
+  MFA_GRACE_DAYS,
+  computeMfaGraceUntil,
+  isMfaGraceExpired,
   shouldEnforceMfaSetup,
   shouldEnforcePasswordChange,
   generateBackupCodes,
@@ -16,9 +19,10 @@ import {
 } from '../lib/mfa.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
-describe('IAM-003 — MFA recommandée (rôles sensibles)', () => {
+describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
   it('couvre direction, secrétariat et comptabilité, pas les enseignants', () => {
     expect(MFA_REQUIRED_ROLES).toEqual(['admin', 'school_admin', 'secretary', 'accountant']);
+    expect(MFA_GRACE_DAYS).toBe(7);
     expect(isMfaRequiredRole('admin')).toBe(true);
     expect(isMfaRequiredRole('teacher')).toBe(false);
     expect(isMfaRequiredRole('supervisor')).toBe(false);
@@ -30,7 +34,9 @@ describe('IAM-003 — MFA recommandée (rôles sensibles)', () => {
     expect(isMfaSetupExempt('/finance')).toBe(false);
   });
 
-  it('shouldEnforceMfaSetup est désactivé (bandeau UI uniquement)', () => {
+  it('shouldEnforceMfaSetup : pas de blocage pendant la grâce', () => {
+    const inGrace = computeMfaGraceUntil();
+    expect(isMfaGraceExpired(inGrace)).toBe(false);
     expect(
       shouldEnforceMfaSetup({
         nodeEnv: 'production',
@@ -38,6 +44,35 @@ describe('IAM-003 — MFA recommandée (rôles sensibles)', () => {
         role: 'school_admin',
         mfaEnabled: false,
         routeBaseUrl: '/students',
+        mfaGraceUntil: inGrace,
+      })
+    ).toBe(false);
+  });
+
+  it('shouldEnforceMfaSetup : bloque après expiration de la grâce', () => {
+    const expired = new Date(Date.now() - 60_000);
+    expect(isMfaGraceExpired(expired)).toBe(true);
+    expect(
+      shouldEnforceMfaSetup({
+        nodeEnv: 'production',
+        testMode: false,
+        role: 'school_admin',
+        mfaEnabled: false,
+        routeBaseUrl: '/students',
+        mfaGraceUntil: expired,
+      })
+    ).toBe(true);
+  });
+
+  it('shouldEnforceMfaSetup : null = pas encore démarré → ne bloque pas', () => {
+    expect(
+      shouldEnforceMfaSetup({
+        nodeEnv: 'production',
+        testMode: false,
+        role: 'school_admin',
+        mfaEnabled: false,
+        routeBaseUrl: '/students',
+        mfaGraceUntil: null,
       })
     ).toBe(false);
   });
@@ -91,6 +126,7 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
         mfaSecret: null,
         mfaBackupCodeHashes: [],
         mustChangePassword: false,
+        mfaGraceUntil: null,
       },
     });
     await prisma.strkProfile.update({
@@ -100,17 +136,19 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
         mfaSecret: null,
         mfaBackupCodeHashes: [],
         mustChangePassword: false,
+        mfaGraceUntil: null,
       },
     });
   });
 
-  it('en prod simulée, school_admin sans MFA n’est plus bloqué hors /auth', async () => {
+  it('pendant la grâce : school_admin sans MFA non bloqué + mfaRecommended', async () => {
     process.env.NODE_ENV = 'production';
     process.env.CADDYNOTE_TEST_MODE = 'false';
 
+    const graceUntil = computeMfaGraceUntil();
     await prisma.strkProfile.update({
       where: { id: fx.a.schoolAdmin.id },
-      data: { mfaEnabled: false, mustChangePassword: false },
+      data: { mfaEnabled: false, mustChangePassword: false, mfaGraceUntil: graceUntil },
     });
 
     const ok = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
@@ -120,6 +158,30 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
     expect(me.status).toBe(200);
     expect(me.body.mfaSetupRequired).toBe(false);
     expect(me.body.mfaRecommended).toBe(true);
+    expect(me.body.mfaGraceUntil).toBeTruthy();
+  });
+
+  it('après expiration grâce : APIs métier bloquées (mfa_setup_required)', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CADDYNOTE_TEST_MODE = 'false';
+
+    await prisma.strkProfile.update({
+      where: { id: fx.a.schoolAdmin.id },
+      data: {
+        mfaEnabled: false,
+        mustChangePassword: false,
+        mfaGraceUntil: new Date(Date.now() - 60_000),
+      },
+    });
+
+    const blocked = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe('mfa_setup_required');
+
+    const me = await request(app).get('/auth/me').set(auth(fx.a.schoolAdmin.token));
+    expect(me.status).toBe(200);
+    expect(me.body.mfaSetupRequired).toBe(true);
+    expect(me.body.mfaRecommended).toBe(false);
   });
 
   it('mot de passe provisoire : APIs métier bloquées jusqu’au change-password', async () => {

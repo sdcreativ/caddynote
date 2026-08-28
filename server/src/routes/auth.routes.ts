@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword } from '../lib/password.js';
 import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from '../lib/jwt.js';
 import { requireAuth } from '../middleware/auth.js';
 import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
-import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, consumeBackupCode, looksLikeBackupCode } from '../lib/mfa.js';
+import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, consumeBackupCode, looksLikeBackupCode, ensureMfaGraceStarted, isMfaGraceExpired, computeMfaGraceUntil } from '../lib/mfa.js';
 import { isEmailConfigured, sendEmail } from '../lib/email.js';
 import { escapeHtml, wrapTransactionalEmail } from '../lib/emailLayout.js';
 import { createSession } from '../lib/sessions.js';
@@ -160,6 +160,12 @@ authRouter.post('/login', authLimiter, async (req, res) => {
   }
 
   await prisma.strkProfile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } });
+  const mfaGraceUntil = await ensureMfaGraceStarted({
+    id: profile.id,
+    role: profile.role,
+    mfaEnabled: profile.mfaEnabled,
+    mfaGraceUntil: profile.mfaGraceUntil,
+  });
 
   const token = await issueAccessToken(req, profile);
   await logAudit({ institutionId: profile.institutionId, actorId: profile.id, action: 'auth.login', ipAddress: req.ip });
@@ -176,7 +182,10 @@ authRouter.post('/login', authLimiter, async (req, res) => {
     })
     .catch(() => undefined);
   const { passwordHash: _omit, mfaSecret: _omit2, passwordResetToken: _omit3, mfaBackupCodeHashes: _omit4, ...safeProfile } = profile;
-  res.json({ token, user: safeProfile });
+  res.json({
+    token,
+    user: { ...safeProfile, mfaGraceUntil },
+  });
 });
 
 const mfaLoginVerifySchema = z.object({
@@ -314,6 +323,7 @@ authRouter.post('/mfa/confirm', requireAuth, async (req, res) => {
     data: {
       mfaEnabled: true,
       mfaBackupCodeHashes: hashBackupCodes(backupCodes),
+      mfaGraceUntil: null,
     },
   });
   await logAudit({
@@ -349,16 +359,27 @@ authRouter.post('/mfa/disable', requireAuth, async (req, res) => {
 });
 
 authRouter.get('/me', requireAuth, async (req, res) => {
-  const profile = await prisma.strkProfile.findUnique({
+  let profile = await prisma.strkProfile.findUnique({
     where: { id: req.auth!.sub },
     select: PUBLIC_PROFILE_SELECT,
   });
   if (!profile) {
     return res.status(404).json({ error: 'Utilisateur introuvable' });
   }
-  // IAM-003 : MFA recommandée (bandeau) pour rôles sensibles — plus de modal bloquant.
-  // Première connexion : mustChangePassword force le changement de MDP provisoire.
+  // Démarre la grâce 7 j au premier accès authentifié (backfill comptes existants).
+  const mfaGraceUntil = await ensureMfaGraceStarted({
+    id: profile.id,
+    role: profile.role,
+    mfaEnabled: profile.mfaEnabled,
+    mfaGraceUntil: profile.mfaGraceUntil,
+  });
+  if (mfaGraceUntil !== profile.mfaGraceUntil) {
+    profile = { ...profile, mfaGraceUntil };
+  }
+
   const needsMfa = isMfaRequiredRole(profile.role) && !profile.mfaEnabled;
+  const graceExpired = needsMfa && isMfaGraceExpired(mfaGraceUntil);
+  const inGrace = needsMfa && !!mfaGraceUntil && !graceExpired;
   const impersonation = req.auth!.impersonatorId
     ? {
         active: true,
@@ -381,9 +402,9 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   res.json({
     user: profile,
     mustChangePassword: !!profile.mustChangePassword,
-    mfaRecommended: needsMfa,
-    /** Conservé à false : l’UI utilise `mfaRecommended` (bandeau). */
-    mfaSetupRequired: false,
+    mfaRecommended: inGrace,
+    mfaSetupRequired: graceExpired && !isTestMode(),
+    mfaGraceUntil: mfaGraceUntil ? mfaGraceUntil.toISOString() : null,
     impersonation,
   });
 });

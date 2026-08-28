@@ -27,6 +27,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     mustChangePassword,
     clearMustChangePassword,
     mfaRecommended,
+    mfaSetupRequired,
+    mfaGraceUntil,
     dismissMfaPrompt,
     markMfaEnabled,
   } = useStrkAuth();
@@ -36,6 +38,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isSchoolShell = isSchoolShellRole(user?.role);
   const hasMobileBottomNav = Boolean(mobileBottomNavForRole(user?.role));
+
+  const mfaBlocking = mfaSetupRequired && !mustChangePassword;
+  const mfaDialogVisible = mfaBlocking || mfaDialogOpen;
 
   const toggleSidebar = () => setSidebarOpen((v) => !v);
   /** « Plus » de la barre mobile : ouvre/ferme le menu latéral. */
@@ -87,6 +92,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <div className="mx-auto w-full max-w-[1400px]">
             {mfaRecommended ? (
               <MfaSecurityBanner
+                graceUntil={mfaGraceUntil}
                 onEnable={() => setMfaDialogOpen(true)}
                 onDismiss={dismissMfaPrompt}
               />
@@ -104,9 +110,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           onCompleted={clearMustChangePassword}
         />
         <TwoFactorAuthDialog
-          open={mfaDialogOpen}
-          onOpenChange={setMfaDialogOpen}
-          dismissible
+          open={mfaDialogVisible}
+          onOpenChange={(open) => {
+            if (mfaBlocking) return;
+            setMfaDialogOpen(open);
+          }}
+          dismissible={!mfaBlocking}
           onEnabled={() => {
             markMfaEnabled();
             setMfaDialogOpen(false);

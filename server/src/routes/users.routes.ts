@@ -15,6 +15,7 @@ import { isOwnedObjectKey } from '../lib/s3.js';
 import { optionalEmail, optionalString } from '../lib/zodHelpers.js';
 import { importTeachersFromCsv } from '../lib/teacherImport.js';
 import { parseCsvWithHeader } from '../lib/csvImport.js';
+import { computeMfaGraceUntil } from '../lib/mfa.js';
 
 export const usersRouter = Router();
 
@@ -545,7 +546,12 @@ usersRouter.post('/:id/admin-reset-mfa', requireRole('admin'), async (req, res) 
   }
   await prisma.strkProfile.update({
     where: { id: target.id },
-    data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodeHashes: [] },
+    data: {
+      mfaEnabled: false,
+      mfaSecret: null,
+      mfaBackupCodeHashes: [],
+      mfaGraceUntil: computeMfaGraceUntil(),
+    },
   });
   await prisma.strkSession.updateMany({
     where: { userId: target.id, revokedAt: null },

@@ -23,6 +23,7 @@
   "mfaBanner": {
     "title": "Renforcez la sécurité de votre compte",
     "body": "Activez la connexion à deux facteurs (application d’authentification) pour protéger l’accès à l’établissement.",
+    "bodyWithDeadline": "Activez la connexion à deux facteurs avant le {{date}}. Passé ce délai, elle sera obligatoire pour continuer.",
     "cta": "Activer la 2FA",
     "dismiss": "Masquer le conseil"
   },

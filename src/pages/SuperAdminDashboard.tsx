@@ -69,6 +69,8 @@ const SuperAdminDashboard = () => {
     mustChangePassword,
     clearMustChangePassword,
     mfaRecommended,
+    mfaSetupRequired,
+    mfaGraceUntil,
     dismissMfaPrompt,
     markMfaEnabled,
   } = useStrkAuth();
@@ -83,6 +85,8 @@ const SuperAdminDashboard = () => {
   const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
   const [demoRequestCount, setDemoRequestCount] = useState(0);
   const [mfaDialogOpen, setMfaDialogOpen] = useState(false);
+  const mfaBlocking = mfaSetupRequired && !mustChangePassword;
+  const mfaDialogVisible = mfaBlocking || mfaDialogOpen;
 
   useEffect(() => {
     if (!sectionParam) return;
@@ -226,6 +230,7 @@ const SuperAdminDashboard = () => {
         <div className="mx-auto w-full max-w-[1400px] p-6 sm:p-8">
           {mfaRecommended ? (
             <MfaSecurityBanner
+              graceUntil={mfaGraceUntil}
               onEnable={() => setMfaDialogOpen(true)}
               onDismiss={dismissMfaPrompt}
             />
@@ -239,9 +244,12 @@ const SuperAdminDashboard = () => {
         onCompleted={clearMustChangePassword}
       />
       <TwoFactorAuthDialog
-        open={mfaDialogOpen}
-        onOpenChange={setMfaDialogOpen}
-        dismissible
+        open={mfaDialogVisible}
+        onOpenChange={(open) => {
+          if (mfaBlocking) return;
+          setMfaDialogOpen(open);
+        }}
+        dismissible={!mfaBlocking}
         onEnabled={() => {
           markMfaEnabled();
           setMfaDialogOpen(false);

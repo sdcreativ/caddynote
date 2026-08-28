@@ -25,6 +25,11 @@ describe('Suivi / discipline — notifications & rôles (§5.11)', () => {
       });
     expect(created.status).toBe(201);
     const id = created.body.user.id as string;
+    // POST /users pose mustChangePassword — sinon le gate IAM bloque toutes les APIs métier.
+    await prisma.strkProfile.update({
+      where: { id },
+      data: { mustChangePassword: false },
+    });
     const token = await issueTestToken({
       sub: id,
       role: 'supervisor',

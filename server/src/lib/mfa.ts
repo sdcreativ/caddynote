@@ -1,16 +1,22 @@
 import { createHash, randomBytes } from 'crypto';
 import { generateSecret, generateURI, verify } from 'otplib';
 import QRCode from 'qrcode';
+import { prisma } from './prisma.js';
 
 /**
  * MFA TOTP pour CaddyNote (IAM-003). Compatible Google Authenticator / Authy / 1Password
  * via otplib (RFC 6238). Codes de secours à usage unique (hashes SHA-256).
- * Pour les rôles sensibles, la MFA est **recommandée** (bandeau UI), plus bloquante à l’API.
+ *
+ * Rôles sensibles : grâce de 7 jours après la 1ʳᵉ connexion sans MFA (bandeau),
+ * puis obligation API + dialog bloquant. Challenge TOTP au login si déjà activée.
  */
 
 const ISSUER = 'CaddyNote';
 const BACKUP_CODE_COUNT = 10;
 const BACKUP_HASH_PREFIX = 'caddynote-mfa-backup:';
+
+/** Jours de grâce MFA après le premier login sans 2FA (option A hardening prod). */
+export const MFA_GRACE_DAYS = 7;
 
 export const generateMfaSecret = (): string => generateSecret();
 
@@ -27,22 +33,27 @@ export const verifyMfaCode = async (secret: string, code: string): Promise<boole
   return result.valid;
 };
 
-/**
- * MFA recommandée pour les rôles sensibles (IAM-003).
- * L’activation n’est plus bloquante côté API : un bandeau UI conseille l’enrôlement
- * après le changement de mot de passe provisoire. Le challenge TOTP reste obligatoire
- * au login lorsque `mfaEnabled` est déjà true.
- */
 export const MFA_REQUIRED_ROLES = ['admin', 'school_admin', 'secretary', 'accountant'] as const;
 
 export const isMfaRequiredRole = (role: string): boolean =>
   (MFA_REQUIRED_ROLES as readonly string[]).includes(role);
 
-/** Chemins toujours accessibles sans gate mot de passe / historique MFA. */
+/** Chemins toujours accessibles sans gate mot de passe / MFA setup. */
 export const isAuthRouterExempt = (baseUrl: string): boolean => baseUrl === '/auth';
 
 /** @deprecated alias — préférer `isAuthRouterExempt`. */
 export const isMfaSetupExempt = isAuthRouterExempt;
+
+export const computeMfaGraceUntil = (from: Date = new Date()): Date => {
+  const d = new Date(from.getTime());
+  d.setUTCDate(d.getUTCDate() + MFA_GRACE_DAYS);
+  return d;
+};
+
+export const isMfaGraceExpired = (
+  mfaGraceUntil: Date | null | undefined,
+  now: Date = new Date()
+): boolean => !!mfaGraceUntil && mfaGraceUntil.getTime() <= now.getTime();
 
 /** Normalise un code de secours (ignore tirets / espaces, majuscules). */
 export const normalizeBackupCode = (code: string): string =>
@@ -82,19 +93,47 @@ export const looksLikeBackupCode = (code: string): boolean => {
 };
 
 /**
- * Gate MFA bloquante désactivée (produit : bannière conseil uniquement).
- * Conservée pour compatibilité des tests / recettes — renvoie toujours `false`.
+ * Gate MFA après expiration de la grâce (hors NODE_ENV=test / CADDYNOTE_TEST_MODE).
+ * Si `mfaGraceUntil` est null, ne bloque pas (la grâce sera démarrée au login ou /me).
  */
-export const shouldEnforceMfaSetup = (_opts: {
+export const shouldEnforceMfaSetup = (opts: {
   nodeEnv: string | undefined;
   testMode: boolean;
   role: string;
   mfaEnabled: boolean;
   routeBaseUrl: string;
-}): boolean => false;
+  mfaGraceUntil?: Date | null;
+}): boolean => {
+  if (opts.nodeEnv === 'test' || opts.testMode) return false;
+  if (!isMfaRequiredRole(opts.role)) return false;
+  if (isAuthRouterExempt(opts.routeBaseUrl)) return false;
+  if (opts.mfaEnabled) return false;
+  if (!opts.mfaGraceUntil) return false;
+  return isMfaGraceExpired(opts.mfaGraceUntil);
+};
 
 /** Gate 1ʳᵉ connexion : mot de passe provisoire à changer (hors `/auth`). */
 export const shouldEnforcePasswordChange = (opts: {
   mustChangePassword: boolean;
   routeBaseUrl: string;
 }): boolean => opts.mustChangePassword && !isAuthRouterExempt(opts.routeBaseUrl);
+
+/**
+ * Démarre la fenêtre de grâce MFA (7 j) au premier login /me si absente.
+ * No-op si rôle non sensible, MFA déjà active, ou grâce déjà posée.
+ */
+export const ensureMfaGraceStarted = async (profile: {
+  id: string;
+  role: string;
+  mfaEnabled: boolean;
+  mfaGraceUntil: Date | null;
+}): Promise<Date | null> => {
+  if (!isMfaRequiredRole(profile.role) || profile.mfaEnabled) return profile.mfaGraceUntil;
+  if (profile.mfaGraceUntil) return profile.mfaGraceUntil;
+  const until = computeMfaGraceUntil();
+  await prisma.strkProfile.update({
+    where: { id: profile.id },
+    data: { mfaGraceUntil: until },
+  });
+  return until;
+};

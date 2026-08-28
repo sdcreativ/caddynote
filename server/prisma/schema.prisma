@@ -394,6 +394,8 @@ model StrkProfile {
   mustChangePassword   Boolean   @default(false) @map("must_change_password")
   mfaEnabled           Boolean   @default(false) @map("mfa_enabled")
   mfaSecret            String?   @map("mfa_secret")
+  /// Fin de la période de grâce MFA (7 j après 1ʳᵉ connexion sans MFA) — null si MFA active ou non concerné.
+  mfaGraceUntil        DateTime? @map("mfa_grace_until")
   /// Hashes SHA-256 des codes de secours à usage unique (IAM-003 recovery).
   mfaBackupCodeHashes  String[]  @default([]) @map("mfa_backup_code_hashes")
   lastLoginAt          DateTime? @map("last_login_at")
