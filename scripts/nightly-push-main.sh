@@ -49,6 +49,25 @@ cd "${REPO_DIR}"
 
 log "=== nightly-push démarré (${REPO_DIR}) dry_run=${DRY_RUN} ==="
 
+# launchd démarre souvent avec un agent SSH vide : charge la clé GitHub du Keychain.
+ensure_ssh_ready() {
+  if ! command -v ssh-add >/dev/null 2>&1; then
+    return 0
+  fi
+  if ssh-add -l >/dev/null 2>&1; then
+    return 0
+  fi
+  local key="${HOME}/.ssh/id_github_sdcreativ"
+  if [[ -f "${key}" ]]; then
+    ssh-add --apple-use-keychain "${key}" 2>>"${LOG_FILE}" \
+      || ssh-add "${key}" 2>>"${LOG_FILE}" \
+      || true
+  fi
+  ssh-add --apple-load-keychain 2>>"${LOG_FILE}" || true
+}
+
+ensure_ssh_ready
+
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   log "ERROR pas un dépôt git"
   notify "CaddyNote nightly-push" "Échec : pas un dépôt git"
