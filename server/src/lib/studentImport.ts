@@ -90,6 +90,7 @@ export const importStudentsFromCsv = async (
           institutionId,
           phoneNumber: raw.phoneNumber || undefined,
           passwordHash,
+          mustChangePassword: true,
         },
       });
       await prisma.strkStudent.create({

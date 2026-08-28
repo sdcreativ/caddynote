@@ -20,6 +20,12 @@
   "searchAlerts": "Alertes récentes",
   "offlineBanner": "Hors ligne — la navigation reste possible, mais les enregistrements (hors appel) nécessitent une connexion. L’appel peut être saisi et sera synchronisé au retour du réseau.",
   "offlineBannerWithPending": "Hors ligne — {{count}} saisie(s) d’appel en attente de synchronisation.",
+  "mfaBanner": {
+    "title": "Renforcez la sécurité de votre compte",
+    "body": "Activez la connexion à deux facteurs (application d’authentification) pour protéger l’accès à l’établissement.",
+    "cta": "Activer la 2FA",
+    "dismiss": "Masquer le conseil"
+  },
   "proTitle": "Passez à CaddyNote Pro",
   "proBody": "Analytics avancés, quotas étendus, support prioritaire.",
   "proCta": "Découvrir l’offre",

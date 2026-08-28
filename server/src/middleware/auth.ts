@@ -3,8 +3,7 @@ import type { StrkUserRole } from '@prisma/client';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { isSessionValid } from '../lib/sessions.js';
 import { isInstitutionSuspended } from '../lib/subscriptionSuspension.js';
-import { isTestMode } from '../lib/testMode.js';
-import { shouldEnforceMfaSetup } from '../lib/mfa.js';
+import { shouldEnforcePasswordChange } from '../lib/mfa.js';
 import { prisma } from '../lib/prisma.js';
 
 // SAA-004 : un établissement suspendu (jamais de suppression de données)
@@ -62,27 +61,22 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
     req.auth = payload;
 
-    // IAM-003 : MFA obligatoire pour les rôles sensibles. On laisse
-    // `/auth/*` (enrôlement, /me, logout) pour ne pas verrouiller le seul
-    // admin hors de son compte. Désactivé en `NODE_ENV=test` et en
-    // `CADDYNOTE_TEST_MODE` (recette locale sans TOTP).
-    if (
-      shouldEnforceMfaSetup({
-        nodeEnv: process.env.NODE_ENV,
-        testMode: isTestMode(),
-        role: payload.role,
-        mfaEnabled: false,
-        routeBaseUrl: req.baseUrl,
-      })
-    ) {
+    // Première connexion : mot de passe provisoire à changer avant les APIs métier.
+    // `/auth/*` reste ouvert (change-password, /me, MFA setup, logout).
+    if (!isAuthExemptForPassword(req.baseUrl)) {
       const profile = await prisma.strkProfile.findUnique({
         where: { id: payload.sub },
-        select: { mfaEnabled: true },
+        select: { mustChangePassword: true },
       });
-      if (!profile?.mfaEnabled) {
+      if (
+        shouldEnforcePasswordChange({
+          mustChangePassword: !!profile?.mustChangePassword,
+          routeBaseUrl: req.baseUrl,
+        })
+      ) {
         return res.status(403).json({
-          error: 'Activez l’authentification à deux facteurs pour continuer.',
-          code: 'mfa_setup_required',
+          error: 'Changez votre mot de passe provisoire pour continuer.',
+          code: 'password_change_required',
         });
       }
     }
@@ -92,6 +86,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ error: 'Jeton invalide ou expiré' });
   }
 };
+
+const isAuthExemptForPassword = (baseUrl: string) => baseUrl === '/auth';
 
 /** Restreint une route à une liste de rôles (RBAC minimal — §4.1 du cahier des charges). */
 export const requireRole =

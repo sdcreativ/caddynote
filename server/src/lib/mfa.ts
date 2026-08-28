@@ -3,9 +3,9 @@ import { generateSecret, generateURI, verify } from 'otplib';
 import QRCode from 'qrcode';
 
 /**
- * MFA obligatoire pour les rôles sensibles (IAM-003). TOTP compatible Google
- * Authenticator / Authy / 1Password, via otplib (RFC 6238).
- * Codes de secours à usage unique (hashes SHA-256) si l’appareil TOTP est perdu.
+ * MFA TOTP pour CaddyNote (IAM-003). Compatible Google Authenticator / Authy / 1Password
+ * via otplib (RFC 6238). Codes de secours à usage unique (hashes SHA-256).
+ * Pour les rôles sensibles, la MFA est **recommandée** (bandeau UI), plus bloquante à l’API.
  */
 
 const ISSUER = 'CaddyNote';
@@ -27,16 +27,22 @@ export const verifyMfaCode = async (secret: string, code: string): Promise<boole
   return result.valid;
 };
 
-/** Rôles pour lesquels la MFA est obligatoire (IAM-003 « rôles sensibles »).
- * `admin` couvre toute l’équipe d’administration plateforme CaddyNote (rôles IAM séparés).
- * Direction, secrétariat et comptabilité établissement : dossiers et caisse. */
+/**
+ * MFA recommandée pour les rôles sensibles (IAM-003).
+ * L’activation n’est plus bloquante côté API : un bandeau UI conseille l’enrôlement
+ * après le changement de mot de passe provisoire. Le challenge TOTP reste obligatoire
+ * au login lorsque `mfaEnabled` est déjà true.
+ */
 export const MFA_REQUIRED_ROLES = ['admin', 'school_admin', 'secretary', 'accountant'] as const;
 
 export const isMfaRequiredRole = (role: string): boolean =>
   (MFA_REQUIRED_ROLES as readonly string[]).includes(role);
 
-/** Chemins toujours accessibles sans MFA (enrôlement + session). */
-export const isMfaSetupExempt = (baseUrl: string): boolean => baseUrl === '/auth';
+/** Chemins toujours accessibles sans gate mot de passe / historique MFA. */
+export const isAuthRouterExempt = (baseUrl: string): boolean => baseUrl === '/auth';
+
+/** @deprecated alias — préférer `isAuthRouterExempt`. */
+export const isMfaSetupExempt = isAuthRouterExempt;
 
 /** Normalise un code de secours (ignore tirets / espaces, majuscules). */
 export const normalizeBackupCode = (code: string): string =>
@@ -76,18 +82,19 @@ export const looksLikeBackupCode = (code: string): boolean => {
 };
 
 /**
- * Gate MFA « prod » (hors NODE_ENV=test et hors CADDYNOTE_TEST_MODE).
- * Extrait pour la recette / tests — même règle que `requireAuth`.
+ * Gate MFA bloquante désactivée (produit : bannière conseil uniquement).
+ * Conservée pour compatibilité des tests / recettes — renvoie toujours `false`.
  */
-export const shouldEnforceMfaSetup = (opts: {
+export const shouldEnforceMfaSetup = (_opts: {
   nodeEnv: string | undefined;
   testMode: boolean;
   role: string;
   mfaEnabled: boolean;
   routeBaseUrl: string;
-}): boolean => {
-  if (opts.nodeEnv === 'test' || opts.testMode) return false;
-  if (!isMfaRequiredRole(opts.role)) return false;
-  if (isMfaSetupExempt(opts.routeBaseUrl)) return false;
-  return !opts.mfaEnabled;
-};
+}): boolean => false;
+
+/** Gate 1ʳᵉ connexion : mot de passe provisoire à changer (hors `/auth`). */
+export const shouldEnforcePasswordChange = (opts: {
+  mustChangePassword: boolean;
+  routeBaseUrl: string;
+}): boolean => opts.mustChangePassword && !isAuthRouterExempt(opts.routeBaseUrl);

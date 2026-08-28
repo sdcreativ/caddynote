@@ -8,6 +8,7 @@ import {
   isMfaSetupExempt,
   MFA_REQUIRED_ROLES,
   shouldEnforceMfaSetup,
+  shouldEnforcePasswordChange,
   generateBackupCodes,
   hashBackupCodes,
   consumeBackupCode,
@@ -15,7 +16,7 @@ import {
 } from '../lib/mfa.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
-describe('IAM-003 — MFA obligatoire (rôles sensibles)', () => {
+describe('IAM-003 — MFA recommandée (rôles sensibles)', () => {
   it('couvre direction, secrétariat et comptabilité, pas les enseignants', () => {
     expect(MFA_REQUIRED_ROLES).toEqual(['admin', 'school_admin', 'secretary', 'accountant']);
     expect(isMfaRequiredRole('admin')).toBe(true);
@@ -23,13 +24,13 @@ describe('IAM-003 — MFA obligatoire (rôles sensibles)', () => {
     expect(isMfaRequiredRole('supervisor')).toBe(false);
   });
 
-  it('exempte uniquement le routeur /auth (enrôlement, /me, logout)', () => {
+  it('exempte uniquement le routeur /auth', () => {
     expect(isMfaSetupExempt('/auth')).toBe(true);
     expect(isMfaSetupExempt('/users')).toBe(false);
     expect(isMfaSetupExempt('/finance')).toBe(false);
   });
 
-  it('shouldEnforceMfaSetup : prod uniquement, rôles sensibles, hors /auth', () => {
+  it('shouldEnforceMfaSetup est désactivé (bandeau UI uniquement)', () => {
     expect(
       shouldEnforceMfaSetup({
         nodeEnv: 'production',
@@ -38,56 +39,18 @@ describe('IAM-003 — MFA obligatoire (rôles sensibles)', () => {
         mfaEnabled: false,
         routeBaseUrl: '/students',
       })
+    ).toBe(false);
+  });
+
+  it('shouldEnforcePasswordChange bloque hors /auth', () => {
+    expect(
+      shouldEnforcePasswordChange({ mustChangePassword: true, routeBaseUrl: '/students' })
     ).toBe(true);
-
+    expect(shouldEnforcePasswordChange({ mustChangePassword: true, routeBaseUrl: '/auth' })).toBe(
+      false
+    );
     expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'production',
-        testMode: false,
-        role: 'school_admin',
-        mfaEnabled: true,
-        routeBaseUrl: '/students',
-      })
-    ).toBe(false);
-
-    expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'test',
-        testMode: false,
-        role: 'school_admin',
-        mfaEnabled: false,
-        routeBaseUrl: '/students',
-      })
-    ).toBe(false);
-
-    expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'production',
-        testMode: true,
-        role: 'school_admin',
-        mfaEnabled: false,
-        routeBaseUrl: '/students',
-      })
-    ).toBe(false);
-
-    expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'production',
-        testMode: false,
-        role: 'teacher',
-        mfaEnabled: false,
-        routeBaseUrl: '/students',
-      })
-    ).toBe(false);
-
-    expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'production',
-        testMode: false,
-        role: 'school_admin',
-        mfaEnabled: false,
-        routeBaseUrl: '/auth',
-      })
+      shouldEnforcePasswordChange({ mustChangePassword: false, routeBaseUrl: '/students' })
     ).toBe(false);
   });
 
@@ -108,7 +71,7 @@ describe('IAM-003 — MFA obligatoire (rôles sensibles)', () => {
   });
 });
 
-describe('IAM-003 — recette HTTP MFA obligatoire hors test mode', () => {
+describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
   let fx: Fixture;
   const prevNodeEnv = process.env.NODE_ENV;
   const prevTestMode = process.env.CADDYNOTE_TEST_MODE;
@@ -123,76 +86,73 @@ describe('IAM-003 — recette HTTP MFA obligatoire hors test mode', () => {
     else process.env.CADDYNOTE_TEST_MODE = prevTestMode;
     await prisma.strkProfile.update({
       where: { id: fx.a.schoolAdmin.id },
-      data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodeHashes: [] },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaBackupCodeHashes: [],
+        mustChangePassword: false,
+      },
     });
     await prisma.strkProfile.update({
       where: { id: fx.globalAdmin.id },
-      data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodeHashes: [] },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaBackupCodeHashes: [],
+        mustChangePassword: false,
+      },
     });
   });
 
-  it('en prod simulée, school_admin sans MFA est bloqué hors /auth', async () => {
+  it('en prod simulée, school_admin sans MFA n’est plus bloqué hors /auth', async () => {
     process.env.NODE_ENV = 'production';
     process.env.CADDYNOTE_TEST_MODE = 'false';
 
     await prisma.strkProfile.update({
       where: { id: fx.a.schoolAdmin.id },
-      data: { mfaEnabled: false },
-    });
-
-    const blocked = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
-    expect(blocked.status).toBe(403);
-    expect(blocked.body.code).toBe('mfa_setup_required');
-
-    const me = await request(app).get('/auth/me').set(auth(fx.a.schoolAdmin.token));
-    expect(me.status).toBe(200);
-    expect(me.body.mfaSetupRequired).toBe(true);
-  });
-
-  it('en prod simulée, admin plateforme sans MFA est bloqué hors /auth (Super Admin)', async () => {
-    process.env.NODE_ENV = 'production';
-    process.env.CADDYNOTE_TEST_MODE = 'false';
-
-    await prisma.strkProfile.update({
-      where: { id: fx.globalAdmin.id },
-      data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodeHashes: [] },
-    });
-
-    const blocked = await request(app).get('/institutions').set(auth(fx.globalAdmin.token));
-    expect(blocked.status).toBe(403);
-    expect(blocked.body.code).toBe('mfa_setup_required');
-
-    const me = await request(app).get('/auth/me').set(auth(fx.globalAdmin.token));
-    expect(me.status).toBe(200);
-    expect(me.body.mfaSetupRequired).toBe(true);
-
-    await prisma.strkProfile.update({
-      where: { id: fx.globalAdmin.id },
-      data: { mfaEnabled: true, mfaSecret: 'JBSWY3DPEHPK3PXP' },
-    });
-    const ok = await request(app).get('/institutions').set(auth(fx.globalAdmin.token));
-    expect(ok.status).toBe(200);
-  });
-
-  it('en prod simulée, school_admin avec MFA passe ; enseignant sans MFA n’est pas bloqué sur /auth/me', async () => {
-    process.env.NODE_ENV = 'production';
-    process.env.CADDYNOTE_TEST_MODE = 'false';
-
-    await prisma.strkProfile.update({
-      where: { id: fx.a.schoolAdmin.id },
-      data: { mfaEnabled: true, mfaSecret: 'JBSWY3DPEHPK3PXP' },
+      data: { mfaEnabled: false, mustChangePassword: false },
     });
 
     const ok = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
     expect(ok.status).not.toBe(403);
 
+    const me = await request(app).get('/auth/me').set(auth(fx.a.schoolAdmin.token));
+    expect(me.status).toBe(200);
+    expect(me.body.mfaSetupRequired).toBe(false);
+    expect(me.body.mfaRecommended).toBe(true);
+  });
+
+  it('mot de passe provisoire : APIs métier bloquées jusqu’au change-password', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CADDYNOTE_TEST_MODE = 'false';
+
     await prisma.strkProfile.update({
-      where: { id: fx.a.teacher.id },
-      data: { mfaEnabled: false },
+      where: { id: fx.a.schoolAdmin.id },
+      data: { mustChangePassword: true, mfaEnabled: false },
     });
-    const teacher = await request(app).get('/auth/me').set(auth(fx.a.teacher.token));
-    expect(teacher.status).toBe(200);
-    expect(teacher.body.mfaSetupRequired).toBeFalsy();
+
+    const blocked = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe('password_change_required');
+
+    const me = await request(app).get('/auth/me').set(auth(fx.a.schoolAdmin.token));
+    expect(me.status).toBe(200);
+    expect(me.body.mustChangePassword).toBe(true);
+
+    const changed = await request(app)
+      .post('/auth/change-password')
+      .set(auth(fx.a.schoolAdmin.token))
+      .send({ currentPassword: 'Password123!', newPassword: 'Password456!' });
+    expect(changed.status).toBe(200);
+
+    const after = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
+    expect(after.status).not.toBe(403);
+
+    // Restaure le mot de passe fixture pour les autres tests.
+    await request(app)
+      .post('/auth/change-password')
+      .set(auth(fx.a.schoolAdmin.token))
+      .send({ currentPassword: 'Password456!', newPassword: 'Password123!' });
   });
 
   it('login-verify accepte un code de secours une seule fois', async () => {
@@ -227,7 +187,6 @@ describe('IAM-003 — recette HTTP MFA obligatoire hors test mode', () => {
       .send({ challengeToken: login2.body.challengeToken, code: backup });
     expect(second.status).toBe(401);
 
-    // Nettoyage : désactiver MFA enseignant
     await request(app)
       .post('/auth/mfa/disable')
       .set(auth(first.body.token))

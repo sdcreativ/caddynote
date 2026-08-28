@@ -84,6 +84,7 @@ export const importTeachersFromCsv = async (
           institutionId,
           phoneNumber: raw.phoneNumber || undefined,
           passwordHash,
+          mustChangePassword: true,
         },
       });
       await ensureRoleExtension(profile.id, roleRaw, institutionId);

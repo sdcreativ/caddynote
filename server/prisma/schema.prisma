@@ -390,6 +390,8 @@ model StrkProfile {
 
   // Authentification applicative (remplace Supabase Auth — IAM-002/003)
   passwordHash         String?   @map("password_hash")
+  /// Compte créé / réinitialisé avec un mot de passe provisoire : changement obligatoire à la 1ʳᵉ connexion.
+  mustChangePassword   Boolean   @default(false) @map("must_change_password")
   mfaEnabled           Boolean   @default(false) @map("mfa_enabled")
   mfaSecret            String?   @map("mfa_secret")
   /// Hashes SHA-256 des codes de secours à usage unique (IAM-003 recovery).

@@ -28,6 +28,9 @@ import { SuperAdminNotificationsBell } from '@/components/admin/SuperAdminNotifi
 import { RealtimeNotifications } from '@/components/notifications/RealtimeNotifications';
 import { Toaster } from '@/components/ui/toaster';
 import { trackProductEvent } from '@/lib/productTelemetry';
+import { ForceChangePasswordDialog } from '@/components/auth/ForceChangePasswordDialog';
+import { MfaSecurityBanner } from '@/components/auth/MfaSecurityBanner';
+import { TwoFactorAuthDialog } from '@/components/settings/TwoFactorAuthDialog';
 
 export const SUPER_ADMIN_SECTIONS = [
   'overview',
@@ -61,7 +64,14 @@ const isValidSection = (value: string | undefined): value is SuperAdminSection =
   !!value && (SUPER_ADMIN_SECTIONS as readonly string[]).includes(value);
 
 const SuperAdminDashboard = () => {
-  const { user } = useStrkAuth();
+  const {
+    user,
+    mustChangePassword,
+    clearMustChangePassword,
+    mfaRecommended,
+    dismissMfaPrompt,
+    markMfaEnabled,
+  } = useStrkAuth();
   const { t } = useTranslation('superAdmin');
   const { canSeeSection } = usePlatformPermissions();
   const navigate = useNavigate();
@@ -72,6 +82,7 @@ const SuperAdminDashboard = () => {
   );
   const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
   const [demoRequestCount, setDemoRequestCount] = useState(0);
+  const [mfaDialogOpen, setMfaDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!sectionParam) return;
@@ -212,9 +223,30 @@ const SuperAdminDashboard = () => {
             onDemoCountChange={setDemoRequestCount}
           />
         </header>
-        <div className="mx-auto w-full max-w-[1400px] p-6 sm:p-8">{renderContent()}</div>
+        <div className="mx-auto w-full max-w-[1400px] p-6 sm:p-8">
+          {mfaRecommended ? (
+            <MfaSecurityBanner
+              onEnable={() => setMfaDialogOpen(true)}
+              onDismiss={dismissMfaPrompt}
+            />
+          ) : null}
+          {renderContent()}
+        </div>
       </main>
 
+      <ForceChangePasswordDialog
+        open={mustChangePassword}
+        onCompleted={clearMustChangePassword}
+      />
+      <TwoFactorAuthDialog
+        open={mfaDialogOpen}
+        onOpenChange={setMfaDialogOpen}
+        dismissible
+        onEnabled={() => {
+          markMfaEnabled();
+          setMfaDialogOpen(false);
+        }}
+      />
       <CreateClassDialog
         open={showCreateClassDialog}
         onOpenChange={setShowCreateClassDialog}

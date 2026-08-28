@@ -13,6 +13,7 @@ interface ApiProfile {
   role: StrkUserRole;
   institutionId: string | null;
   mfaEnabled?: boolean;
+  mustChangePassword?: boolean;
 }
 
 const mapApiProfileToUser = (profile: ApiProfile): StrkUser => ({
@@ -46,8 +47,11 @@ interface StrkAuthContextType {
   logout: () => Promise<void>;
   hasRole: (role: StrkUserRole) => boolean;
   signup: (email: string, password: string, userData?: { first_name?: string; last_name?: string; role?: StrkUserRole; phone_number?: string; institution?: string }) => Promise<void>;
+  /** Toujours false (MFA non bloquante) — conservé pour compat. */
   mfaSetupRequired: boolean;
   mfaRecommended: boolean;
+  mustChangePassword: boolean;
+  clearMustChangePassword: () => void;
   dismissMfaPrompt: () => void;
   markMfaEnabled: () => void;
   impersonation: ImpersonationState;
@@ -66,22 +70,32 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [mfaSetupRequired, setMfaSetupRequired] = useState(false);
   const [mfaRecommended, setMfaRecommended] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [mfaPromptDismissed, setMfaPromptDismissed] = useState(false);
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
   const [impersonation, setImpersonation] = useState<ImpersonationState>({ active: false });
   const { toast } = useToast();
 
-  const applyMfaFlags = useCallback((flags?: { mfaSetupRequired?: boolean; mfaRecommended?: boolean }) => {
-    setMfaSetupRequired(!!flags?.mfaSetupRequired);
-    setMfaRecommended(!!(flags?.mfaRecommended ?? flags?.mfaSetupRequired));
-    setMfaPromptDismissed(false);
-  }, []);
+  const applyMfaFlags = useCallback(
+    (flags?: {
+      mfaSetupRequired?: boolean;
+      mfaRecommended?: boolean;
+      mustChangePassword?: boolean;
+    }) => {
+      setMfaSetupRequired(!!flags?.mfaSetupRequired);
+      setMfaRecommended(!!flags?.mfaRecommended);
+      setMustChangePassword(!!flags?.mustChangePassword);
+      setMfaPromptDismissed(false);
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
     clearToken();
     setUser(null);
     setMfaSetupRequired(false);
     setMfaRecommended(false);
+    setMustChangePassword(false);
     setMfaPromptDismissed(false);
     setImpersonation({ active: false });
     window.location.href = '/sign';
@@ -101,10 +115,15 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       user: ApiProfile;
       mfaSetupRequired?: boolean;
       mfaRecommended?: boolean;
+      mustChangePassword?: boolean;
       impersonation?: ImpersonationState;
     }>('/auth/me');
     setUser(mapApiProfileToUser(me.user));
-    applyMfaFlags({ mfaSetupRequired: me.mfaSetupRequired, mfaRecommended: me.mfaRecommended });
+    applyMfaFlags({
+      mfaSetupRequired: me.mfaSetupRequired,
+      mfaRecommended: me.mfaRecommended,
+      mustChangePassword: me.mustChangePassword ?? me.user.mustChangePassword,
+    });
     setImpersonation(me.impersonation?.active ? me.impersonation : { active: false });
     return me;
   }, [applyMfaFlags]);
@@ -289,7 +308,12 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     setMfaPromptDismissed(true);
   }, []);
 
-  const showMfaPrompt = (mfaSetupRequired || mfaRecommended) && !mfaPromptDismissed && !!user && !user.mfaEnabled;
+  const clearMustChangePassword = useCallback(() => {
+    setMustChangePassword(false);
+  }, []);
+
+  const showMfaBanner =
+    mfaRecommended && !mustChangePassword && !mfaPromptDismissed && !!user && !user.mfaEnabled;
 
   const value: StrkAuthContextType = {
     user,
@@ -303,8 +327,10 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     hasRole,
     signup,
-    mfaSetupRequired: mfaSetupRequired && !mfaPromptDismissed,
-    mfaRecommended: showMfaPrompt && !mfaSetupRequired,
+    mfaSetupRequired: false,
+    mfaRecommended: showMfaBanner,
+    mustChangePassword,
+    clearMustChangePassword,
     dismissMfaPrompt,
     markMfaEnabled,
     impersonation,

@@ -108,6 +108,7 @@ export const resolveGuardianAccount = async (
       role: 'parent',
       passwordHash,
       institutionId: institutionId ?? null,
+      mustChangePassword: true,
     },
   });
   return { id: created.id, created: true, tempPassword };

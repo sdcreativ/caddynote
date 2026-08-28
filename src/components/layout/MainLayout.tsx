@@ -2,6 +2,8 @@ import { useState, useEffect, ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { TwoFactorAuthDialog } from '@/components/settings/TwoFactorAuthDialog';
+import { ForceChangePasswordDialog } from '@/components/auth/ForceChangePasswordDialog';
+import { MfaSecurityBanner } from '@/components/auth/MfaSecurityBanner';
 import StrkNavbar from './StrkNavbar';
 import StrkSidebar from './StrkSidebar';
 import MobileBottomNav from './MobileBottomNav';
@@ -20,14 +22,21 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const { user, mfaSetupRequired, dismissMfaPrompt, markMfaEnabled } = useStrkAuth();
+  const {
+    user,
+    mustChangePassword,
+    clearMustChangePassword,
+    mfaRecommended,
+    dismissMfaPrompt,
+    markMfaEnabled,
+  } = useStrkAuth();
   const { t } = useTranslation('nav');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mfaDialogOpen, setMfaDialogOpen] = useState(false);
   const location = useLocation();
   const isSchoolShell = isSchoolShellRole(user?.role);
   const hasMobileBottomNav = Boolean(mobileBottomNavForRole(user?.role));
 
-  const mfaPromptOpen = mfaSetupRequired;
   const toggleSidebar = () => setSidebarOpen((v) => !v);
   /** « Plus » de la barre mobile : ouvre/ferme le menu latéral. */
   const toggleMoreMenu = () => setSidebarOpen((v) => !v);
@@ -76,6 +85,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           )}
         >
           <div className="mx-auto w-full max-w-[1400px]">
+            {mfaRecommended ? (
+              <MfaSecurityBanner
+                onEnable={() => setMfaDialogOpen(true)}
+                onDismiss={dismissMfaPrompt}
+              />
+            ) : null}
             {!isSchoolShell && (
               <div className="mb-6">
                 <SubscriptionNotifications />
@@ -84,13 +99,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             {children}
           </div>
         </main>
+        <ForceChangePasswordDialog
+          open={mustChangePassword}
+          onCompleted={clearMustChangePassword}
+        />
         <TwoFactorAuthDialog
-          open={mfaPromptOpen}
-          onOpenChange={(open) => {
-            if (!open) dismissMfaPrompt();
+          open={mfaDialogOpen}
+          onOpenChange={setMfaDialogOpen}
+          dismissible
+          onEnabled={() => {
+            markMfaEnabled();
+            setMfaDialogOpen(false);
           }}
-          dismissible={!mfaSetupRequired}
-          onEnabled={markMfaEnabled}
         />
       </div>
 

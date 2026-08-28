@@ -195,6 +195,7 @@ export const provisionDemoFromContact = async (
       role: 'school_admin',
       phoneNumber: input.adminPhone || null,
       institutionId: institution.id,
+      mustChangePassword: true,
     },
     select: PUBLIC_PROFILE_SELECT,
   });

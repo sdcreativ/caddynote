@@ -12,6 +12,7 @@ export const PUBLIC_PROFILE_SELECT = {
   institutionId: true,
   groupId: true,
   mfaEnabled: true,
+  mustChangePassword: true,
   isActive: true,
   deactivatedAt: true,
   createdAt: true,

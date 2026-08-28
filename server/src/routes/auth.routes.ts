@@ -356,8 +356,8 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   if (!profile) {
     return res.status(404).json({ error: 'Utilisateur introuvable' });
   }
-  // IAM-003 : en prod, invite bloquante côté UI si rôle sensible sans MFA.
-  // En CADDYNOTE_TEST_MODE : recommandé seulement (pas de modal bloquant).
+  // IAM-003 : MFA recommandée (bandeau) pour rôles sensibles — plus de modal bloquant.
+  // Première connexion : mustChangePassword force le changement de MDP provisoire.
   const needsMfa = isMfaRequiredRole(profile.role) && !profile.mfaEnabled;
   const impersonation = req.auth!.impersonatorId
     ? {
@@ -380,8 +380,10 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 
   res.json({
     user: profile,
+    mustChangePassword: !!profile.mustChangePassword,
     mfaRecommended: needsMfa,
-    mfaSetupRequired: needsMfa && !isTestMode(),
+    /** Conservé à false : l’UI utilise `mfaRecommended` (bandeau). */
+    mfaSetupRequired: false,
     impersonation,
   });
 });
@@ -406,7 +408,10 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
   }
 
   const passwordHash = await hashPassword(parsed.data.newPassword);
-  await prisma.strkProfile.update({ where: { id: profile.id }, data: { passwordHash } });
+  await prisma.strkProfile.update({
+    where: { id: profile.id },
+    data: { passwordHash, mustChangePassword: false },
+  });
   // IAM-004 : les autres sessions (autres appareils) sont invalidées ; celle
   // en cours ne l'est jamais ici — sinon la requête qui vient de réussir se
   // retrouverait elle-même déconnectée sans nouveau jeton pour la remplacer.
@@ -492,7 +497,7 @@ authRouter.post('/reset-password', authLimiter, async (req, res) => {
   const passwordHash = await hashPassword(parsed.data.newPassword);
   await prisma.strkProfile.update({
     where: { id: profile.id },
-    data: { passwordHash, passwordResetToken: null, passwordResetExpires: null },
+    data: { passwordHash, passwordResetToken: null, passwordResetExpires: null, mustChangePassword: false },
   });
   // IAM-004 : une réinitialisation de mot de passe (typiquement après
   // suspicion de compromission) invalide toutes les sessions existantes —

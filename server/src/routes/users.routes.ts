@@ -166,7 +166,16 @@ usersRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
 
   try {
     const user = await prisma.strkProfile.create({
-      data: { email, passwordHash, firstName, lastName, role, phoneNumber, institutionId },
+      data: {
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        role,
+        phoneNumber,
+        institutionId,
+        mustChangePassword: true,
+      },
       select: PUBLIC_PROFILE_SELECT,
     });
     // Bug réel corrigé le 16/08/2026 (voir lib/roleExtensions.ts) : sans
@@ -560,7 +569,12 @@ usersRouter.post('/:id/admin-reset-password', requireRole('admin'), async (req, 
   const passwordHash = await hashPassword(tempPassword);
   await prisma.strkProfile.update({
     where: { id: target.id },
-    data: { passwordHash, passwordResetToken: null, passwordResetExpires: null },
+    data: {
+      passwordHash,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      mustChangePassword: true,
+    },
   });
   await prisma.strkSession.updateMany({
     where: { userId: target.id, revokedAt: null },
