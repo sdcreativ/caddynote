@@ -14,6 +14,18 @@ import { feeGridRouter } from './feeGrid.routes.js';
 import { computeStudentBalances } from '../lib/financeBalances.js';
 import { toCsv } from '../lib/csvExport.js';
 import { toXlsx } from '../lib/xlsxExport.js';
+import {
+  createManualMultiPayment,
+  ensureSingleAllocation,
+  recomputeInvoiceStatus,
+  PaymentAllocationError,
+} from '../lib/paymentAllocations.js';
+import { applyCreditNoteToInvoice, createCreditNote, CreditNoteError } from '../lib/creditNotes.js';
+import {
+  applySponsorshipToInvoice,
+  createSponsorship,
+  SponsorshipError,
+} from '../lib/sponsorships.js';
 
 /**
  * Module Finance (chap. 16, FIN-001 à 008) : catalogue de frais, factures,
@@ -146,7 +158,7 @@ financeRouter.get('/invoices', async (req, res) => {
     }
     const invoices = await prisma.strkInvoice.findMany({
       where: { studentId },
-      include: { lines: true, payments: true },
+      include: { lines: true, payments: { include: { allocations: true } }, allocations: true },
       orderBy: { issuedAt: 'desc' },
     });
     return res.json({ invoices: await Promise.all(invoices.map(enrichInvoice)) });
@@ -163,7 +175,7 @@ financeRouter.get('/invoices', async (req, res) => {
   }
   const invoices = await prisma.strkInvoice.findMany({
     where: { institutionId: targetInstitutionId },
-    include: { lines: true, payments: true },
+    include: { lines: true, payments: { include: { allocations: true } }, allocations: true },
     orderBy: { issuedAt: 'desc' },
   });
   res.json({ invoices: await Promise.all(invoices.map(enrichInvoice)) });
@@ -172,7 +184,7 @@ financeRouter.get('/invoices', async (req, res) => {
 financeRouter.get('/invoices/:id', async (req, res) => {
   const invoice = await prisma.strkInvoice.findUnique({
     where: { id: req.params.id },
-    include: { lines: true, payments: true },
+    include: { lines: true, payments: { include: { allocations: true } }, allocations: true },
   });
   if (!invoice) {
     return res.status(404).json({ error: 'Facture introuvable' });
@@ -278,7 +290,7 @@ financeRouter.post('/invoices', requireRole(...FINANCE_ROLES), async (req, res) 
       createdBy: auth.sub,
       lines: { create: resolvedLines },
     },
-    include: { lines: true, payments: true },
+    include: { lines: true, payments: { include: { allocations: true } }, allocations: true },
   });
   res.status(201).json({ invoice: await enrichInvoice(invoice) });
 });
@@ -288,7 +300,7 @@ financeRouter.patch('/invoices/:id/cancel', requireRole(...FINANCE_ROLES), async
   if (!invoice || !isSameInstitution(req.auth!, invoice.institutionId)) {
     return res.status(404).json({ error: 'Facture introuvable' });
   }
-  if (invoice.paidCents > 0) {
+  if (invoice.paidCents > 0 || invoice.creditAppliedCents > 0) {
     return res.status(400).json({ error: 'Impossible d’annuler une facture déjà partiellement payée' });
   }
   const updated = await prisma.strkInvoice.update({ where: { id: invoice.id }, data: { status: 'cancelled' } });
@@ -296,15 +308,6 @@ financeRouter.patch('/invoices/:id/cancel', requireRole(...FINANCE_ROLES), async
 });
 
 // --- Paiements (FIN-003/004/005) ---
-
-/** Recalcule paidCents/status d'une facture à partir de ses paiements 'paid'. */
-const recomputeInvoiceStatus = async (invoiceId: string) => {
-  const invoice = await prisma.strkInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
-  const paidPayments = await prisma.strkPayment.findMany({ where: { invoiceId, status: 'paid' } });
-  const paidCents = paidPayments.reduce((sum, p) => sum + p.amountCents, 0);
-  const status = paidCents <= 0 ? 'issued' : paidCents >= invoice.totalCents ? 'paid' : 'partially_paid';
-  await prisma.strkInvoice.update({ where: { id: invoiceId }, data: { paidCents, status } });
-};
 
 const requireInvoiceAccess = async (req: import('express').Request, res: import('express').Response) => {
   const invoice = await prisma.strkInvoice.findUnique({ where: { id: req.params.id } });
@@ -336,7 +339,7 @@ financeRouter.post('/invoices/:id/payments/cinetpay/initiate', async (req, res) 
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
-  const remaining = invoice.totalCents - invoice.paidCents;
+  const remaining = invoice.totalCents - invoice.paidCents - invoice.creditAppliedCents;
   const amountCents = Math.min(parsed.data.amountCents ?? remaining, remaining);
   if (amountCents <= 0) {
     return res.status(400).json({ error: 'Cette facture est déjà entièrement payée' });
@@ -354,6 +357,7 @@ financeRouter.post('/invoices/:id/payments/cinetpay/initiate', async (req, res) 
       paidBy: req.auth!.sub,
     },
   });
+  await ensureSingleAllocation(payment.id, invoice.id, amountCents);
 
   const appUrl = process.env.APP_URL || 'http://localhost:8080';
   const apiUrl = process.env.API_URL || 'http://localhost:4000';
@@ -392,7 +396,7 @@ financeRouter.post('/invoices/:id/payments/stripe/initiate', async (req, res) =>
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
-  const remaining = invoice.totalCents - invoice.paidCents;
+  const remaining = invoice.totalCents - invoice.paidCents - invoice.creditAppliedCents;
   const amountCents = Math.min(parsed.data.amountCents ?? remaining, remaining);
   if (amountCents <= 0) {
     return res.status(400).json({ error: 'Cette facture est déjà entièrement payée' });
@@ -409,6 +413,7 @@ financeRouter.post('/invoices/:id/payments/stripe/initiate', async (req, res) =>
       paidBy: req.auth!.sub,
     },
   });
+  await ensureSingleAllocation(payment.id, invoice.id, amountCents);
 
   const appUrl = process.env.APP_URL || 'http://localhost:8080';
   const session = await getStripeClient().checkout.sessions.create({
@@ -447,7 +452,7 @@ financeRouter.post('/invoices/:id/payments/manual', requireRole(...FINANCE_ROLES
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
-  const remaining = invoice.totalCents - invoice.paidCents;
+  const remaining = invoice.totalCents - invoice.paidCents - invoice.creditAppliedCents;
   if (parsed.data.amountCents > remaining) {
     return res.status(400).json({ error: 'Le montant dépasse le solde restant dû' });
   }
@@ -466,6 +471,7 @@ financeRouter.post('/invoices/:id/payments/manual', requireRole(...FINANCE_ROLES
       verificationToken: generateVerificationToken(),
     },
   });
+  await ensureSingleAllocation(payment.id, invoice.id, parsed.data.amountCents);
   await recomputeInvoiceStatus(invoice.id);
   await logAudit({
     institutionId: invoice.institutionId,
@@ -476,7 +482,62 @@ financeRouter.post('/invoices/:id/payments/manual', requireRole(...FINANCE_ROLES
     metadata: { invoiceId: invoice.id, amountCents: parsed.data.amountCents, method: parsed.data.method },
     ipAddress: req.ip,
   });
-  res.status(201).json({ payment });
+  const allocations = await prisma.strkPaymentAllocation.findMany({ where: { paymentId: payment.id } });
+  res.status(201).json({ payment, allocations });
+});
+
+const manualMultiSchema = z.object({
+  method: z.enum(['bank_transfer', 'cash']),
+  currency: z.string().optional(),
+  allocations: z
+    .array(
+      z.object({
+        invoiceId: z.string().uuid(),
+        amountCents: z.number().int().positive(),
+      })
+    )
+    .min(1),
+});
+
+/** Encaissement unique ventilé sur plusieurs factures (staff). */
+financeRouter.post('/payments/manual-multi', requireRole(...FINANCE_ROLES), async (req, res) => {
+  if (!req.auth!.institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé à ce compte' });
+  }
+  const parsed = manualMultiSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+  try {
+    const result = await createManualMultiPayment({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      method: parsed.data.method,
+      currency: parsed.data.currency,
+      allocations: parsed.data.allocations,
+      receiptNumber: generateReceiptNumber(),
+      verificationToken: generateVerificationToken(),
+    });
+    await logAudit({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.payment.manual_multi_confirmed',
+      targetType: 'payment',
+      targetId: result.payment.id,
+      metadata: {
+        amountCents: result.payment.amountCents,
+        method: parsed.data.method,
+        allocations: parsed.data.allocations,
+      },
+      ipAddress: req.ip,
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof PaymentAllocationError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
 });
 
 // --- Remboursement (FIN-008) : traçable, sans jamais supprimer/modifier le paiement initial ---
@@ -484,7 +545,10 @@ financeRouter.post('/invoices/:id/payments/manual', requireRole(...FINANCE_ROLES
 const refundSchema = z.object({ amountCents: z.number().int().positive(), reason: z.string().optional() });
 
 financeRouter.post('/payments/:id/refund', requireRole(...FINANCE_ROLES), async (req, res) => {
-  const payment = await prisma.strkPayment.findUnique({ where: { id: req.params.id }, include: { invoice: true } });
+  const payment = await prisma.strkPayment.findUnique({
+    where: { id: req.params.id },
+    include: { invoice: true, allocations: true },
+  });
   if (!payment || !isSameInstitution(req.auth!, payment.invoice.institutionId)) {
     return res.status(404).json({ error: 'Paiement introuvable' });
   }
@@ -510,7 +574,12 @@ financeRouter.post('/payments/:id/refund', requireRole(...FINANCE_ROLES), async 
   // Le paiement initial n'est ni supprimé ni modifié dans son montant —
   // seul son statut reflète qu'il a fait l'objet d'un remboursement.
   await prisma.strkPayment.update({ where: { id: payment.id }, data: { status: 'refunded' } });
-  await recomputeInvoiceStatus(payment.invoiceId);
+  const invoiceIds = [
+    ...new Set([payment.invoiceId, ...payment.allocations.map((a) => a.invoiceId)]),
+  ];
+  for (const invoiceId of invoiceIds) {
+    await recomputeInvoiceStatus(invoiceId);
+  }
   await logAudit({
     institutionId: payment.invoice.institutionId,
     actorId: req.auth!.sub,
@@ -521,6 +590,195 @@ financeRouter.post('/payments/:id/refund', requireRole(...FINANCE_ROLES), async 
     ipAddress: req.ip,
   });
   res.status(201).json({ refund });
+});
+
+// --- Avoirs (Lot 5.4) ---
+
+const creditNoteSchema = z.object({
+  studentId: z.string().uuid(),
+  amountCents: z.number().int().positive(),
+  currency: z.string().optional(),
+  reason: z.string().optional(),
+  relatedInvoiceId: z.string().uuid().optional(),
+});
+
+financeRouter.get('/credit-notes', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const institutionId = req.auth!.institutionId;
+  if (!institutionId) return res.status(400).json({ error: 'Aucun établissement associé' });
+  const studentId = typeof req.query.studentId === 'string' ? req.query.studentId : undefined;
+  const notes = await prisma.strkCreditNote.findMany({
+    where: { institutionId, ...(studentId ? { studentId } : {}) },
+    include: { applications: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ creditNotes: notes });
+});
+
+financeRouter.post('/credit-notes', requireRole(...FINANCE_ROLES), async (req, res) => {
+  if (!req.auth!.institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé' });
+  }
+  const parsed = creditNoteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+  try {
+    const note = await createCreditNote({
+      institutionId: req.auth!.institutionId,
+      createdBy: req.auth!.sub,
+      ...parsed.data,
+    });
+    await logAudit({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.credit_note.created',
+      targetType: 'credit_note',
+      targetId: note.id,
+      metadata: { amountCents: note.amountCents, studentId: note.studentId },
+      ipAddress: req.ip,
+    });
+    res.status(201).json({ creditNote: note });
+  } catch (error) {
+    if (error instanceof CreditNoteError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
+});
+
+const applyCreditSchema = z.object({
+  invoiceId: z.string().uuid(),
+  amountCents: z.number().int().positive(),
+});
+
+financeRouter.post('/credit-notes/:id/apply', requireRole(...FINANCE_ROLES), async (req, res) => {
+  if (!req.auth!.institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé' });
+  }
+  const parsed = applyCreditSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides' });
+  }
+  try {
+    const result = await applyCreditNoteToInvoice({
+      creditNoteId: req.params.id,
+      invoiceId: parsed.data.invoiceId,
+      amountCents: parsed.data.amountCents,
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+    });
+    await logAudit({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.credit_note.applied',
+      targetType: 'credit_note',
+      targetId: req.params.id,
+      metadata: result,
+      ipAddress: req.ip,
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof CreditNoteError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
+});
+
+// --- Parrainages (Lot 5.4) ---
+
+const sponsorshipSchema = z.object({
+  studentId: z.string().uuid(),
+  sponsorName: z.string().min(1),
+  sponsorType: z.enum(['ngo', 'company', 'individual', 'state']).optional(),
+  amountCents: z.number().int().positive(),
+  currency: z.string().optional(),
+  feeTypeCode: z.string().optional(),
+  academicYear: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+financeRouter.get('/sponsorships', requireRole(...FINANCE_ROLES), async (req, res) => {
+  const institutionId = req.auth!.institutionId;
+  if (!institutionId) return res.status(400).json({ error: 'Aucun établissement associé' });
+  const studentId = typeof req.query.studentId === 'string' ? req.query.studentId : undefined;
+  const rows = await prisma.strkSponsorship.findMany({
+    where: { institutionId, ...(studentId ? { studentId } : {}) },
+    include: { applications: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ sponsorships: rows });
+});
+
+financeRouter.post('/sponsorships', requireRole(...FINANCE_ROLES), async (req, res) => {
+  if (!req.auth!.institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé' });
+  }
+  const parsed = sponsorshipSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+  try {
+    const sponsorship = await createSponsorship({
+      institutionId: req.auth!.institutionId,
+      createdBy: req.auth!.sub,
+      ...parsed.data,
+    });
+    await logAudit({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.sponsorship.created',
+      targetType: 'sponsorship',
+      targetId: sponsorship.id,
+      metadata: { amountCents: sponsorship.amountCents, studentId: sponsorship.studentId },
+      ipAddress: req.ip,
+    });
+    res.status(201).json({ sponsorship });
+  } catch (error) {
+    if (error instanceof SponsorshipError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
+});
+
+const applySponsorshipSchema = z.object({
+  invoiceId: z.string().uuid(),
+  amountCents: z.number().int().positive(),
+});
+
+financeRouter.post('/sponsorships/:id/apply', requireRole(...FINANCE_ROLES), async (req, res) => {
+  if (!req.auth!.institutionId) {
+    return res.status(400).json({ error: 'Aucun établissement associé' });
+  }
+  const parsed = applySponsorshipSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides' });
+  }
+  try {
+    const result = await applySponsorshipToInvoice({
+      sponsorshipId: req.params.id,
+      invoiceId: parsed.data.invoiceId,
+      amountCents: parsed.data.amountCents,
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+    });
+    await logAudit({
+      institutionId: req.auth!.institutionId,
+      actorId: req.auth!.sub,
+      action: 'finance.sponsorship.applied',
+      targetType: 'sponsorship',
+      targetId: req.params.id,
+      metadata: result,
+      ipAddress: req.ip,
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof SponsorshipError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
 });
 
 // --- Rapprochement bancaire (FIN-007) ---
@@ -929,6 +1187,7 @@ financePublicRouter.post('/webhooks/cinetpay', async (req, res) => {
             providerPaymentId: result.operatorId,
           },
         });
+        await ensureSingleAllocation(payment.id, payment.invoiceId, payment.amountCents);
         await recomputeInvoiceStatus(payment.invoiceId);
         await logAudit({
           institutionId: payment.invoice.institutionId,

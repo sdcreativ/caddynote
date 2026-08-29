@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { getStripeClient, isStripeConfigured, isStripeWebhookConfigured } from '../lib/stripeClient.js';
 import { logAudit } from '../lib/audit.js';
 import { markAdmissionFeePaidByProviderRef } from './admissions.routes.js';
+import { ensureSingleAllocation, recomputeInvoiceStatus } from '../lib/paymentAllocations.js';
 
 /**
  * Remplace l'edge function Supabase `webhook-stripe`. FIN-005 / bonnes
@@ -56,21 +57,8 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
                 providerRef: session.id,
               },
             });
-            const paidSum = await prisma.strkPayment.aggregate({
-              where: { invoiceId: payment.invoiceId, status: 'paid' },
-              _sum: { amountCents: true },
-            });
-            const paidCents = paidSum._sum.amountCents ?? 0;
-            const status =
-              paidCents >= payment.invoice.totalCents
-                ? 'paid'
-                : paidCents > 0
-                  ? 'partially_paid'
-                  : payment.invoice.status;
-            await prisma.strkInvoice.update({
-              where: { id: payment.invoiceId },
-              data: { paidCents, status },
-            });
+            await ensureSingleAllocation(payment.id, payment.invoiceId, payment.amountCents);
+            await recomputeInvoiceStatus(payment.invoiceId);
             await logAudit({
               institutionId: payment.invoice.institutionId,
               actorId: null,

@@ -41,6 +41,7 @@ import { refundPayment } from '@/services/strkBankService';
 import { BankReconciliationPanel } from '@/components/finance/BankReconciliationPanel';
 import { FeeGridPanel } from '@/components/finance/FeeGridPanel';
 import { FinanceBalancesPanel } from '@/components/finance/FinanceBalancesPanel';
+import { FinanceLot54Panel } from '@/components/finance/FinanceLot54Panel';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { ApiError } from '@/lib/apiClient';
 import { generatePaymentReceipt, generateInvoiceDocument, downloadDocument } from '@/services/strkDocumentService';
@@ -297,6 +298,7 @@ const FinancePage = () => {
       <Tabs defaultValue="invoices">
         <TabsList>
           <TabsTrigger value="invoices">{t('tabs.invoices')}</TabsTrigger>
+          <TabsTrigger value="lot54">{t('tabs.lot54')}</TabsTrigger>
           <TabsTrigger value="plans">{t('tabs.plans')}</TabsTrigger>
           <TabsTrigger value="schedules">{t('tabs.schedules')}</TabsTrigger>
           <TabsTrigger value="balances">{t('tabs.balances')}</TabsTrigger>
@@ -358,6 +360,10 @@ const FinancePage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="lot54" className="space-y-4">
+          <FinanceLot54Panel invoices={invoices} students={students} onChanged={() => void loadData()} />
         </TabsContent>
 
         <TabsContent value="plans" className="space-y-4">

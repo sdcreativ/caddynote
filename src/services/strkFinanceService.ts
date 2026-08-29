@@ -44,6 +44,7 @@ export interface StrkInvoice {
   status: string;
   total_cents: number;
   paid_cents: number;
+  credit_applied_cents: number;
   currency: string;
   due_date?: string;
   issued_at: string;
@@ -101,6 +102,7 @@ interface ApiInvoice {
   status: string;
   totalCents: number;
   paidCents: number;
+  creditAppliedCents?: number;
   currency: string;
   dueDate?: string | null;
   issuedAt: string;
@@ -116,6 +118,7 @@ const mapInvoice = (i: ApiInvoice): StrkInvoice => ({
   status: i.status,
   total_cents: i.totalCents,
   paid_cents: i.paidCents,
+  credit_applied_cents: i.creditAppliedCents ?? 0,
   currency: i.currency,
   due_date: i.dueDate || undefined,
   issued_at: i.issuedAt,
@@ -247,6 +250,88 @@ export const recordManualPayment = async (
     console.error('Error in recordManualPayment:', error);
     return false;
   }
+};
+
+export const recordManualMultiPayment = async (payload: {
+  method: 'cash' | 'bank_transfer';
+  allocations: { invoiceId: string; amountCents: number }[];
+}): Promise<boolean> => {
+  try {
+    await apiClient.post('/finance/payments/manual-multi', payload);
+    return true;
+  } catch (error) {
+    console.error('Error in recordManualMultiPayment:', error);
+    throw error;
+  }
+};
+
+export type StrkCreditNote = {
+  id: string;
+  studentId: string;
+  amountCents: number;
+  remainingCents: number;
+  currency: string;
+  reason?: string | null;
+  status: string;
+};
+
+export const fetchCreditNotes = async (studentId?: string): Promise<StrkCreditNote[]> => {
+  const q = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+  const { creditNotes } = await apiClient.get<{ creditNotes: StrkCreditNote[] }>(`/finance/credit-notes${q}`);
+  return creditNotes;
+};
+
+export const createCreditNoteApi = async (data: {
+  studentId: string;
+  amountCents: number;
+  reason?: string;
+}): Promise<StrkCreditNote> => {
+  const { creditNote } = await apiClient.post<{ creditNote: StrkCreditNote }>('/finance/credit-notes', data);
+  return creditNote;
+};
+
+export const applyCreditNoteApi = async (
+  creditNoteId: string,
+  invoiceId: string,
+  amountCents: number
+): Promise<void> => {
+  await apiClient.post(`/finance/credit-notes/${creditNoteId}/apply`, { invoiceId, amountCents });
+};
+
+export type StrkSponsorship = {
+  id: string;
+  studentId: string;
+  sponsorName: string;
+  sponsorType: string;
+  amountCents: number;
+  remainingCents: number;
+  currency: string;
+  status: string;
+};
+
+export const fetchSponsorships = async (studentId?: string): Promise<StrkSponsorship[]> => {
+  const q = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+  const { sponsorships } = await apiClient.get<{ sponsorships: StrkSponsorship[] }>(`/finance/sponsorships${q}`);
+  return sponsorships;
+};
+
+export const createSponsorshipApi = async (data: {
+  studentId: string;
+  sponsorName: string;
+  sponsorType?: string;
+  amountCents: number;
+  notes?: string;
+}): Promise<StrkSponsorship> => {
+  const { sponsorship } = await apiClient.post<{ sponsorship: StrkSponsorship }>('/finance/sponsorships', data);
+  return sponsorship;
+};
+
+export const applySponsorshipApi = async (
+  sponsorshipId: string,
+  invoiceId: string,
+  amountCents: number
+): Promise<void> => {
+  await apiClient.post(`/finance/sponsorships/${sponsorshipId}/apply`, { invoiceId, amountCents });
 };
 
 /**

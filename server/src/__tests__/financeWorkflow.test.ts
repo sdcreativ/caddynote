@@ -128,6 +128,125 @@ describe('Finance — flag, facturation, rapprochement (§5.8)', () => {
       expect(after.body.invoice.paidCents).toBe(150000);
     });
 
+    it('manual-multi : 1 paiement → 2 factures + isolation tenant', async () => {
+      const fee1 = await request(app).post('/finance/fee-items').set(auth(fx.a.schoolAdmin.token)).send({
+        name: `Multi A ${Date.now()}`,
+        amountCents: 40000,
+      });
+      const fee2 = await request(app).post('/finance/fee-items').set(auth(fx.a.schoolAdmin.token)).send({
+        name: `Multi B ${Date.now()}`,
+        amountCents: 60000,
+      });
+      const inv1 = await request(app).post('/finance/invoices').set(auth(fx.a.schoolAdmin.token)).send({
+        studentId: fx.a.student.id,
+        lines: [{ feeItemId: fee1.body.feeItem.id, quantity: 1 }],
+      });
+      const inv2 = await request(app).post('/finance/invoices').set(auth(fx.a.schoolAdmin.token)).send({
+        studentId: fx.a.student.id,
+        lines: [{ feeItemId: fee2.body.feeItem.id, quantity: 1 }],
+      });
+      expect(inv1.status).toBe(201);
+      expect(inv2.status).toBe(201);
+
+      const multi = await request(app)
+        .post('/finance/payments/manual-multi')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({
+          method: 'cash',
+          allocations: [
+            { invoiceId: inv1.body.invoice.id, amountCents: 40000 },
+            { invoiceId: inv2.body.invoice.id, amountCents: 60000 },
+          ],
+        });
+      expect(multi.status).toBe(201);
+      expect(multi.body.payment.amountCents).toBe(100000);
+      expect(multi.body.allocations).toHaveLength(2);
+
+      const after1 = await request(app)
+        .get(`/finance/invoices/${inv1.body.invoice.id}`)
+        .set(auth(fx.a.schoolAdmin.token));
+      const after2 = await request(app)
+        .get(`/finance/invoices/${inv2.body.invoice.id}`)
+        .set(auth(fx.a.schoolAdmin.token));
+      expect(after1.body.invoice.status).toBe('paid');
+      expect(after2.body.invoice.status).toBe('paid');
+
+      const overpay = await request(app)
+        .post('/finance/payments/manual-multi')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({
+          method: 'cash',
+          allocations: [{ invoiceId: inv1.body.invoice.id, amountCents: 1 }],
+        });
+      expect(overpay.status).toBe(400);
+
+      if (fx.b?.institutionId && fx.b?.schoolAdmin?.token && fx.b?.student?.id) {
+        const feeB = await request(app).post('/finance/fee-items').set(auth(fx.b.schoolAdmin.token)).send({
+          name: `Other tenant ${Date.now()}`,
+          amountCents: 10000,
+        });
+        const invB = await request(app).post('/finance/invoices').set(auth(fx.b.schoolAdmin.token)).send({
+          studentId: fx.b.student.id,
+          lines: [{ feeItemId: feeB.body.feeItem.id, quantity: 1 }],
+        });
+        const steal = await request(app)
+          .post('/finance/payments/manual-multi')
+          .set(auth(fx.a.schoolAdmin.token))
+          .send({
+            method: 'cash',
+            allocations: [{ invoiceId: invB.body.invoice.id, amountCents: 10000 }],
+          });
+        expect([403, 404]).toContain(steal.status);
+      }
+    });
+
+    it('avoir + parrainage imputés sur facture', async () => {
+      const fee = await request(app).post('/finance/fee-items').set(auth(fx.a.schoolAdmin.token)).send({
+        name: `Credit ${Date.now()}`,
+        amountCents: 50000,
+      });
+      const invoice = await request(app).post('/finance/invoices').set(auth(fx.a.schoolAdmin.token)).send({
+        studentId: fx.a.student.id,
+        lines: [{ feeItemId: fee.body.feeItem.id, quantity: 1 }],
+      });
+      const invoiceId = invoice.body.invoice.id as string;
+
+      const note = await request(app).post('/finance/credit-notes').set(auth(fx.a.schoolAdmin.token)).send({
+        studentId: fx.a.student.id,
+        amountCents: 20000,
+        reason: 'Trop-perçu test',
+      });
+      expect(note.status).toBe(201);
+
+      const applyNote = await request(app)
+        .post(`/finance/credit-notes/${note.body.creditNote.id}/apply`)
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({ invoiceId, amountCents: 20000 });
+      expect(applyNote.status).toBe(201);
+
+      const mid = await request(app).get(`/finance/invoices/${invoiceId}`).set(auth(fx.a.schoolAdmin.token));
+      expect(mid.body.invoice.creditAppliedCents).toBe(20000);
+      expect(mid.body.invoice.status).toBe('partially_paid');
+
+      const sponsorship = await request(app).post('/finance/sponsorships').set(auth(fx.a.schoolAdmin.token)).send({
+        studentId: fx.a.student.id,
+        sponsorName: 'ONG Test',
+        sponsorType: 'ngo',
+        amountCents: 30000,
+      });
+      expect(sponsorship.status).toBe(201);
+
+      const applySp = await request(app)
+        .post(`/finance/sponsorships/${sponsorship.body.sponsorship.id}/apply`)
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({ invoiceId, amountCents: 30000 });
+      expect(applySp.status).toBe(201);
+
+      const done = await request(app).get(`/finance/invoices/${invoiceId}`).set(auth(fx.a.schoolAdmin.token));
+      expect(done.body.invoice.creditAppliedCents).toBe(50000);
+      expect(done.body.invoice.status).toBe('paid');
+    });
+
     it('relance pénalité : facture échue → late-fee-check → ligne penalty + overdue', async () => {
       await prisma.strkInstitution.update({
         where: { id: fx.a.institutionId },
