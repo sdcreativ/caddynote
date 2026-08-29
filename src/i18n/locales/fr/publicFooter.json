@@ -1,5 +1,5 @@
 {
-  "tagline": "La plateforme de gestion scolaire pour les établissements francophones.",
+  "tagline": "La gestion scolaire, simplifiée.",
   "product": "Produit",
   "resources": "Ressources",
   "company": "Entreprise",
@@ -14,6 +14,6 @@
     "about": "À propos",
     "contact": "Contact"
   },
-  "copyright": "© {{year}} CaddyNote — Une solution pour l'Europe et l'Afrique",
+  "copyright": "© {{year}} CaddyNote — La gestion scolaire, simplifiée",
   "legal": "Mentions légales · Confidentialité"
 }

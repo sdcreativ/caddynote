@@ -7,7 +7,7 @@ export const BRAND = {
   blue: '#1D70D8',
   markLight: '/logo-cn-light.png',
   markDark: '/logo-cn.png',
-  taglinePublic: 'Une solution éducative',
+  taglinePublic: 'La gestion scolaire, simplifiée',
   taglineTeam: 'Équipe CaddyNote',
 } as const;
 

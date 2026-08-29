@@ -24,7 +24,7 @@ export type SeoPage = {
 
 export const DEFAULT_SEO: SeoPage = {
   path: '/',
-  title: 'CaddyNote — Gestion scolaire pour l’Afrique et l’Europe',
+  title: 'CaddyNote — La gestion scolaire, simplifiée',
   description:
     'CaddyNote connecte directions, enseignants et familles : présences, notes, paiements Mobile Money, documents et pilotage multi-établissements.',
 };
@@ -36,7 +36,7 @@ export const PUBLIC_SEO_PAGES: SeoPage[] = [
     path: '/about',
     title: 'À propos — CaddyNote',
     description:
-      'Découvrez la mission de CaddyNote : une plateforme de gestion scolaire moderne, pensée pour les établissements francophones en Afrique et en Europe.',
+      'Découvrez la mission de CaddyNote : une plateforme de gestion scolaire moderne, pensée pour le terrain.',
   },
   {
     path: '/contact',

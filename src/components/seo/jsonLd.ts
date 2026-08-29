@@ -12,7 +12,7 @@ export function buildHomeJsonLd() {
       logo: absoluteUrl('/logo-cn-light.png'),
       email: 'contact@caddynote.com',
       description:
-        'Plateforme de gestion scolaire pour les établissements francophones en Afrique et en Europe.',
+        'Plateforme de gestion scolaire pour les établissements scolaires.',
       sameAs: [],
     },
     {
