@@ -4,6 +4,7 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import { isAuthGateToastDescription } from "@/lib/authGate"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 5000
@@ -128,6 +129,19 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Gates IAM (MDP provisoire / MFA) : le dialog dédié gère déjà l’UX —
+  // ne pas empiler des toasts rouges pendant que l’utilisateur change son MDP.
+  if (
+    props.variant === "destructive" &&
+    isAuthGateToastDescription(props.description)
+  ) {
+    return {
+      id: "",
+      dismiss: () => {},
+      update: () => {},
+    }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>

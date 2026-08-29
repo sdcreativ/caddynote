@@ -117,6 +117,26 @@ const SuperAdminDashboard = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (mustChangePassword || mfaBlocking) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center bg-[#F5F7FB] p-4">
+        <ForceChangePasswordDialog
+          open={mustChangePassword}
+          onCompleted={clearMustChangePassword}
+        />
+        <TwoFactorAuthDialog
+          open={mfaBlocking}
+          onOpenChange={() => undefined}
+          dismissible={false}
+          onEnabled={() => {
+            markMfaEnabled();
+          }}
+        />
+        <Toaster />
+      </div>
+    );
+  }
+
   const setActiveSection = (section: string) => {
     navigate(`/super-admin/${section}`);
   };

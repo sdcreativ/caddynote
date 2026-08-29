@@ -97,6 +97,20 @@ const UsersManagement = () => {
   const { institutions } = useStrkInstitutions();
   const { classes, loadClassesByInstitution, assignStudents } = useStrkClasses();
 
+  const reloadUsers = async () => {
+    if (!user) return;
+    // Liste globale réservée à l’admin plateforme ; direction → son établissement.
+    if (user.role === 'admin' && !user.institutionId) {
+      await reloadUsers();
+      return;
+    }
+    if (user.institutionId) {
+      await loadUsersByInstitution(user.institutionId);
+      return;
+    }
+    await loadAllUsers();
+  };
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin':
@@ -113,8 +127,9 @@ const UsersManagement = () => {
   };
 
   useEffect(() => {
-    void loadAllUsers();
-  }, [loadAllUsers]);
+    void reloadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recharge quand l’identité / établissement change
+  }, [user?.id, user?.role, user?.institutionId]);
 
   const resetForm = () => {
     setFormData({
@@ -257,7 +272,7 @@ const UsersManagement = () => {
       resetForm();
 
       // Recharger tous les utilisateurs
-      await loadAllUsers();
+      await reloadUsers();
     } catch (error) {
       console.error('Error creating user:', error);
       toast({
@@ -322,7 +337,7 @@ const UsersManagement = () => {
       });
 
       // Reload all users to ensure consistency
-      await loadAllUsers();
+      await reloadUsers();
     }
   };
 
@@ -336,7 +351,7 @@ const UsersManagement = () => {
       setSelectedUser(null);
 
       // Reload all users to ensure consistency
-      await loadAllUsers();
+      await reloadUsers();
     }
   };
 
@@ -345,7 +360,10 @@ const UsersManagement = () => {
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = activeTab === 'all' || user.role === activeTab;
+    const matchesRole =
+      activeTab === 'all' ||
+      user.role === activeTab ||
+      (activeTab === 'teacher' && user.role === 'head_teacher');
 
     return matchesSearch && matchesRole;
   });
@@ -403,7 +421,7 @@ const UsersManagement = () => {
         ) : error ? (
           <div className="text-center py-12 border border-red-200 rounded-lg">
             <p className="text-red-500">{error}</p>
-            <Button variant="outline" className="mt-2" onClick={() => loadAllUsers()}>
+            <Button variant="outline" className="mt-2" onClick={() => void reloadUsers()}>
               {tc('actions.retry')}
             </Button>
           </div>

@@ -63,6 +63,27 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     return <Navigate to="/sign" replace />;
   }
 
+  /** Pendant MDP provisoire / MFA obligatoire : pas de shell métier (évite 403 toastés). */
+  if (mustChangePassword || mfaBlocking) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center bg-[#F5F7FB] p-4">
+        <ForceChangePasswordDialog
+          open={mustChangePassword}
+          onCompleted={clearMustChangePassword}
+        />
+        <TwoFactorAuthDialog
+          open={mfaBlocking}
+          onOpenChange={() => undefined}
+          dismissible={false}
+          onEnabled={() => {
+            markMfaEnabled();
+          }}
+        />
+        <Toaster />
+      </div>
+    );
+  }
+
   const shell = (
     <div className="relative flex h-screen bg-[#F5F7FB]">
       <a

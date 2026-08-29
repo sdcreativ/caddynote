@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Institution } from '@/types/strk';
 import { useToast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/apiClient';
+import { isAuthGateError } from '@/lib/authGate';
 import {
   fetchStrkInstitutions,
   fetchStrkInstitutionById,
@@ -12,6 +13,15 @@ import {
 
 const errorMessage = (err: unknown, fallback: string) =>
   err instanceof ApiError ? err.message : fallback;
+
+const toastUnlessAuthGate = (
+  toastFn: ReturnType<typeof useToast>['toast'],
+  err: unknown,
+  message: string
+) => {
+  if (isAuthGateError(err)) return;
+  toastFn({ title: 'Erreur', description: message, variant: 'destructive' });
+};
 
 export const useStrkInstitutions = () => {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -28,7 +38,7 @@ export const useStrkInstitutions = () => {
     } catch (err) {
       const message = errorMessage(err, 'Impossible de charger les établissements');
       setError(message);
-      toast({ title: 'Erreur', description: message, variant: 'destructive' });
+      toastUnlessAuthGate(toast, err, message);
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +53,7 @@ export const useStrkInstitutions = () => {
       } catch (err) {
         const message = errorMessage(err, "Impossible de charger les détails de l'établissement");
         setError(message);
-        toast({ title: 'Erreur', description: message, variant: 'destructive' });
+        toastUnlessAuthGate(toast, err, message);
         return null;
       } finally {
         setIsLoading(false);
@@ -67,7 +77,7 @@ export const useStrkInstitutions = () => {
       } catch (err) {
         const message = errorMessage(err, "Impossible d'ajouter l'établissement");
         setError(message);
-        toast({ title: 'Erreur', description: message, variant: 'destructive' });
+        toastUnlessAuthGate(toast, err, message);
         return null;
       } finally {
         setIsLoading(false);
@@ -94,7 +104,7 @@ export const useStrkInstitutions = () => {
       } catch (err) {
         const message = errorMessage(err, "Impossible de mettre à jour l'établissement");
         setError(message);
-        toast({ title: 'Erreur', description: message, variant: 'destructive' });
+        toastUnlessAuthGate(toast, err, message);
         return null;
       } finally {
         setIsLoading(false);
@@ -118,7 +128,7 @@ export const useStrkInstitutions = () => {
       } catch (err) {
         const message = errorMessage(err, "Impossible de supprimer l'établissement");
         setError(message);
-        toast({ title: 'Erreur', description: message, variant: 'destructive' });
+        toastUnlessAuthGate(toast, err, message);
         return false;
       } finally {
         setIsLoading(false);
