@@ -3,17 +3,21 @@
  *
  * Format binaire : magic `CNENC1` (6) + IV (12) + authTag (16) + ciphertext.
  * Clé : FILE_ENCRYPTION_KEY (64 hex = 32 octets, ou base64 32 octets).
- * Si la clé est absente : pas de chiffrement applicatif (compatibilité).
+ * Staging/production : clé obligatoire (fail-closed). Dev local : optionnel.
  *
  * Complément infra S3 : S3_SSE=AES256|aws:kms (+ S3_SSE_KMS_KEY_ID).
  */
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
+import { isHardenedRuntime } from './deployment.js';
 
 const MAGIC = Buffer.from('CNENC1');
 const IV_LEN = 12;
 const TAG_LEN = 16;
 
 export const isFileEncryptionConfigured = (): boolean => !!resolveKey();
+
+/** Obligatoire en staging/production hors CADDYNOTE_TEST_MODE. */
+export const isFileEncryptionRequired = (): boolean => isHardenedRuntime();
 
 const resolveKey = (): Buffer | null => {
   const raw = process.env.FILE_ENCRYPTION_KEY?.trim();
@@ -25,13 +29,30 @@ const resolveKey = (): Buffer | null => {
   } catch {
     /* ignore */
   }
-  // Dérivation déterministe si une phrase est fournie (dev uniquement — documenter en prod d’utiliser 32 octets).
+  // Dérivation déterministe si une phrase est fournie (dev uniquement — en
+  // staging/prod préférer 32 octets hex/base64).
   return createHash('sha256').update(raw).digest();
+};
+
+/** Fail-fast au boot API si le chiffrement est requis sans clé. */
+export const assertFileEncryptionReady = (): void => {
+  if (!isFileEncryptionRequired()) return;
+  if (!isFileEncryptionConfigured()) {
+    throw new Error(
+      'FILE_ENCRYPTION_KEY obligatoire en staging/production (openssl rand -hex 32). ' +
+        'Refus de démarrer sans chiffrement at-rest applicatif.'
+    );
+  }
 };
 
 export const encryptBuffer = (plain: Buffer): Buffer => {
   const key = resolveKey();
-  if (!key) return plain;
+  if (!key) {
+    if (isFileEncryptionRequired()) {
+      throw new Error('FILE_ENCRYPTION_KEY absente — chiffrement at-rest obligatoire');
+    }
+    return plain;
+  }
   const iv = randomBytes(IV_LEN);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([cipher.update(plain), cipher.final()]);

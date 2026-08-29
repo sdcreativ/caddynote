@@ -18,6 +18,8 @@ import 'express-async-errors';
 import cors from 'cors';
 import helmet from 'helmet';
 import { isTestMode } from './lib/testMode.js';
+import { assertFileEncryptionReady } from './lib/fileEncryption.js';
+import { assertAntivirusReady } from './lib/antivirus.js';
 
 // BigInt (ex. storageUsedBytes) n'est pas JSON-sérialisable par défaut.
 (BigInt.prototype as unknown as { toJSON?: () => string }).toJSON = function toJSON() {
@@ -245,6 +247,14 @@ if (process.env.NODE_ENV !== 'test') {
     console.warn(
       '⚠️  CADDYNOTE_TEST_MODE=true — intégrations externes coupées, MFA assouplie'
     );
+  }
+
+  try {
+    assertFileEncryptionReady();
+    assertAntivirusReady();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
   }
 
   if (shouldServeHttp(role)) {

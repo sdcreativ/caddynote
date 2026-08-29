@@ -1,37 +1,90 @@
 import net from 'node:net';
 import { areExternalServicesDisabled } from './testMode.js';
+import { getDeployment, isHardenedRuntime } from './deployment.js';
 
 /**
- * DOC-005 : scan antivirus des fichiers déposés par un utilisateur (aucun
- * scan de contenu n'existait jusqu'ici — seul le type déclaré était
- * vérifié). Le fichier transite directement navigateur -> S3 (upload signé,
- * jamais par notre serveur) : le scan a donc lieu *après* l'upload, quand
- * l'appelant confirme le dépôt en rattachant la clé à un dossier réel
- * (`POST /admissions/.../documents`, `PUT /documents/templates/:type`) —
- * c'est le seul moment où le serveur va de toute façon relire l'objet.
- *
- * ClamAV (`clamd`) plutôt qu'un service tiers payant (VirusTotal...) :
- * auto-hébergeable, protocole simple (INSTREAM sur TCP), même principe
- * d'adaptateur réversible que Stripe/CinetPay/SMTP/S3 ailleurs dans l'API —
- * gated par `CLAMAV_HOST`/`CLAMAV_PORT`, dégradation explicite si absent
- * (jamais un blocage silencieux, jamais un faux sentiment de sécurité).
+ * DOC-005 : scan antivirus ClamAV (clamd INSTREAM).
+ * Production : obligatoire (fail-closed). Staging/local : optionnel (Oracle ARM).
  */
 
 export const isAntivirusConfigured = (): boolean =>
-  !areExternalServicesDisabled() && !!process.env.CLAMAV_HOST;
+  !areExternalServicesDisabled() && !!process.env.CLAMAV_HOST?.trim();
+
+/** Obligatoire uniquement en production hors test mode. */
+export const isAntivirusRequired = (): boolean =>
+  getDeployment() === 'production' && isHardenedRuntime();
 
 export interface ScanResult {
-  scanned: boolean; // false si clamd n'est pas configuré sur cette instance
+  scanned: boolean;
   clean: boolean;
   threatName?: string;
 }
 
+export class AntivirusGateError extends Error {
+  status: number;
+  code: string;
+
+  constructor(message: string, status: number, code: string) {
+    super(message);
+    this.name = 'AntivirusGateError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Fail-fast au boot API en production sans ClamAV. */
+export const assertAntivirusReady = (): void => {
+  if (!isAntivirusRequired()) return;
+  if (!isAntivirusConfigured()) {
+    throw new Error(
+      'CLAMAV_HOST obligatoire en production (service clamav / profil antivirus). ' +
+        'Refus de démarrer sans scan antivirus des uploads.'
+    );
+  }
+};
+
+/**
+ * Refuse un upload non sain. En production : config + scan obligatoires.
+ * En staging : scan si ClamAV présent ; sinon no-op.
+ */
+export const assertCleanUpload = async (buffer: Buffer): Promise<void> => {
+  if (!isAntivirusConfigured()) {
+    if (isAntivirusRequired()) {
+      throw new AntivirusGateError(
+        'Antivirus non configuré — dépôt de fichiers indisponible.',
+        503,
+        'antivirus_required'
+      );
+    }
+    return;
+  }
+
+  let scan: ScanResult;
+  try {
+    scan = await scanBuffer(buffer);
+  } catch (error) {
+    console.error('Échec du scan antivirus (clamd) :', error);
+    if (isAntivirusRequired()) {
+      throw new AntivirusGateError(
+        'Service antivirus indisponible — réessayez plus tard.',
+        503,
+        'antivirus_unavailable'
+      );
+    }
+    return;
+  }
+
+  if (scan.scanned && !scan.clean) {
+    throw new AntivirusGateError(
+      'Fichier refusé par l’antivirus',
+      422,
+      'malware_detected'
+    );
+  }
+};
+
 const CHUNK_SIZE = 64 * 1024;
 
-/** Protocole INSTREAM de clamd : commande `zINSTREAM\0`, puis des blocs
- * [taille 4 octets big-endian][données], terminés par un bloc de taille 0.
- * Implémenté directement sur `net.Socket` plutôt qu'une dépendance
- * supplémentaire — le protocole est court et stable. */
 export const scanBuffer = (buffer: Buffer): Promise<ScanResult> => {
   if (!isAntivirusConfigured()) {
     return Promise.resolve({ scanned: false, clean: true });
@@ -64,7 +117,6 @@ export const scanBuffer = (buffer: Buffer): Promise<ScanResult> => {
         socket.write(sizeHeader);
         socket.write(chunk);
       }
-      // Bloc de taille 0 : signale la fin du flux à clamd.
       const endMarker = Buffer.alloc(4);
       endMarker.writeUInt32BE(0, 0);
       socket.write(endMarker);
@@ -74,7 +126,6 @@ export const scanBuffer = (buffer: Buffer): Promise<ScanResult> => {
 
     socket.on('end', () => {
       const response = Buffer.concat(responseChunks).toString('utf8').replace(/\0/g, '').trim();
-      // Réponses possibles : "stream: OK", "stream: <nom> FOUND", "stream: <erreur> ERROR".
       if (response.includes('FOUND')) {
         const threatName = response.replace('stream:', '').replace('FOUND', '').trim();
         return finish({ scanned: true, clean: false, threatName });

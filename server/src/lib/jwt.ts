@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { StrkUserRole } from '@prisma/client';
+import { resolveAccessTokenExpiresIn } from './sessions.js';
 
 export interface JwtPayload {
   sub: string; // StrkProfile.id
@@ -24,7 +25,7 @@ const getSecret = (): string => {
 
 export const signAccessToken = (payload: JwtPayload, expiresIn?: string): string =>
   jwt.sign(payload, getSecret(), {
-    expiresIn: (expiresIn || process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
+    expiresIn: resolveAccessTokenExpiresIn(expiresIn) as jwt.SignOptions['expiresIn'],
   });
 
 export const verifyAccessToken = (token: string): JwtPayload => {

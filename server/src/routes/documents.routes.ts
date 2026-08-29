@@ -20,7 +20,7 @@ import {
   deleteStoredObject,
 } from '../lib/fileStorage.js';
 import { STORAGE_FOLDER, folderForDocumentType } from '../lib/storageFolders.js';
-import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
+import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
 import type { JwtPayload } from '../lib/jwt.js';
 import { logAudit } from '../lib/audit.js';
 import { Prisma, type StrkDocument, type StrkDocumentType } from '@prisma/client';
@@ -818,24 +818,24 @@ documentsRouter.put('/templates/:type', requireRole(...SECRETARIAT_ROLES), async
   ) {
     return res.status(403).json({ error: 'Ce fichier ne provient pas de votre établissement' });
   }
-  // DOC-005 : même principe qu'à l'attachement d'une pièce de préinscription
-  // — le logo a transité directement navigateur -> S3, ce PUT est le seul
-  // instant où le serveur relit l'objet pour l'enregistrer comme gabarit.
-  if (parsed.data.logoKey && isAntivirusConfigured()) {
-    const bytes = await getStoredObjectBytes(parsed.data.logoKey);
-    const scan = await scanBuffer(bytes).catch((error) => {
-      console.error('Échec du scan antivirus (clamd) :', error);
-      return { scanned: false, clean: true } as const;
-    });
-    if (scan.scanned && !scan.clean) {
-      await deleteStoredObject(parsed.data.logoKey).catch(() => {});
-      await logAudit({
-        institutionId,
-        actorId: req.auth!.sub,
-        action: 'document.antivirus_rejected',
-        metadata: { fileKey: parsed.data.logoKey, threatName: scan.threatName, context: 'template_logo' },
-      });
-      return res.status(400).json({ error: 'Ce fichier a été refusé par l’analyse antivirus.' });
+  if (parsed.data.logoKey) {
+    try {
+      const bytes = await getStoredObjectBytes(parsed.data.logoKey);
+      await assertCleanUpload(bytes);
+    } catch (error) {
+      if (error instanceof AntivirusGateError) {
+        if (error.code === 'malware_detected') {
+          await deleteStoredObject(parsed.data.logoKey).catch(() => {});
+          await logAudit({
+            institutionId,
+            actorId: req.auth!.sub,
+            action: 'document.antivirus_rejected',
+            metadata: { fileKey: parsed.data.logoKey, context: 'template_logo' },
+          });
+        }
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+      throw error;
     }
   }
 

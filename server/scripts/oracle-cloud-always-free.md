@@ -259,12 +259,15 @@ CADDYNOTE_PROCESS_ROLE=all
 PORT=4000
 DATABASE_URL=postgresql://caddynote:CHANGE_ME_POSTGRES@localhost:5433/caddynote
 JWT_SECRET=GENERE_AVEC_openssl_rand_base64_48
-JWT_EXPIRES_IN=7d
+JWT_EXPIRES_IN=12h
+# Obligatoire en staging (openssl rand -hex 32) — sinon l’API refuse de démarrer
+FILE_ENCRYPTION_KEY=
 CORS_ORIGIN=http://IP_PUBLIQUE:8080
 APP_URL=http://IP_PUBLIQUE:8080
 API_URL=http://IP_PUBLIQUE:4000
 BOOTSTRAP_ADMIN_EMAIL=toi@exemple.com
 BOOTSTRAP_ADMIN_PASSWORD=MOT_DE_PASSE_FORT
+# Optionnel sur ARM ; obligatoire uniquement en production (x86 + ClamAV)
 CLAMAV_HOST=
 ```
 
@@ -273,6 +276,7 @@ CLAMAV_HOST=
 ```bash
 # Sans ClamAV (défaut) : pas d'image ARM64 officielle sur Oracle A1.
 # Antivirus optionnel x86 uniquement : --profile antivirus + CLAMAV_HOST=clamav
+# HTTPS / domaine : chantier ops suivant (Caddy + Let’s Encrypt), pas requis pour ce guide HTTP.
 docker compose up -d --build caddynote-db caddynote-api caddynote-web
 
 docker compose ps

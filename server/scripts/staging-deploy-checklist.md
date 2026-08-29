@@ -55,6 +55,9 @@ CADDYNOTE_PROCESS_ROLE=all
 JWT_SECRET=<openssl rand -hex 32>
 JWT_EXPIRES_IN=12h
 
+# Obligatoire en staging (sinon l’API refuse de démarrer)
+FILE_ENCRYPTION_KEY=<openssl rand -hex 32>
+
 APP_URL=http://IP_PUBLIQUE:8080
 API_URL=http://IP_PUBLIQUE:4000
 CORS_ORIGIN=http://IP_PUBLIQUE:8080
@@ -62,6 +65,8 @@ CORS_ORIGIN=http://IP_PUBLIQUE:8080
 BOOTSTRAP_ADMIN_EMAIL=toi@exemple.ci
 BOOTSTRAP_ADMIN_PASSWORD=<openssl rand -base64 24>
 
+# Optionnel sur Oracle ARM (pas d’image ClamAV ARM64 officielle).
+# Obligatoire uniquement en production (x86 + profile antivirus).
 CLAMAV_HOST=
 ```
 
@@ -169,9 +174,20 @@ curl -sS "http://IP_PUBLIQUE:4000/health"
 | CORS bloqué | `CORS_ORIGIN` = origine exacte du front |
 | Timeout navigateur | Security List **et** iptables INPUT 8080/4000 |
 | Job deploy en file d’attente | Runner offline / label `staging` manquant |
-| ClamAV pull fail ARM | Ne pas activer le profil `antivirus` |
+| ClamAV pull fail ARM | Ne pas activer le profil `antivirus` (optionnel en staging) |
+| API refuse de démarrer | `FILE_ENCRYPTION_KEY` manquante/invalide en staging |
 | Disque VM plein | `docker system prune` périodique |
 | Postgres exposé | Ne **pas** publier 5433 sur Internet |
+
+---
+
+## 8b. Suivant — HTTPS / domaine (hors scope code actuel)
+
+Chantier ops séparé après durcissement chiffrement / antivirus / JWT :
+
+- [ ] Domaine + Caddy (ou équivalent) + Let’s Encrypt
+- [ ] `APP_URL` / `API_URL` / `CORS_ORIGIN` / `VITE_*` en `https://…`
+- [ ] Security List + iptables `80`/`443` ; retirer l’exposition HTTP nu `8080`/`4000` si possible
 
 ---
 

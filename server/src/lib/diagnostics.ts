@@ -4,7 +4,16 @@ import { isStripeConfigured, isStripeWebhookConfigured } from './stripeClient.js
 import { isCinetPayConfigured } from './cinetpay.js';
 import { isEmailConfigured, isLocalSmtpRelay } from './email.js';
 import { isSmsConfigured } from './sms.js';
-import { isAntivirusConfigured } from './antivirus.js';
+import {
+  isAntivirusConfigured,
+  isAntivirusRequired,
+} from './antivirus.js';
+import {
+  isFileEncryptionConfigured,
+  isFileEncryptionRequired,
+} from './fileEncryption.js';
+import { resolveAccessTokenExpiresIn } from './sessions.js';
+import { getDeployment } from './deployment.js';
 import { isTestMode } from './testMode.js';
 
 /**
@@ -19,6 +28,7 @@ export interface IntegrationStatus {
 
 export const getIntegrationsStatus = (): IntegrationStatus[] => {
   const storageMode = getFileStorageMode();
+  const jwtExpires = resolveAccessTokenExpiresIn();
   return [
     {
       key: 'test_mode',
@@ -28,12 +38,26 @@ export const getIntegrationsStatus = (): IntegrationStatus[] => {
         : 'Désactivé (attendu en pilote/prod)',
     },
     {
+      key: 'deployment',
+      configured: getDeployment() !== 'local',
+      notes: `CADDYNOTE_DEPLOYMENT=${getDeployment()}`,
+    },
+    {
       key: 'file_storage',
       configured: true,
       notes:
         storageMode === 's3'
           ? 'Mode S3'
           : 'Repli local (server/uploads) — OK pilote ; brancher S3 pour prod multi-instance',
+    },
+    {
+      key: 'file_encryption',
+      configured: isFileEncryptionConfigured(),
+      notes: isFileEncryptionConfigured()
+        ? 'AES-256-GCM applicatif actif'
+        : isFileEncryptionRequired()
+          ? 'FILE_ENCRYPTION_KEY manquante (obligatoire staging/prod)'
+          : 'Optionnel en local — générer openssl rand -hex 32 pour staging/prod',
     },
     {
       key: 's3',
@@ -77,7 +101,16 @@ export const getIntegrationsStatus = (): IntegrationStatus[] => {
     {
       key: 'clamav',
       configured: isAntivirusConfigured(),
-      notes: isAntivirusConfigured() ? undefined : 'Scan antivirus désactivé (DOC-005)',
+      notes: isAntivirusConfigured()
+        ? undefined
+        : isAntivirusRequired()
+          ? 'CLAMAV_HOST manquant (obligatoire en production)'
+          : 'Scan antivirus optionnel hors production (DOC-005)',
+    },
+    {
+      key: 'jwt_ttl',
+      configured: true,
+      notes: `Durée d’accès effective : ${jwtExpires} (plafond 24h en staging/prod)`,
     },
     {
       key: 'file_purge',
@@ -99,12 +132,22 @@ export const getPilotReadiness = (): {
   if (isTestMode()) {
     blockers.push('CADDYNOTE_TEST_MODE encore actif — MFA assouplie et intégrations coupées');
   }
+  if (isFileEncryptionRequired() && !isFileEncryptionConfigured()) {
+    blockers.push('FILE_ENCRYPTION_KEY manquante — chiffrement at-rest obligatoire en staging/prod');
+  }
+  if (isAntivirusRequired() && !isAntivirusConfigured()) {
+    blockers.push('CLAMAV_HOST manquant — antivirus obligatoire en production');
+  }
+  if (!isAntivirusConfigured() && getDeployment() === 'staging') {
+    warnings.push('ClamAV absent en staging (souvent ARM) — activer avant production');
+  }
   if (!isEmailConfigured()) {
     warnings.push('SMTP non configuré — les e-mails de suivi resteront en journal serveur');
   }
   if (!isS3Configured()) {
     warnings.push('S3 absent — stockage local OK pour un pilote mono-instance uniquement');
   }
+  warnings.push('HTTPS / domaine : chantier ops séparé (Caddy + Let’s Encrypt + APP_URL/CORS)');
 
   return { ready: blockers.length === 0, blockers, warnings };
 };

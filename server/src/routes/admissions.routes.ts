@@ -15,7 +15,7 @@ import {
 import { isS3Configured, buildObjectKey, createPresignedUploadPost } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, isFileStorageAvailable, getStoredObjectBytes, deleteStoredObject, putStoredObject } from '../lib/fileStorage.js';
-import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
+import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
 import {
   ImageOptimizeError,
   isOptimizableImageMime,
@@ -593,24 +593,25 @@ admissionsPublicRouter.post('/status/:token/documents', submitLimiter, async (re
     return res.status(403).json({ error: 'Ce fichier ne provient pas de ce dossier' });
   }
   // DOC-005 : scan antivirus au rattachement (S3 ou local).
-  if (isAntivirusConfigured()) {
+  try {
     const bytes = await getStoredObjectBytes(parsed.data.fileKey);
-    const scan = await scanBuffer(bytes).catch((error) => {
-      console.error('Échec du scan antivirus (clamd) :', error);
-      return { scanned: false, clean: true } as const;
-    });
-    if (scan.scanned && !scan.clean) {
-      await deleteStoredObject(parsed.data.fileKey).catch(() => {});
-      await logAudit({
-        institutionId: application.institutionId,
-        actorId: null,
-        action: 'admission.document_rejected_malware',
-        targetType: 'admission_application',
-        targetId: application.id,
-        metadata: { fileKey: parsed.data.fileKey, threatName: scan.threatName },
-      });
-      return res.status(422).json({ error: 'Fichier refusé par l’antivirus', code: 'malware_detected' });
+    await assertCleanUpload(bytes);
+  } catch (error) {
+    if (error instanceof AntivirusGateError) {
+      if (error.code === 'malware_detected') {
+        await deleteStoredObject(parsed.data.fileKey).catch(() => {});
+        await logAudit({
+          institutionId: application.institutionId,
+          actorId: null,
+          action: 'admission.document_rejected_malware',
+          targetType: 'admission_application',
+          targetId: application.id,
+          metadata: { fileKey: parsed.data.fileKey },
+        });
+      }
+      return res.status(error.status).json({ error: error.message, code: error.code });
     }
+    throw error;
   }
   const documents = [...((application.documents as { label: string; fileKey: string }[]) ?? []), parsed.data];
   const updated = await prisma.strkAdmissionApplication.update({

@@ -13,6 +13,7 @@ import { isGlobalAdmin } from '../lib/authz.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
 import { putStoredObject, getFileStorageMode, getStoredObjectBytes, isAtRestEncryptionEnabled } from '../lib/fileStorage.js';
+import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
 import { STORAGE_FOLDERS, UPLOAD_FOLDERS, type StorageFolder, type UploadFolder } from '../lib/storageFolders.js';
 import {
   ImageOptimizeError,
@@ -179,6 +180,7 @@ filesRouter.put('/direct-upload', async (req, res) => {
         return res.status(403).json({ error: 'Accès refusé à cette clé de fichier' });
       }
     }
+    await assertCleanUpload(result.body);
     await putStoredObject(result.key, result.body, result.contentType);
     return res.status(201).json({
       key: result.key,
@@ -188,6 +190,9 @@ filesRouter.put('/direct-upload', async (req, res) => {
       optimized: result.optimized,
     });
   } catch (err) {
+    if (err instanceof AntivirusGateError) {
+      return res.status(err.status).json({ error: err.message, code: err.code });
+    }
     if (err instanceof ImageOptimizeError) {
       return res.status(400).json({ error: err.message });
     }

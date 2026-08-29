@@ -10,7 +10,7 @@ import { isSameInstitution, SECRETARIAT_ROLES } from '../lib/authz.js';
 import { buildObjectKey, createPresignedUploadPost, isS3Configured, getPresignedDownloadUrl } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, getStoredObjectBytes, deleteStoredObject, ensureStoredObjectEncrypted } from '../lib/fileStorage.js';
-import { isAntivirusConfigured, scanBuffer } from '../lib/antivirus.js';
+import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
 import { isOptimizableImageMime, withWebpExtension } from '../lib/imageOptimize.js';
 import { logAudit } from '../lib/audit.js';
 import {
@@ -235,13 +235,17 @@ export const registerAdmissionPacketPublicRoutes = (router: Router, submitLimite
       return res.status(403).json({ error: 'Ce fichier ne provient pas de ce dossier' });
     }
 
-    if (isAntivirusConfigured()) {
+    try {
       const bytes = await getStoredObjectBytes(parsed.data.fileKey);
-      const scan = await scanBuffer(bytes).catch(() => ({ scanned: false, clean: true } as const));
-      if (scan.scanned && !scan.clean) {
-        await deleteStoredObject(parsed.data.fileKey).catch(() => {});
-        return res.status(422).json({ error: 'Fichier refusé par l’antivirus', code: 'malware_detected' });
+      await assertCleanUpload(bytes);
+    } catch (error) {
+      if (error instanceof AntivirusGateError) {
+        if (error.code === 'malware_detected') {
+          await deleteStoredObject(parsed.data.fileKey).catch(() => {});
+        }
+        return res.status(error.status).json({ error: error.message, code: error.code });
       }
+      throw error;
     }
     // Ré-chiffre un upload navigateur S3 encore en clair (no-op si déjà chiffré / clé absente).
     await ensureStoredObjectEncrypted(parsed.data.fileKey, parsed.data.contentType).catch(() => undefined);
