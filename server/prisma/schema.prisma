@@ -1352,6 +1352,9 @@ model StrkAdmissionApplication {
   // Une fois finalisé (status=enrolled) : élève réellement créé.
   enrolledStudentId     String? @map("enrolled_student_id") @db.Uuid
 
+  /// Relance « dossier incomplet » (cron) — une fois tant que le dossier reste incomplet.
+  packetRemindedAt DateTime? @map("packet_reminded_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

@@ -121,10 +121,9 @@ export class StrkActivityService {
     });
   }
 
-  // Le nettoyage des activités anciennes devient une tâche planifiée côté
-  // serveur plutôt qu'un appel client (cf. Lot 11 NFR).
-  static async deleteOldActivities(daysOld: number = 90): Promise<void> {
-    console.warn('deleteOldActivities: à implémenter côté serveur (tâche planifiée)', daysOld);
+  // Purge gérée côté serveur (cron quotidien, ACTIVITY_RETENTION_DAYS défaut 90).
+  static async deleteOldActivities(_daysOld: number = 90): Promise<void> {
+    /* no-op client — cf. server/src/lib/notificationActivityRetention.ts */
   }
 }
 

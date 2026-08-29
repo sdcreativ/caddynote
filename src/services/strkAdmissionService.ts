@@ -467,6 +467,7 @@ export const fetchAdmissionPolicy = () =>
       };
       expiryReminderDays: number;
       deadlineReminderDays: number;
+      incompleteReminderDays?: number;
     };
   }>('/admissions/packets/policy');
 

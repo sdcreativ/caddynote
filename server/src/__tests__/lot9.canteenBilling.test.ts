@@ -87,4 +87,51 @@ describe('Lot 9 — cantine facturation + parent (S1)', () => {
     const staff = await request(app).get('/services/mine').set(auth(fx.a.schoolAdmin.token));
     expect(staff.status).toBe(403);
   });
+
+  it('parent self-service : catalogue + transport + cantine ; refuse enfant non lié', async () => {
+    const route = await request(app)
+      .post('/services/transport/routes')
+      .set(auth(fx.a.schoolAdmin.token))
+      .send({ name: `Self-bus-${Date.now()}`, capacity: 5 });
+    expect(route.status).toBe(201);
+    const routeId = route.body.route.id as string;
+
+    const plan = await request(app)
+      .post('/services/canteen/plans')
+      .set(auth(fx.a.schoolAdmin.token))
+      .send({ name: `Self-cantine-${Date.now()}`, priceCents: 50000, currency: 'XOF' });
+    expect(plan.status).toBe(201);
+    const planId = plan.body.plan.id as string;
+
+    const catalog = await request(app).get('/services/mine').set(auth(fx.parentA.token));
+    expect(catalog.status).toBe(200);
+    const child = (
+      catalog.body.children as {
+        studentId: string;
+        availableTransportRoutes: { id: string }[];
+        availableCanteenPlans: { id: string }[];
+      }[]
+    ).find((c) => c.studentId === fx.a.student.id);
+    expect(child?.availableTransportRoutes.some((r) => r.id === routeId)).toBe(true);
+    expect(child?.availableCanteenPlans.some((p) => p.id === planId)).toBe(true);
+
+    const enroll = await request(app)
+      .post('/services/mine/transport/enroll')
+      .set(auth(fx.parentA.token))
+      .send({ studentId: fx.a.student.id, routeId });
+    expect(enroll.status).toBe(201);
+
+    const subscribe = await request(app)
+      .post('/services/mine/canteen/subscribe')
+      .set(auth(fx.parentA.token))
+      .send({ studentId: fx.a.student.id, planId });
+    expect(subscribe.status).toBe(201);
+    expect(subscribe.body.invoice?.totalCents).toBe(50000);
+
+    const idor = await request(app)
+      .post('/services/mine/transport/enroll')
+      .set(auth(fx.parentA.token))
+      .send({ studentId: fx.b.student.id, routeId });
+    expect(idor.status).toBe(403);
+  });
 });

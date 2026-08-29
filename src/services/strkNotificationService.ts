@@ -32,10 +32,9 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
   await apiClient.delete(`/notifications/${notificationId}`);
 };
 
-// Le nettoyage des notifications expirées devient une tâche planifiée côté
-// serveur plutôt qu'un appel client (cf. server/, à ajouter en Lot 11 NFR).
+// Purge gérée côté serveur (cron quotidien `notification-activity-retention`).
 export const deleteExpiredNotifications = async (): Promise<void> => {
-  console.warn('deleteExpiredNotifications: à implémenter côté serveur (tâche planifiée)');
+  /* no-op client — cf. server/src/lib/notificationActivityRetention.ts */
 };
 
 // Fonctions utilitaires pour créer des notifications courantes

@@ -27,6 +27,8 @@ export type AdmissionInstitutionPolicy = {
   expiryReminderDays: number;
   /** Jours avant clôture de dépôt pour relancer. */
   deadlineReminderDays: number;
+  /** Jours d’inactivité avant relance dossier incomplet (draft / needs_info). */
+  incompleteReminderDays: number;
 };
 
 const DEFAULT_POLICY: AdmissionInstitutionPolicy = {
@@ -40,6 +42,7 @@ const DEFAULT_POLICY: AdmissionInstitutionPolicy = {
   },
   expiryReminderDays: 14,
   deadlineReminderDays: 3,
+  incompleteReminderDays: 7,
 };
 
 const settingKey = (institutionId: string) => `admissions:${institutionId}`;
@@ -57,6 +60,7 @@ export const getAdmissionInstitutionPolicy = async (
     payment: { ...DEFAULT_POLICY.payment, ...(v.payment ?? {}) },
     expiryReminderDays: v.expiryReminderDays ?? DEFAULT_POLICY.expiryReminderDays,
     deadlineReminderDays: v.deadlineReminderDays ?? DEFAULT_POLICY.deadlineReminderDays,
+    incompleteReminderDays: v.incompleteReminderDays ?? DEFAULT_POLICY.incompleteReminderDays,
   };
 };
 
@@ -67,6 +71,7 @@ export const setAdmissionInstitutionPolicy = async (
     payment?: Partial<AdmissionPaymentPolicy>;
     expiryReminderDays?: number;
     deadlineReminderDays?: number;
+    incompleteReminderDays?: number;
   }
 ): Promise<AdmissionInstitutionPolicy> => {
   const current = await getAdmissionInstitutionPolicy(institutionId);
@@ -75,6 +80,7 @@ export const setAdmissionInstitutionPolicy = async (
     payment: { ...current.payment, ...(policy.payment ?? {}) },
     expiryReminderDays: policy.expiryReminderDays ?? current.expiryReminderDays,
     deadlineReminderDays: policy.deadlineReminderDays ?? current.deadlineReminderDays,
+    incompleteReminderDays: policy.incompleteReminderDays ?? current.incompleteReminderDays,
   };
   await prisma.strkSetting.upsert({
     where: { category_key: { category: 'institution', key: settingKey(institutionId) } },

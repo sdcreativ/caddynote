@@ -52,7 +52,7 @@ const AdmissionPacketsConfigPanel = () => {
       setTypes(catalog.filter((x) => x.institutionId));
       if (!selectedId && list[0]) setSelectedId(list[0].id);
       setPolicySummary(
-        `Canaux: email=${policy.channels.email ? 'oui' : 'non'}, sms=${policy.channels.sms ? 'oui' : 'non'}, whatsapp=${policy.channels.whatsapp ? 'oui' : 'non'} · Paiement: ${policy.payment.trigger}`
+        `Canaux: email=${policy.channels.email ? 'oui' : 'non'}, sms=${policy.channels.sms ? 'oui' : 'non'}, whatsapp=${policy.channels.whatsapp ? 'oui' : 'non'} · Paiement: ${policy.payment.trigger} · Relance dossier incomplet: ${policy.incompleteReminderDays ?? 7} j`
       );
     } catch (error) {
       toast({
@@ -343,6 +343,7 @@ const AdmissionPacketsConfigPanel = () => {
                     },
                     expiryReminderDays: 14,
                     deadlineReminderDays: 3,
+                    incompleteReminderDays: 7,
                   });
                   await load();
                   toast({ title: t('config.saved') });

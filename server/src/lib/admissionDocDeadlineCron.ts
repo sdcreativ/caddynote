@@ -8,11 +8,16 @@ import { notifyAdmissionContact, pickGuardianPhone } from './admissionFollowUp.j
 
 let started = false;
 
-export const runAdmissionDocumentReminderCheck = async (): Promise<{
+export const runAdmissionDocumentReminderCheck = async (opts?: {
+  /** Limite le run à un établissement (tests / admin). */
+  institutionId?: string;
+}): Promise<{
   checked: number;
   reminded: number;
 }> => {
-  const institutions = await prisma.strkInstitution.findMany({ select: { id: true }, take: 500 });
+  const institutions = opts?.institutionId
+    ? [{ id: opts.institutionId }]
+    : await prisma.strkInstitution.findMany({ select: { id: true }, take: 500 });
   let checked = 0;
   let reminded = 0;
   const now = new Date();
@@ -101,6 +106,45 @@ export const runAdmissionDocumentReminderCheck = async (): Promise<{
       await prisma.strkAdmissionDocumentItem.update({
         where: { id: item.id },
         data: { deadlineRemindedAt: now },
+      });
+      reminded += 1;
+    }
+
+    // Dossiers incomplets (draft / needs_info) stagnants — sans dépendre de depositClosesAt
+    const staleBefore = new Date(
+      now.getTime() - Math.max(1, policy.incompleteReminderDays) * 86400000
+    );
+    const incompleteApps = await prisma.strkAdmissionApplication.findMany({
+      where: {
+        institutionId: inst.id,
+        status: { in: ['draft', 'needs_info'] },
+        packetRemindedAt: null,
+        updatedAt: { lte: staleBefore },
+        documentItems: {
+          some: { waived: false, status: { in: ['missing', 'non_compliant', 'unreadable'] } },
+        },
+      },
+      take: 100,
+    });
+
+    for (const app of incompleteApps) {
+      checked += 1;
+      const channels = policy.channels;
+      if (channels.email || channels.sms || channels.whatsapp) {
+        await notifyAdmissionContact({
+          to: app.contactEmail,
+          studentFirstName: app.studentFirstName,
+          studentLastName: app.studentLastName,
+          publicToken: app.publicToken,
+          kind: 'needs_info',
+          detail: 'Dossier incomplet — pièces manquantes ou à corriger',
+          phone: channels.sms || channels.whatsapp ? pickGuardianPhone(app.guardians) : null,
+          channelOverride: channels,
+        }).catch(() => undefined);
+      }
+      await prisma.strkAdmissionApplication.update({
+        where: { id: app.id },
+        data: { packetRemindedAt: now },
       });
       reminded += 1;
     }

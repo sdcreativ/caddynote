@@ -19,8 +19,6 @@
     "historyTitle": "Historique des appels",
     "historyForClass": "Séances de {{className}} — matière, horaire et enseignant",
     "historySelectClass": "Sélectionnez une classe pour voir l'historique",
-    "historySoon": "Fonctionnalité d'historique en cours de développement",
-    "historySoonHint": "Sera disponible dans la prochaine version",
     "justificationsTab": "Justificatifs"
   },
   "teacher": {

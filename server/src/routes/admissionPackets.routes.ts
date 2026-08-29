@@ -974,6 +974,7 @@ export const registerAdmissionPacketStaffRoutes = (router: Router) => {
           .optional(),
         expiryReminderDays: z.number().int().positive().max(365).optional(),
         deadlineReminderDays: z.number().int().positive().max(90).optional(),
+        incompleteReminderDays: z.number().int().positive().max(90).optional(),
       })
       .safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });

@@ -8,6 +8,8 @@ export interface CacheEntry<T> {
 export class CacheService {
   private static cache = new Map<string, CacheEntry<any>>();
   private static readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes par défaut
+  private static hits = 0;
+  private static misses = 0;
 
   static set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
     const entry: CacheEntry<T> = {
@@ -23,15 +25,18 @@ export class CacheService {
     const entry = this.cache.get(key);
     
     if (!entry) {
+      this.misses += 1;
       return null;
     }
 
     // Vérifier si l'entrée a expiré
     if (Date.now() > entry.expiry) {
       this.cache.delete(key);
+      this.misses += 1;
       return null;
     }
 
+    this.hits += 1;
     return entry.data as T;
   }
 
@@ -57,6 +62,8 @@ export class CacheService {
 
   static clear(): void {
     this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
   }
 
   static cleanup(): void {
@@ -79,10 +86,11 @@ export class CacheService {
       age: now - entry.timestamp,
       expiresIn: entry.expiry - now
     }));
+    const total = this.hits + this.misses;
 
     return {
       size: this.cache.size,
-      hitRate: 0, // À implémenter avec des métriques de hit/miss
+      hitRate: total === 0 ? 0 : this.hits / total,
       entries
     };
   }

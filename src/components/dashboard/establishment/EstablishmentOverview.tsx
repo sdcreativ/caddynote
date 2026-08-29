@@ -28,6 +28,7 @@ import { TodayAgenda } from './TodayAgenda';
 import { PriorityAlerts } from './PriorityAlerts';
 import { FinanceCollecte } from './FinanceCollecte';
 import { SetupChecklist } from './SetupChecklist';
+import { ScheduleTab } from '@/components/institution/ScheduleTab';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -381,6 +382,9 @@ export function EstablishmentOverview() {
               ) : null}
               {showAgenda ? <TodayAgenda items={data.agenda} /> : null}
             </div>
+          ) : null}
+          {user?.institutionId ? (
+            <ScheduleTab institutionId={user.institutionId} />
           ) : null}
           {showFinanceBlock ? (
             <div className={showAttendanceChart || showAgenda ? 'xl:max-w-md xl:ml-auto' : undefined}>

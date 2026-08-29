@@ -3,7 +3,7 @@ import { getFileStorageMode } from './fileStorage.js';
 import { isStripeConfigured, isStripeWebhookConfigured } from './stripeClient.js';
 import { isCinetPayConfigured } from './cinetpay.js';
 import { isEmailConfigured, isLocalSmtpRelay } from './email.js';
-import { isSmsConfigured } from './sms.js';
+import { isSmsConfigured, isWhatsAppConfigured } from './sms.js';
 import {
   isAntivirusConfigured,
   isAntivirusRequired,
@@ -96,7 +96,19 @@ export const getIntegrationsStatus = (): IntegrationStatus[] => {
     {
       key: 'twilio',
       configured: isSmsConfigured(),
-      notes: isSmsConfigured() ? undefined : 'SMS/WhatsApp en 501',
+      notes: isSmsConfigured() ? undefined : 'SMS en 501 sans TWILIO_*',
+    },
+    {
+      key: 'whatsapp',
+      configured: isWhatsAppConfigured(),
+      notes: isWhatsAppConfigured()
+        ? 'Canal WhatsApp Twilio actif (souvent sandbox Meta)'
+        : 'WhatsApp optionnel — TWILIO_WHATSAPP_FROM',
+    },
+    {
+      key: 'data_retention',
+      configured: true,
+      notes: 'Cron quotidien : notifs expirées + activités (ACTIVITY_RETENTION_DAYS, défaut 90)',
     },
     {
       key: 'clamav',

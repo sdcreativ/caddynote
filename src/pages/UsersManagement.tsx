@@ -236,7 +236,11 @@ const UsersManagement = () => {
     }
 
     try {
-      const { user } = await apiClient.post<{ user: { id: string }; tempPassword: string }>('/users', {
+      const { user, emailSent } = await apiClient.post<{
+        user: { id: string };
+        tempPassword: string;
+        emailSent?: boolean;
+      }>('/users', {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -265,7 +269,9 @@ const UsersManagement = () => {
 
       toast({
         title: t('createdTitle'),
-        description: t('createdBody', { email: formData.email }),
+        description: emailSent
+          ? t('createdBodyEmailSent', { email: formData.email })
+          : t('createdBody', { email: formData.email }),
       });
 
       setShowAddDialog(false);

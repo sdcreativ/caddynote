@@ -42,6 +42,7 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
 
 type ParentServicesChild = {
   studentId: string;
+  canteenEnabled?: boolean;
   canteenSubscriptions: Array<{
     id: string;
     planName: string;
@@ -50,6 +51,18 @@ type ParentServicesChild = {
     invoice?: { invoiceNumber: string; totalCents: number; status: string } | null;
   }>;
   transportEnrollments: Array<{ id: string; routeName: string }>;
+  availableTransportRoutes?: Array<{
+    id: string;
+    name: string;
+    capacity: number | null;
+    seatsLeft: number | null;
+  }>;
+  availableCanteenPlans?: Array<{
+    id: string;
+    name: string;
+    priceCents: number;
+    currency: string;
+  }>;
   servicesEnabled: boolean;
 };
 
@@ -173,6 +186,58 @@ const MyChildrenPage = () => {
       setServicesLoading(false);
     }
   }, []);
+
+  const [servicesActionId, setServicesActionId] = useState<string | null>(null);
+
+  const enrollTransport = async (routeId: string) => {
+    if (!selectedChildId) return;
+    setServicesActionId(routeId);
+    try {
+      await apiClient.post('/services/mine/transport/enroll', {
+        studentId: selectedChildId,
+        routeId,
+      });
+      toast({ title: 'Inscription transport enregistrée' });
+      await loadServices(selectedChildId);
+    } catch (err) {
+      toast({
+        title: 'Inscription impossible',
+        description: err instanceof ApiError ? err.message : 'Réessayez plus tard.',
+        variant: 'destructive',
+      });
+    } finally {
+      setServicesActionId(null);
+    }
+  };
+
+  const subscribeCanteen = async (planId: string) => {
+    if (!selectedChildId) return;
+    setServicesActionId(planId);
+    try {
+      const res = await apiClient.post<{
+        invoice?: { invoiceNumber?: string } | null;
+      }>('/services/mine/canteen/subscribe', {
+        studentId: selectedChildId,
+        planId,
+      });
+      toast({
+        title: 'Abonnement cantine enregistré',
+        description: res.invoice?.invoiceNumber
+          ? `Facture ${res.invoice.invoiceNumber} créée.`
+          : undefined,
+      });
+      await loadServices(selectedChildId);
+      if (selectedChild?.canViewBilling) await loadInvoices(selectedChildId);
+    } catch (err) {
+      toast({
+        title: 'Souscription impossible',
+        description: err instanceof ApiError ? err.message : 'Réessayez plus tard.',
+        variant: 'destructive',
+      });
+    } finally {
+      setServicesActionId(null);
+    }
+  };
 
   useEffect(() => {
     if (selectedChildId && selectedChild?.canViewAttendance) {
@@ -781,7 +846,7 @@ const MyChildrenPage = () => {
                         <Utensils className="h-4 w-4" /> Cantine
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
+                    <CardContent className="space-y-3 text-sm">
                       {(servicesChild.canteenSubscriptions?.length ?? 0) === 0 ? (
                         <p className="text-muted-foreground">Pas d’abonnement cantine</p>
                       ) : (
@@ -799,6 +864,32 @@ const MyChildrenPage = () => {
                           </div>
                         ))
                       )}
+                      {servicesChild.canteenEnabled !== false &&
+                      (servicesChild.availableCanteenPlans?.length ?? 0) > 0 ? (
+                        <div className="space-y-2 border-t pt-3">
+                          <p className="text-xs font-medium text-muted-foreground">Formules disponibles</p>
+                          {servicesChild.availableCanteenPlans!.map((plan) => (
+                            <div
+                              key={plan.id}
+                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
+                            >
+                              <span>
+                                {plan.name}
+                                <span className="ml-2 text-muted-foreground">
+                                  {(plan.priceCents / 100).toLocaleString('fr-FR')} {plan.currency}
+                                </span>
+                              </span>
+                              <Button
+                                size="sm"
+                                disabled={servicesActionId === plan.id}
+                                onClick={() => void subscribeCanteen(plan.id)}
+                              >
+                                {servicesActionId === plan.id ? '…' : 'Souscrire'}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                   <Card>
@@ -807,7 +898,7 @@ const MyChildrenPage = () => {
                         <Bus className="h-4 w-4" /> Transport
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
+                    <CardContent className="space-y-3 text-sm">
                       {(servicesChild.transportEnrollments?.length ?? 0) === 0 ? (
                         <p className="text-muted-foreground">Pas d’inscription transport</p>
                       ) : (
@@ -817,6 +908,33 @@ const MyChildrenPage = () => {
                           </div>
                         ))
                       )}
+                      {(servicesChild.availableTransportRoutes?.length ?? 0) > 0 ? (
+                        <div className="space-y-2 border-t pt-3">
+                          <p className="text-xs font-medium text-muted-foreground">Circuits disponibles</p>
+                          {servicesChild.availableTransportRoutes!.map((route) => (
+                            <div
+                              key={route.id}
+                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
+                            >
+                              <span>
+                                {route.name}
+                                {route.seatsLeft != null ? (
+                                  <span className="ml-2 text-muted-foreground">
+                                    {route.seatsLeft} place{route.seatsLeft > 1 ? 's' : ''}
+                                  </span>
+                                ) : null}
+                              </span>
+                              <Button
+                                size="sm"
+                                disabled={servicesActionId === route.id}
+                                onClick={() => void enrollTransport(route.id)}
+                              >
+                                {servicesActionId === route.id ? '…' : 'Inscrire'}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 </div>

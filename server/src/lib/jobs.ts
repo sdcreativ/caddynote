@@ -11,6 +11,7 @@ import { startDunningCron } from './dunning.js';
 import { startCampaignScheduleCron } from './campaignSchedule.js';
 import { startExportScheduleCron } from './exportSchedule.js';
 import { startAdmissionDocumentReminderCron } from './admissionDocDeadlineCron.js';
+import { startNotificationActivityRetentionCron } from './notificationActivityRetention.js';
 import { startQueue, registerCommunicationDispatchWorker } from './queue.js';
 import { dispatchCommunicationById } from './communications.js';
 
@@ -37,6 +38,7 @@ export const startBackgroundJobs = (): void => {
   startCampaignScheduleCron();
   startExportScheduleCron();
   startAdmissionDocumentReminderCron();
+  startNotificationActivityRetentionCron();
   startQueue()
     .then(() => registerCommunicationDispatchWorker(dispatchCommunicationById))
     .catch((error) => console.error("Erreur au démarrage de la file d'attente:", error));

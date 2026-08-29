@@ -13,8 +13,8 @@ import { isFeatureEnabled } from '../lib/featureFlags.js';
  * Lot 9 — modules complémentaires (SHOULD/COULD) : transport, cantine,
  * bibliothèque, internat, santé scolaire (visites), RH (fiches hors paie).
  *
- * Socle opérationnel + facturation cantine (S1) + lecture parent `/services/mine`.
- * Pas encore : planning bus, inscription parent, paie.
+ * Socle opérationnel + facturation cantine (S1) + parent `/services/mine`
+ * (lecture + self-service cantine/transport). Pas encore : planning bus, paie.
  */
 export const lot9Router = Router();
 lot9Router.use(requireAuth);
@@ -34,6 +34,14 @@ const requireInst = (req: Request) => resolveInstitutionId(req);
 
 const studentLabel = (p: { firstName: string | null; lastName: string | null; id: string }) =>
   [p.firstName, p.lastName].filter(Boolean).join(' ').trim() || p.id;
+
+/** Lien parent actif → établissement de l’élève (anti-IDOR). */
+const resolveActiveGuardianLink = async (guardianId: string, studentId: string) => {
+  return prisma.strkStudentGuardian.findFirst({
+    where: { guardianId, studentId, status: 'active' },
+    select: { studentId: true, institutionId: true },
+  });
+};
 
 /** Parent : enfants liés + cantine/transport en lecture seule (hors requireFeature). */
 lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
@@ -99,14 +107,78 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
         })
       : [];
 
+  const lot9InstitutionIds = institutionIds.filter((id) => lot9Enabled.get(id));
+  const catalogRoutes =
+    lot9InstitutionIds.length > 0
+      ? await prisma.strkTransportRoute.findMany({
+          where: { institutionId: { in: lot9InstitutionIds }, isActive: true },
+          include: { enrollments: { where: { endDate: null }, select: { id: true } } },
+          orderBy: { name: 'asc' },
+        })
+      : [];
+  const routesByInst = new Map<string, typeof catalogRoutes>();
+  for (const r of catalogRoutes) {
+    const list = routesByInst.get(r.institutionId) ?? [];
+    list.push(r);
+    routesByInst.set(r.institutionId, list);
+  }
+
+  const canteenInstitutionIds = institutionIds.filter(
+    (id) => lot9Enabled.get(id) && canteenEnabled.get(id)
+  );
+  const catalogPlans =
+    canteenInstitutionIds.length > 0
+      ? await prisma.strkCanteenPlan.findMany({
+          where: { institutionId: { in: canteenInstitutionIds }, isActive: true },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, priceCents: true, currency: true, institutionId: true },
+        })
+      : [];
+  const plansByInst = new Map<string, typeof catalogPlans>();
+  for (const p of catalogPlans) {
+    const list = plansByInst.get(p.institutionId) ?? [];
+    list.push(p);
+    plansByInst.set(p.institutionId, list);
+  }
+
   const children = links.map((link) => {
     const lot9On = lot9Enabled.get(link.institutionId) === true;
     const canteenOn = canteenEnabled.get(link.institutionId) === true;
+
+    const enrolledRouteIds = new Set(
+      transport
+        .filter((e) => e.studentId === link.studentId && e.route.institutionId === link.institutionId)
+        .map((e) => e.route.id)
+    );
+    const subscribedPlanIds = new Set(
+      canteen
+        .filter((s) => s.studentId === link.studentId && s.plan.institutionId === link.institutionId)
+        .map((s) => s.plan.id)
+    );
+
+    const availableTransportRoutes = lot9On
+      ? (routesByInst.get(link.institutionId) ?? [])
+          .filter((r) => !enrolledRouteIds.has(r.id))
+          .map((r) => ({
+            id: r.id,
+            name: r.name,
+            capacity: r.capacity,
+            seatsLeft: r.capacity == null ? null : Math.max(0, r.capacity - r.enrollments.length),
+          }))
+          .filter((r) => r.seatsLeft === null || r.seatsLeft > 0)
+      : [];
+
+    const availableCanteenPlans =
+      lot9On && canteenOn
+        ? (plansByInst.get(link.institutionId) ?? []).filter((p) => !subscribedPlanIds.has(p.id))
+        : [];
+
     return {
       studentId: link.studentId,
       studentName: nameById[link.studentId] ?? link.studentId,
       institutionId: link.institutionId,
       servicesEnabled: lot9On,
+      canteenEnabled: lot9On && canteenOn,
       transportEnrollments: lot9On
         ? transport
             .filter((e) => e.studentId === link.studentId && e.route.institutionId === link.institutionId)
@@ -132,10 +204,116 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
                 invoice: s.invoice,
               }))
           : [],
+      availableTransportRoutes,
+      availableCanteenPlans,
     };
   });
 
   res.json({ children });
+});
+
+/** Parent : inscription transport (self-service). */
+lot9Router.post('/mine/transport/enroll', requireRole('parent'), async (req, res) => {
+  const parsed = z
+    .object({ studentId: z.string().uuid(), routeId: z.string().uuid() })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+
+  const link = await resolveActiveGuardianLink(req.auth!.sub, parsed.data.studentId);
+  if (!link) return res.status(403).json({ error: 'Enfant non rattaché' });
+
+  if (!(await isFeatureEnabled(link.institutionId, 'lot9_services'))) {
+    return res.status(403).json({ error: 'Services non activés', code: 'feature_disabled' });
+  }
+
+  const route = await prisma.strkTransportRoute.findUnique({
+    where: { id: parsed.data.routeId },
+    include: { enrollments: { where: { endDate: null } } },
+  });
+  if (!route || route.institutionId !== link.institutionId) {
+    return res.status(404).json({ error: 'Circuit introuvable' });
+  }
+  if (!route.isActive) return res.status(400).json({ error: 'Circuit inactif' });
+  if (route.capacity != null && route.enrollments.length >= route.capacity) {
+    return res.status(409).json({ error: 'Capacité du circuit atteinte' });
+  }
+  if (route.enrollments.some((e) => e.studentId === parsed.data.studentId)) {
+    return res.status(409).json({ error: 'Élève déjà inscrit sur ce circuit' });
+  }
+
+  try {
+    const enrollment = await prisma.strkTransportEnrollment.create({
+      data: { routeId: route.id, studentId: parsed.data.studentId },
+    });
+    await logAudit({
+      institutionId: link.institutionId,
+      actorId: req.auth!.sub,
+      action: 'lot9.transport.parent_enrolled',
+      targetType: 'transport_enrollment',
+      targetId: enrollment.id,
+      metadata: { studentId: parsed.data.studentId, routeId: route.id },
+    });
+    res.status(201).json({ enrollment });
+  } catch {
+    return res.status(409).json({ error: 'Inscription déjà existante' });
+  }
+});
+
+/** Parent : souscription cantine (+ facture si prix > 0). */
+lot9Router.post('/mine/canteen/subscribe', requireRole('parent'), async (req, res) => {
+  const parsed = z
+    .object({ studentId: z.string().uuid(), planId: z.string().uuid() })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+
+  const link = await resolveActiveGuardianLink(req.auth!.sub, parsed.data.studentId);
+  if (!link) return res.status(403).json({ error: 'Enfant non rattaché' });
+
+  if (!(await isFeatureEnabled(link.institutionId, 'lot9_services'))) {
+    return res.status(403).json({ error: 'Services non activés', code: 'feature_disabled' });
+  }
+  if (!(await isFeatureEnabled(link.institutionId, 'canteen'))) {
+    return res.status(403).json({ error: 'Cantine non activée', code: 'feature_disabled' });
+  }
+
+  const plan = await prisma.strkCanteenPlan.findUnique({ where: { id: parsed.data.planId } });
+  if (!plan || plan.institutionId !== link.institutionId) {
+    return res.status(404).json({ error: 'Formule introuvable' });
+  }
+  if (!plan.isActive) return res.status(400).json({ error: 'Formule inactive' });
+
+  const active = await prisma.strkCanteenSubscription.findFirst({
+    where: {
+      planId: plan.id,
+      studentId: parsed.data.studentId,
+      status: 'active',
+      endDate: null,
+    },
+  });
+  if (active) return res.status(409).json({ error: 'Abonnement déjà actif' });
+
+  try {
+    const { subscription, invoice } = await subscribeStudentToCanteenPlan({
+      plan,
+      studentId: parsed.data.studentId,
+      actorId: req.auth!.sub,
+    });
+    await logAudit({
+      institutionId: plan.institutionId,
+      actorId: req.auth!.sub,
+      action: 'lot9.canteen.parent_subscribed',
+      targetType: 'canteen_subscription',
+      targetId: subscription.id,
+      metadata: {
+        studentId: parsed.data.studentId,
+        planId: plan.id,
+        invoiceId: invoice?.id ?? null,
+      },
+    });
+    res.status(201).json({ subscription, invoice });
+  } catch {
+    return res.status(409).json({ error: 'Abonnement déjà existant' });
+  }
 });
 
 lot9Router.use(requireFeature('lot9_services'));
