@@ -46,7 +46,7 @@ describe('ParentDashboardHome (cockpit deux clics)', () => {
     expect(screen.getAllByRole('button', { name: /^Notes$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Finances$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Emploi du temps/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('oriente le CTA vers les finances s’il y a un reste à payer', async () => {

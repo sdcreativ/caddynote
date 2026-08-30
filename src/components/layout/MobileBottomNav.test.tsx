@@ -91,15 +91,17 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
-  it('Vie scolaire : Accueil · Appel · Absences · Messages · Plus', () => {
+  it('Vie scolaire : Accueil · Présences · Élèves · Messagerie · Plus', () => {
     render(
-      <MemoryRouter initialEntries={['/absences']}>
+      <MemoryRouter initialEntries={['/attendance']}>
         <MobileBottomNav role="supervisor" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Absences' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Appel' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Présences' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Élèves' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Absences' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Appel' })).not.toBeInTheDocument();
   });
 });

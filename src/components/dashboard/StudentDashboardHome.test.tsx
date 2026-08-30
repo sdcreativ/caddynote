@@ -40,7 +40,7 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
     expect(screen.getAllByRole('button', { name: /^Mes cours$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Absences$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Emploi du temps/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('oriente le CTA vers les absences s’il n’y a pas de devoirs', () => {

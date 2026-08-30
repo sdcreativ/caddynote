@@ -75,7 +75,7 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
     expect(screen.getAllByRole('button', { name: /^Notes$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Cahier de textes/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Calendrier/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Emploi du temps/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('propose des raccourcis Appel / Cahier par cours quand aucun créneau urgent', async () => {
