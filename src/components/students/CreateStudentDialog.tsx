@@ -10,42 +10,43 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, ExternalLink } from 'lucide-react';
 import { SELECT_NONE, classIdFromSelect } from '@/lib/selectNone';
 import { tCommon } from '@/i18n/config';
+import { apiClient, ApiError } from '@/lib/apiClient';
+import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { assignStudentsToClass } from '@/services/strkClassService';
 
 interface CreateStudentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateStudent: (studentData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    phoneNumber?: string;
-    classId?: string;
-  }) => Promise<void>;
+  /** Appelé après création réussie (rechargement liste). */
+  onCreated?: () => void;
   classes: { id: string; name: string }[];
   isLoading?: boolean;
 }
 
+type AccessMode = 'record' | 'login';
+
 /**
- * Création manuelle d’exception (import / cas urgents).
- * Parcours nominal : préinscription publique `/admissions` puis validation
- * direction sur `/admissions/admin`.
+ * Création manuelle d’exception.
+ * - Fiche seule (défaut) : comme admissions enroll, sans login.
+ * - Avec accès : e-mail réel + MDP provisoire serveur (pas de MDP saisi côté client).
+ * Parcours nominal : préinscription `/admissions`.
  */
 export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   isOpen,
   onClose,
-  onCreateStudent,
+  onCreated,
   classes,
   isLoading = false,
 }) => {
+  const { user } = useStrkAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
     phoneNumber: '',
     classId: SELECT_NONE,
   });
+  const [accessMode, setAccessMode] = useState<AccessMode>('record');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation('students');
@@ -55,10 +56,10 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       firstName: '',
       lastName: '',
       email: '',
-      password: '',
       phoneNumber: '',
       classId: SELECT_NONE,
     });
+    setAccessMode('record');
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -69,7 +70,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
       toast({
         title: tCommon('status.error'),
         description: t('create.required'),
@@ -78,58 +79,74 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast({
-        title: tCommon('status.error'),
-        description: t('create.invalidEmail'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      toast({
-        title: tCommon('status.error'),
-        description: t('create.passwordMin'),
-        variant: 'destructive',
-      });
-      return;
+    if (accessMode === 'login') {
+      const email = formData.email.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast({
+          title: tCommon('status.error'),
+          description: t('create.invalidEmail'),
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
-      await onCreateStudent({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        phoneNumber: formData.phoneNumber || undefined,
-        classId: classIdFromSelect(formData.classId),
-      });
-      toast({
-        title: t('create.successTitle'),
-        description: t('create.successBody'),
-      });
+      const classId = classIdFromSelect(formData.classId);
+      const institutionId = user?.institutionId || undefined;
+
+      if (accessMode === 'record') {
+        await apiClient.post('/students', {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          phoneNumber: formData.phoneNumber.trim() || undefined,
+          classId: classId || undefined,
+          institutionId,
+        });
+        toast({
+          title: t('create.successTitle'),
+          description: t('create.successRecordBody'),
+        });
+      } else {
+        const { user: created, tempPassword, emailSent } = await apiClient.post<{
+          user: { id: string };
+          tempPassword: string;
+          emailSent?: boolean;
+        }>('/users', {
+          email: formData.email.trim(),
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          role: 'student',
+          institutionId,
+          phoneNumber: formData.phoneNumber.trim() || undefined,
+        });
+        if (classId) {
+          await assignStudentsToClass(classId, [created.id]).catch(() => undefined);
+        }
+        toast({
+          title: t('create.successTitle'),
+          description: [
+            t('create.successLoginBody', {
+              email: formData.email.trim(),
+              password: tempPassword,
+            }),
+            emailSent ? t('create.emailSent') : t('create.emailNotSent'),
+          ].join(' '),
+        });
+      }
+
+      onCreated?.();
       handleOpenChange(false);
-    } catch {
+    } catch (e) {
       toast({
         title: tCommon('status.error'),
-        description: t('create.errorBody'),
+        description: e instanceof ApiError ? e.message : t('create.errorBody'),
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 10; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setFormData((prev) => ({ ...prev, password }));
   };
 
   return (
@@ -171,6 +188,22 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         </div>
 
         <div className="grid gap-4 py-2">
+          <div className="space-y-2">
+            <Label>{t('create.accessMode')}</Label>
+            <Select value={accessMode} onValueChange={(v) => setAccessMode(v as AccessMode)} disabled={isSubmitting}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="record">{t('create.modeRecord')}</SelectItem>
+                <SelectItem value="login">{t('create.modeLogin')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {accessMode === 'record' ? t('create.modeRecordHint') : t('create.modeLoginHint')}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">{t('create.firstName')}</Label>
@@ -194,34 +227,19 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('create.email')}</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder={t('create.emailPlaceholder')}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t('create.password')}</Label>
-              <Button type="button" variant="outline" size="sm" onClick={generatePassword} disabled={isSubmitting}>
-                {t('create.generate')}
-              </Button>
+          {accessMode === 'login' ? (
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('create.email')}</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder={t('create.emailPlaceholder')}
+                disabled={isSubmitting}
+              />
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder={t('create.passwordPlaceholder')}
-              disabled={isSubmitting}
-            />
-          </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="phoneNumber">{t('create.phone')}</Label>

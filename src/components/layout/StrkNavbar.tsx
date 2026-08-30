@@ -133,52 +133,56 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur">
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="lg:hidden text-slate-600"
-          onClick={onToggleSidebar}
-          type="button"
-          aria-label={t('openMenu')}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+      <div className="relative flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="z-10 flex shrink-0 items-center gap-3">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="lg:hidden text-slate-600"
+            onClick={onToggleSidebar}
+            type="button"
+            aria-label={t('openMenu')}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
 
-        {isSchoolShell && institutionName ? (
-          <InstitutionBrand
-            name={institutionName}
-            logoKey={institutionLogo}
-            to="/dashboard"
-            size={28}
-            className="lg:hidden shrink-0 [&_.font-display]:text-sm"
-            aria-label={t('logoHome')}
-          />
-        ) : (
-          <CaddyNoteLogo
-            to="/dashboard"
-            size={28}
-            withWordmark
-            tagline={null}
-            linkClassName="lg:hidden shrink-0"
-            className="[&_.font-display]:text-sm"
-            aria-label={t('logoHome')}
-          />
-        )}
+          {isSchoolShell && institutionName ? (
+            <InstitutionBrand
+              name={institutionName}
+              logoKey={institutionLogo}
+              to="/dashboard"
+              size={28}
+              className="lg:hidden shrink-0 [&_.font-display]:text-sm"
+              aria-label={t('logoHome')}
+            />
+          ) : (
+            <CaddyNoteLogo
+              to="/dashboard"
+              size={28}
+              withWordmark
+              tagline={null}
+              linkClassName="lg:hidden shrink-0"
+              className="[&_.font-display]:text-sm"
+              aria-label={t('logoHome')}
+            />
+          )}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-4 text-left text-sm text-slate-500 transition-colors hover:border-slate-300 hover:bg-white max-w-xl"
-        >
-          <Search className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="truncate">{t('searchPlaceholder')}</span>
-          <kbd className="ml-auto hidden shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 sm:inline-block">
-            ⌘K
-          </kbd>
-        </button>
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center px-16 sm:px-24 lg:px-32">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="pointer-events-auto flex h-11 w-full max-w-xl min-w-0 items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-4 text-left text-sm text-slate-500 transition-colors hover:border-slate-300 hover:bg-white"
+          >
+            <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="truncate">{t('searchPlaceholder')}</span>
+            <kbd className="ml-auto hidden shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 sm:inline-block">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="z-10 ml-auto flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"

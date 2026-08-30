@@ -53,7 +53,7 @@ const Students = () => {
   const { t: tc } = useTranslation('common');
   const confirm = useConfirmDialog();
   const { user } = useStrkAuth();
-  const { users: students, isLoading, loadUsersByInstitution, addUser, updateUser, deleteUser, reactivateUser } = useStrkUsers();
+  const { users: students, isLoading, loadUsersByInstitution, updateUser, deleteUser, reactivateUser } = useStrkUsers();
   const { classes, isLoading: classesLoading, loadClassesByInstitution } = useStrkClasses();
 
   useEffect(() => {
@@ -91,6 +91,8 @@ const Students = () => {
     ...student,
     name: student.name || t('unnamed'),
     email: student.email || t('noEmail'),
+    loginEmail: student.email || null,
+    hasLogin: Boolean(student.email),
     class: t('unassigned'), // Pour l'instant, pas de classe assignée
     // PER-005 : reflète l'état réel du compte (désactivé n'est plus un état
     // fictif — c'était toujours "active" en dur avant, quel que soit le
@@ -114,31 +116,6 @@ const Students = () => {
 
   // Créer une liste de filtres de classes basée sur les vraies classes
   const classFilters = ['all', ...classes.map(cls => cls.name)];
-
-  const handleCreateStudent = async (studentData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    phoneNumber?: string;
-    classId?: string;
-  }) => {
-    try {
-      await addUser({
-        ...studentData,
-        role: 'student',
-        institutionId: user?.institutionId || ''
-      });
-      
-      // Recharger les données
-      if (user?.institutionId) {
-        loadUsersByInstitution(user.institutionId);
-      }
-    } catch (error) {
-      console.error('Error creating student:', error);
-      throw error;
-    }
-  };
 
   const handleViewDetails = (studentId: string) => {
     const student = studentsWithStatus.find(s => s.id === studentId);
@@ -569,7 +546,9 @@ const Students = () => {
       <CreateStudentDialog
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        onCreateStudent={handleCreateStudent}
+        onCreated={() => {
+          if (user?.institutionId) void loadUsersByInstitution(user.institutionId);
+        }}
         classes={classes}
         isLoading={classesLoading}
       />
@@ -580,6 +559,9 @@ const Students = () => {
         isOpen={!!selectedStudent}
         onClose={() => setSelectedStudent(null)}
         onSave={handleSaveStudent}
+        onAccessChanged={() => {
+          if (user?.institutionId) void loadUsersByInstitution(user.institutionId);
+        }}
         classes={classes}
         isEditing={selectedStudent?.isEditing}
       />

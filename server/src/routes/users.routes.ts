@@ -567,10 +567,26 @@ usersRouter.post('/:id/admin-reset-mfa', requireRole('admin'), async (req, res) 
   res.json({ success: true });
 });
 
-/** Mot de passe temporaire admin + révocation sessions. */
-usersRouter.post('/:id/admin-reset-password', requireRole('admin'), async (req, res) => {
+/** Mot de passe temporaire + révocation sessions (admin plateforme ou secrétariat du tenant). */
+usersRouter.post('/:id/admin-reset-password', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
   const target = await prisma.strkProfile.findUnique({ where: { id: req.params.id } });
   if (!target) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+  if (!isGlobalAdmin(req.auth!)) {
+    if (!isSameInstitution(req.auth!, target.institutionId)) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+    if (CROSS_TENANT_ROLES.has(target.role) || target.role === 'school_admin') {
+      return res.status(403).json({ error: 'Réinitialisation non autorisée pour ce rôle' });
+    }
+  }
+  if (!target.email || !target.passwordHash) {
+    return res.status(400).json({
+      error: 'Ce compte n’a pas encore d’accès de connexion. Activez d’abord l’espace élève / invitez l’utilisateur.',
+      code: 'no_login',
+    });
+  }
+
   const tempPassword = generateTempPassword();
   const passwordHash = await hashPassword(tempPassword);
   await prisma.strkProfile.update({
@@ -592,8 +608,9 @@ usersRouter.post('/:id/admin-reset-password', requireRole('admin'), async (req, 
     action: 'user.password.reset_admin',
     targetType: 'user',
     targetId: target.id,
+    ipAddress: req.ip,
   });
-  res.json({ success: true, tempPassword });
+  res.json({ success: true, tempPassword, email: target.email });
 });
 
 /** Timeline compte : activité + audit. */

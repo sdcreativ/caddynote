@@ -2,11 +2,22 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { getStudentAccess, isSameInstitution, INSTITUTION_STAFF_ROLES, SECRETARIAT_ROLES, tenantWhere } from '../lib/authz.js';
+import {
+  getStudentAccess,
+  isGlobalAdmin,
+  isSameInstitution,
+  INSTITUTION_STAFF_ROLES,
+  SECRETARIAT_ROLES,
+  tenantWhere,
+} from '../lib/authz.js';
 import { rejectUnlessSameInstitution, rejectUnlessStudentAccess } from '../lib/httpAuthz.js';
 import { importStudentsFromCsv } from '../lib/studentImport.js';
 import { parseCsvWithHeader } from '../lib/csvImport.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
+import { logAudit } from '../lib/audit.js';
+import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
+import { provisionStudentLogin } from '../lib/studentLogin.js';
+import { optionalUuid } from '../lib/zodHelpers.js';
 
 export const studentsRouter = Router();
 
@@ -52,6 +63,12 @@ studentsRouter.get('/', requireRole(...INSTITUTION_STAFF_ROLES), async (req, res
   res.json({ students, genderHeadcount });
 });
 
+const currentAcademicYear = () => {
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth();
+  return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+};
+
 const importSchema = z.object({
   csv: z.string().min(1),
   institutionId: z.string().uuid(),
@@ -82,6 +99,145 @@ studentsRouter.post('/import', requireRole(...SECRETARIAT_ROLES), async (req, re
 
   const summary = await importStudentsFromCsv(parsed.data.csv, parsed.data.institutionId, req.auth!.sub);
   res.json(summary);
+});
+
+/**
+ * Fiche élève sans accès connexion (aligné admissions enroll).
+ * Pour l’espace élève : POST /students/:id/activate-login ensuite.
+ */
+const createStudentRecordSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  phoneNumber: z.string().max(50).optional(),
+  classId: optionalUuid,
+  institutionId: optionalUuid,
+  gender: z.enum(['female', 'male']).optional(),
+});
+
+studentsRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const parsed = createStudentRecordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+
+  let institutionId = parsed.data.institutionId;
+  if (!isGlobalAdmin(req.auth!)) {
+    if (institutionId && !isSameInstitution(req.auth!, institutionId)) {
+      return res.status(403).json({ error: 'Permissions insuffisantes' });
+    }
+    institutionId = req.auth!.institutionId ?? undefined;
+  }
+  if (!institutionId) {
+    return res.status(400).json({ error: 'Établissement requis' });
+  }
+
+  const studentsQuota = await checkQuota(institutionId, 'students');
+  if (!studentsQuota.allowed) {
+    return res.status(403).json({
+      error: `Quota de ${QUOTA_LABELS.students} atteint pour le plan actuel (${studentsQuota.current}/${studentsQuota.limit}).`,
+    });
+  }
+  const usersQuota = await checkQuota(institutionId, 'users');
+  if (!usersQuota.allowed) {
+    return res.status(403).json({
+      error: `Quota de ${QUOTA_LABELS.users} atteint pour le plan actuel (${usersQuota.current}/${usersQuota.limit}).`,
+    });
+  }
+
+  if (parsed.data.classId) {
+    const classroom = await prisma.strkClass.findUnique({ where: { id: parsed.data.classId } });
+    if (!classroom || classroom.institutionId !== institutionId) {
+      return res.status(400).json({ error: 'Classe invalide' });
+    }
+  }
+
+  const profile = await prisma.strkProfile.create({
+    data: {
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+      phoneNumber: parsed.data.phoneNumber,
+      role: 'student',
+      institutionId,
+    },
+    select: PUBLIC_PROFILE_SELECT,
+  });
+
+  await prisma.strkStudent.create({
+    data: {
+      id: profile.id,
+      institutionId,
+      classId: parsed.data.classId ?? null,
+      gender: parsed.data.gender ?? null,
+      enrollmentDate: new Date(),
+    },
+  });
+
+  if (parsed.data.classId) {
+    const classroom = await prisma.strkClass.findUnique({ where: { id: parsed.data.classId } });
+    const academicYear = classroom?.academicYear || currentAcademicYear();
+    await prisma.strkClassStudent.create({
+      data: {
+        studentId: profile.id,
+        classId: parsed.data.classId,
+        academicYear,
+        enrollmentDate: new Date(),
+        isActive: true,
+      },
+    });
+  }
+
+  await logAudit({
+    institutionId,
+    actorId: req.auth!.sub,
+    action: 'student.record_created',
+    targetType: 'user',
+    targetId: profile.id,
+    metadata: { withLogin: false },
+    ipAddress: req.ip,
+  });
+
+  res.status(201).json({ user: profile, withLogin: false });
+});
+
+const activateLoginSchema = z.object({
+  /** E-mail famille réel. Absent → alias opaque s-{id}@eleves.caddynote.app */
+  email: z.string().email().optional(),
+});
+
+studentsRouter.post('/:id/activate-login', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const student = await prisma.strkStudent.findUnique({ where: { id: req.params.id } });
+  if (!student || !isSameInstitution(req.auth!, student.institutionId)) {
+    return res.status(404).json({ error: 'Élève introuvable' });
+  }
+  const parsed = activateLoginSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+  }
+
+  try {
+    const result = await provisionStudentLogin({
+      studentId: student.id,
+      email: parsed.data.email,
+      actorId: req.auth!.sub,
+      ipAddress: req.ip,
+    });
+    res.status(201).json({
+      user: result.user,
+      tempPassword: result.tempPassword,
+      email: result.email,
+      emailSent: result.emailSent,
+      smsSent: result.smsSent,
+      loginMode: result.loginMode,
+    });
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 500;
+    const message = err instanceof Error ? err.message : 'Échec activation';
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({ error: message });
+    }
+    console.error('activate-login:', err);
+    return res.status(500).json({ error: 'Échec activation de l’espace élève' });
+  }
 });
 
 studentsRouter.get('/:id', async (req, res) => {
@@ -166,12 +322,6 @@ studentsRouter.put('/:id/health', async (req, res) => {
   });
   res.json({ healthInfo });
 });
-
-const currentAcademicYear = () => {
-  const year = new Date().getFullYear();
-  const month = new Date().getMonth();
-  return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-};
 
 // ELV-003 : historique scolaire pluriannuel (inscriptions classe × année).
 studentsRouter.get('/:id/enrollments', async (req, res) => {

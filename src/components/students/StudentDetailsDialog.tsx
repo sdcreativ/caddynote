@@ -14,8 +14,8 @@ import { useStrkUsers } from '@/hooks/useStrkUsers';
 import { useStrkClasses } from '@/hooks/useStrkClasses';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { GuardianManagement } from '@/components/students/GuardianManagement';
-import { User, Mail, Phone, Calendar, MapPin, GraduationCap, BarChart3, AlertCircle } from 'lucide-react';
-import { apiClient } from '@/lib/apiClient';
+import { User, Mail, Phone, Calendar, MapPin, GraduationCap, BarChart3, AlertCircle, Loader2 } from 'lucide-react';
+import { apiClient, ApiError } from '@/lib/apiClient';
 import { SELECT_NONE } from '@/lib/selectNone';
 
 interface EnrollmentRow {
@@ -32,6 +32,8 @@ interface StudentDetailsDialogProps {
     id: string;
     name: string;
     email: string;
+    loginEmail?: string | null;
+    hasLogin?: boolean;
     phone?: string;
     dateOfBirth?: string;
     address?: string;
@@ -43,6 +45,7 @@ interface StudentDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (studentData: any) => void;
+  onAccessChanged?: () => void;
   classes: any[];
   isEditing?: boolean;
 }
@@ -52,6 +55,7 @@ export const StudentDetailsDialog: React.FC<StudentDetailsDialogProps> = ({
   isOpen,
   onClose,
   onSave,
+  onAccessChanged,
   classes,
   isEditing = false
 }) => {
@@ -69,20 +73,28 @@ export const StudentDetailsDialog: React.FC<StudentDetailsDialogProps> = ({
     status: 'active' as 'active' | 'inactive' | 'suspended',
     classId: SELECT_NONE
   });
+  const [activateEmail, setActivateEmail] = useState('');
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [hasLogin, setHasLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (student) {
       const [firstName, ...lastNameParts] = (student.name || '').split(' ');
+      const realEmail = student.loginEmail ?? (student.hasLogin ? student.email : '') ?? '';
       setFormData({
         firstName: firstName || '',
         lastName: lastNameParts.join(' ') || '',
-        email: student.email || '',
+        email: realEmail,
         phone: student.phone || '',
         dateOfBirth: student.dateOfBirth || '',
         address: student.address || '',
         status: student.status || 'active',
         classId: SELECT_NONE,
       });
+      setHasLogin(Boolean(student.hasLogin ?? student.loginEmail));
+      setLoginEmail(student.loginEmail ?? (student.hasLogin ? student.email : null));
+      setActivateEmail('');
       apiClient
         .get<{ enrollments: EnrollmentRow[] }>(`/students/${student.id}/enrollments`)
         .then(({ enrollments: rows }) => {
@@ -100,7 +112,7 @@ export const StudentDetailsDialog: React.FC<StudentDetailsDialogProps> = ({
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
 
   const handleSave = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email) {
+    if (!formData.firstName || !formData.lastName) {
       toast({
         title: tc('status.error'),
         description: t('create.required'),
@@ -108,12 +120,79 @@ export const StudentDetailsDialog: React.FC<StudentDetailsDialogProps> = ({
       });
       return;
     }
+    if (hasLogin && formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast({
+        title: tc('status.error'),
+        description: t('create.invalidEmail'),
+        variant: "destructive",
+      });
+      return;
+    }
 
     onSave({
       ...formData,
+      email: formData.email || undefined,
       name: `${formData.firstName} ${formData.lastName}`.trim()
     });
     setEditMode(false);
+  };
+
+  const activateLogin = async (mode: 'email' | 'opaque') => {
+    if (!student) return;
+    if (mode === 'email') {
+      const email = activateEmail.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast({ title: tc('status.error'), description: t('create.invalidEmail'), variant: 'destructive' });
+        return;
+      }
+    }
+    setAccessBusy(true);
+    try {
+      const res = await apiClient.post<{
+        email: string;
+        tempPassword: string;
+        emailSent?: boolean;
+      }>(`/students/${student.id}/activate-login`, mode === 'email' ? { email: activateEmail.trim() } : {});
+      setHasLogin(true);
+      setLoginEmail(res.email);
+      setFormData((prev) => ({ ...prev, email: res.email }));
+      toast({
+        title: t('login.activatedTitle'),
+        description: t('login.activatedBody', { email: res.email, password: res.tempPassword }),
+      });
+      onAccessChanged?.();
+    } catch (e) {
+      toast({
+        title: tc('status.error'),
+        description: e instanceof ApiError ? e.message : t('login.error'),
+        variant: 'destructive',
+      });
+    } finally {
+      setAccessBusy(false);
+    }
+  };
+
+  const resetProvisionalPassword = async () => {
+    if (!student) return;
+    setAccessBusy(true);
+    try {
+      const res = await apiClient.post<{ tempPassword: string; email: string }>(
+        `/users/${student.id}/admin-reset-password`,
+        {}
+      );
+      toast({
+        title: t('login.resetTitle'),
+        description: t('login.resetBody', { email: res.email, password: res.tempPassword }),
+      });
+    } catch (e) {
+      toast({
+        title: tc('status.error'),
+        description: e instanceof ApiError ? e.message : t('login.error'),
+        variant: 'destructive',
+      });
+    } finally {
+      setAccessBusy(false);
+    }
   };
 
   const handleStatusChange = (newStatus: 'active' | 'inactive' | 'suspended') => {
@@ -202,9 +281,70 @@ export const StudentDetailsDialog: React.FC<StudentDetailsDialogProps> = ({
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                disabled={!editMode}
+                disabled={!editMode || !hasLogin}
               />
             </div>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm font-medium">{t('login.section')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-4">
+                {hasLogin ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {t('login.hasAccess', { email: loginEmail || formData.email })}
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={accessBusy}
+                      onClick={() => void resetProvisionalPassword()}
+                    >
+                      {accessBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {t('login.resetPassword')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">{t('login.noAccess')}</p>
+                    <p className="text-xs text-muted-foreground">{t('login.activateOpaqueHint')}</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="activate-email">{t('login.emailLabel')}</Label>
+                        <Input
+                          id="activate-email"
+                          type="email"
+                          value={activateEmail}
+                          onChange={(e) => setActivateEmail(e.target.value)}
+                          placeholder={t('create.emailPlaceholder')}
+                          disabled={accessBusy}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={accessBusy}
+                        onClick={() => void activateLogin('email')}
+                      >
+                        {t('login.activateEmail')}
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={accessBusy}
+                      onClick={() => void activateLogin('opaque')}
+                    >
+                      {accessBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {t('login.activateOpaque')}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="space-y-2">
               <Label htmlFor="phone">{t('create.phone')}</Label>
