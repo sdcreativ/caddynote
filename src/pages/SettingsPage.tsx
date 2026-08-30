@@ -13,7 +13,7 @@ import { StrkSettingsService } from '@/services/strkSettingsService';
 import { fetchGradingScales, createGradingScale, deleteGradingScale, type StrkGradingScale } from '@/services/strkGradingScaleService';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { QuotasAndFlagsPanel } from '@/components/admin/QuotasAndFlagsPanel';
 import LogsCenter from '@/components/admin/LogsCenter';
 import { SessionsPanel } from '@/components/settings/SessionsPanel';
@@ -24,7 +24,11 @@ import {
   Shield,
   Database,
   Clock,
-  GraduationCap
+  GraduationCap,
+  Trash2,
+  Download,
+  ScrollText,
+  ExternalLink,
 } from 'lucide-react';
 
 const SettingsPage = () => {
@@ -205,6 +209,31 @@ const SettingsPage = () => {
         <Settings className="h-6 w-6" />
         <h1 className="text-3xl font-bold">{t('title')}</h1>
       </div>
+
+      {(user?.role === 'school_admin' || user?.role === 'admin') && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('tools.title')}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t('tools.hint')}</p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/exports">
+                <Download className="mr-2 h-4 w-4" />
+                {t('tools.exports')}
+                <ExternalLink className="ml-2 h-3.5 w-3.5 opacity-60" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/audit-log">
+                <ScrollText className="mr-2 h-4 w-4" />
+                {t('tools.audit')}
+                <ExternalLink className="ml-2 h-3.5 w-3.5 opacity-60" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue={availableTabs[0]} className="space-y-4">
         <TabsList className={`grid w-full ${

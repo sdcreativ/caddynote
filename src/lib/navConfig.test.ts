@@ -60,8 +60,14 @@ describe('navConfig (NFR-009)', () => {
     const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
     expect(advancedHrefs).toContain('/grades');
     expect(advancedHrefs).toContain('/users');
+    expect(advancedHrefs).toContain('/communications');
     expect(advancedHrefs).not.toContain('/admissions/admin');
     expect(advancedHrefs).not.toContain('/finance');
+    // Allégés : disponibilités, exports / audit → Paramètres ; EDT → Vue d’ensemble
+    expect(advancedHrefs).not.toContain('/teacher-availability');
+    expect(advancedHrefs).not.toContain('/exports');
+    expect(advancedHrefs).not.toContain('/audit-log');
+    expect(advancedHrefs).not.toContain('/calendar');
   });
 
   it('Enseignant : menu jour 1 allégé (+ section Plus)', () => {
@@ -167,17 +173,55 @@ describe('navConfig (NFR-009)', () => {
     }
   });
 
-  it('Vie scolaire : barre du bas mobile = Accueil · Appel · Absences · Messages · Plus', () => {
+  it('Vie scolaire : barre du bas mobile = Accueil · Présences · Élèves · Messages · Plus', () => {
     const items = mobileBottomNavForRole('supervisor');
     expect(items).toHaveLength(5);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/attendance' });
-    expect(items![2]).toMatchObject({ kind: 'link', href: '/absences' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/students' });
     expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
     expect(items![4]).toMatchObject({ kind: 'more' });
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
     }
+  });
+
+  it('Secrétariat : menu jour 1 allégé (+ section Plus)', () => {
+    const sections = navSectionsForRole('secretary');
+    const day1 = sections.filter((s) => !s.collapsible);
+    const advanced = sections.find((s) => s.collapsible);
+    const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
+    expect(visibleCount).toBeLessThanOrEqual(8);
+    expect(advanced?.defaultCollapsed).toBe(true);
+    const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toContain('/attendance');
+    expect(hrefs).not.toContain('/absences');
+    expect(hrefs).toContain('/admissions/admin');
+    expect(hrefs).toContain('/messages');
+    expect(hrefs).not.toContain('/subjects');
+    expect(hrefs).not.toContain('/users');
+    const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
+    expect(advancedHrefs).toEqual(
+      expect.arrayContaining(['/subjects', '/documents', '/users', '/communications', '/calendar'])
+    );
+  });
+
+  it('Vie scolaire : hub Présences unique, pas Appel + Absences', () => {
+    const sections = navSectionsForRole('supervisor');
+    const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toContain('/attendance');
+    expect(hrefs).not.toContain('/absences');
+    expect(hrefs).toContain('/follow-up');
+    expect(hrefs).not.toContain('/calendar');
+  });
+
+  it('Comptable : menu déjà compact (pas de Plus dense)', () => {
+    const sections = navSectionsForRole('accountant');
+    const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toEqual(
+      expect.arrayContaining(['/dashboard', '/finance', '/students', '/documents', '/settings'])
+    );
+    expect(sections.find((s) => s.collapsible)).toBeUndefined();
   });
 
   it('Parent : barre du bas mobile = Accueil · Enfants · Finances · Messages · Plus', () => {

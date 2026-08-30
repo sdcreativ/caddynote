@@ -48,7 +48,7 @@
     "grades": "Notes",
     "availability": "Disponibilités",
     "teaching": "Cahier de textes",
-    "calendar": "Calendrier",
+    "calendar": "Emploi du temps",
     "myGrades": "Mes notes",
     "myCourses": "Mes cours",
     "homework": "Devoirs",
@@ -232,10 +232,10 @@
   },
   "agenda": {
     "today": "Aujourd'hui",
-    "title": "Agenda",
+    "title": "Agenda du jour",
     "emptyTitle": "Rien de planifié",
-    "emptyBody": "Les cours et événements du jour apparaîtront ici.",
-    "addEvent": "Ajouter un événement"
+    "emptyBody": "Les cours et événements du jour apparaîtront ici. La gestion complète reste dans Emploi du temps.",
+    "addEvent": "Ouvrir l'emploi du temps"
   },
   "attendanceChart": {
     "section": "Assiduité",

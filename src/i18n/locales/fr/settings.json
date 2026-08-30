@@ -4,6 +4,12 @@
   "saveError": "Erreur lors de la sauvegarde: {{message}}",
   "unknownError": "Erreur inconnue",
   "unauthenticated": "Utilisateur non authentifié. Veuillez vous reconnecter.",
+  "tools": {
+    "title": "Outils d’administration",
+    "hint": "Exports et journal d’audit — retirés du menu principal pour alléger la navigation Direction.",
+    "exports": "Exports",
+    "audit": "Journal d’audit"
+  },
   "tabs": {
     "system": "Système",
     "notifications": "Notifications",

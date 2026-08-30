@@ -53,7 +53,7 @@ export const ScheduleTab = ({ institutionId }: ScheduleTabProps) => {
           Emploi du temps
         </CardTitle>
         <Button asChild size="sm" variant="outline">
-          <Link to="/calendar">Ouvrir le calendrier</Link>
+          <Link to="/calendar">Gérer l’emploi du temps</Link>
         </Button>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">

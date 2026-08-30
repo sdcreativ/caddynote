@@ -318,17 +318,19 @@ const InstitutionsPage = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedInstitution(institution);
-                          setShowDeleteDialog(true);
-                        }}
-                        aria-label={t('aria.delete', { name: institution.name })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {user?.role === 'admin' ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedInstitution(institution);
+                            setShowDeleteDialog(true);
+                          }}
+                          aria-label={t('aria.delete', { name: institution.name })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>

@@ -334,7 +334,7 @@
     "setup": {
       "title": "Configuration initiale de l'école",
       "create": "2.1. Création de l'institution",
-      "createIntro": "Accédez à la section \"Institutions\" (<institutions>/institutions</institutions>) pour configurer votre établissement :",
+      "createIntro": "Accédez à la section Paramètres (<institutions>/settings</institutions>) pour configurer votre établissement :",
       "info": "<strong>Informations générales :</strong> Nom, adresse, contact",
       "academic": "<strong>Paramètres académiques :</strong> Calendrier scolaire, horaires",
       "branding": "<strong>Branding :</strong> Logo et couleurs de l'établissement",

@@ -104,6 +104,7 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
   const role = user?.role;
   const isTeacher = role === 'teacher' || role === 'head_teacher';
   const isStudent = role === 'student';
+  const isPlatformInstitutionsRole = role === 'admin' || role === 'group_owner';
   // Appel ≠ absences ≠ signatures (voir docs/PRESENCE.md / navConfig).
   const callHref = isTeacher ? '/teacher-attendance' : '/attendance';
   const absencesHref = isStudent ? '/my-absences' : '/absences';
@@ -125,6 +126,9 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
     { titleKey: 'items.grades' as const, href: isStudent ? '/my-grades' : '/grades' },
     { titleKey: 'items.documents' as const, href: '/documents' },
     { titleKey: 'items.settings' as const, href: '/settings' },
+    ...(isPlatformInstitutionsRole
+      ? [{ titleKey: 'items.institutions' as const, href: '/institutions' }]
+      : []),
   ];
 
   return (

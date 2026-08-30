@@ -29,7 +29,7 @@ export function SchoolGuideContent() {
             <GuideSection id="configuration-initiale" icon={Settings} title={t('school.setup.title')} first>
                 <h3>{t('school.setup.create')}</h3>
                 <p>
-                    <Trans i18nKey="school.setup.createIntro" components={{ institutions: <NavBadge to="/institutions" /> }} />
+                    <Trans i18nKey="school.setup.createIntro" components={{ institutions: <NavBadge to="/settings" /> }} />
                 </p>
                 <ul>
                     <li><Trans i18nKey="school.setup.info" components={{ strong: <strong /> }} /></li>

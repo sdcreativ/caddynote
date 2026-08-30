@@ -20,6 +20,9 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { ATTENDANCE_HUB_ROLES, EXPORT_ROLES, FINANCE_ROLES, INSTITUTION_STAFF_ROLES, SECRETARIAT_ROLES, TEACHING_ROLES, DIRECTION_ROLES } from "@/lib/roles";
 
+/** Liste multi-établissements — plateforme / réseau, pas Direction mono-école. */
+const PLATFORM_INSTITUTIONS_ROLES = ['admin', 'group_owner'] as const;
+
 import Index from "./pages/Index";
 import SignPage from "./pages/SignPage";
 import SignupPage from "./pages/SignupPage";
@@ -139,7 +142,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/institutions" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRoles={PLATFORM_INSTITUTIONS_ROLES}>
                     <MainLayout>
                       <InstitutionsPage />
                     </MainLayout>

@@ -157,7 +157,9 @@ function RoleNavBody({
         <div className="px-4 pt-3">
           <button
             type="button"
-            onClick={() => onNavigate(user?.role === 'school_admin' ? '/institutions' : '/dashboard')}
+            onClick={() =>
+              onNavigate(user?.role === 'school_admin' ? '/settings' : '/dashboard')
+            }
             className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">

@@ -36,8 +36,6 @@ import {
   Download,
   School,
   Shield,
-  AlertTriangle,
-  CalendarOff,
   ScrollText,
   MoreHorizontal,
 } from 'lucide-react';
@@ -228,21 +226,16 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'supervisor':
-      // Accueil · Présences · Absences · Messages · Plus
+      // Accueil · Présences · Élèves · Messages · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         {
           kind: 'link',
-          titleKey: 'items.call',
+          titleKey: 'items.attendance',
           href: '/attendance',
           icon: ClipboardCheck,
         },
-        {
-          kind: 'link',
-          titleKey: 'items.absences',
-          href: '/absences',
-          icon: AlertTriangle,
-        },
+        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
         { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
@@ -315,19 +308,17 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
             { titleKey: 'items.users', href: '/users', icon: UserCog },
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
-            { titleKey: 'items.availability', href: '/teacher-availability', icon: CalendarOff },
+            // Emploi du temps : accès via Vue d’ensemble (résumé + tuile), pas une 2ᵉ entrée nav.
             { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
             { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.services', href: '/services', icon: Bus },
-            { titleKey: 'items.exports', href: '/exports', icon: Download },
-            { titleKey: 'items.auditLog', href: '/audit-log', icon: ScrollText },
             { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
       ];
+      // Disponibilités / exports / audit / EDT menu : hors Plus Direction.
 
     case 'teacher':
     case 'head_teacher':
@@ -364,27 +355,34 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'secretary':
+      // Jour 1 allégé ; matières / docs / utilisateurs / campagnes sous Plus.
       return [
         {
           labelKey: 'sections.secretariat',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
             { titleKey: 'items.students', href: '/students', icon: Users },
-            { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
-            { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
-            { titleKey: 'items.call', href: '/attendance', icon: ClipboardCheck },
-            { titleKey: 'items.absences', href: '/absences', icon: AlertTriangle },
+            { titleKey: 'items.attendance', href: '/attendance', icon: ClipboardCheck },
             { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
+            { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+            { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
+          ],
+        },
+        {
+          labelKey: 'sections.advanced',
+          collapsible: true,
+          defaultCollapsed: true,
+          items: [
+            { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
             { titleKey: 'items.users', href: '/users', icon: UserCog },
-            { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
+            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
           ],
         },
         {
           labelKey: 'sections.account',
           items: [
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
@@ -412,13 +410,13 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'supervisor':
+      // Hub Présences unique (comme Direction) ; pas Appel + Absences séparés.
       return [
         {
           labelKey: 'sections.life',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
-            { titleKey: 'items.call', href: '/attendance', icon: ClipboardCheck },
-            { titleKey: 'items.absences', href: '/absences', icon: AlertTriangle },
+            { titleKey: 'items.attendance', href: '/attendance', icon: ClipboardCheck },
             { titleKey: 'items.students', href: '/students', icon: Users },
             { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
@@ -427,7 +425,6 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
         {
           labelKey: 'sections.account',
           items: [
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
