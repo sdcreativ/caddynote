@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { QuotasAndFlagsPanel } from '@/components/admin/QuotasAndFlagsPanel';
+import { DespsOpsPanel } from '@/components/admin/DespsOpsPanel';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import {
   getMaintenanceMode,
@@ -291,6 +292,7 @@ const PlatformSettings = () => {
       </Card>
 
       {institutionId ? <QuotasAndFlagsPanel institutionId={institutionId} /> : null}
+      <DespsOpsPanel institutions={institutions} />
 
       <SaaSOpsControls />
     </div>

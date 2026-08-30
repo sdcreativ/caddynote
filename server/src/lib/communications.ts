@@ -259,10 +259,20 @@ const dispatchCommunication = async (log: StrkCommunicationLog): Promise<StrkCom
         data: { status: 'sent', sentAt: new Date(), providerMessageId: result.providerMessageId },
       });
     }
-    // push : notification interne existante, "livrée" dès l'écriture en base.
+    // push : notification interne + Web Push si abonnement VAPID.
     await prisma.notification.create({
       data: { userId: log.recipientId!, title: log.subject ?? 'Notification', message: log.body, type: log.isCritical ? 'warning' : 'info' },
     });
+    try {
+      const { sendWebPushToUser } = await import('./webPush.js');
+      await sendWebPushToUser(log.recipientId!, {
+        title: log.subject ?? 'Notification',
+        body: log.body,
+        url: '/notifications',
+      });
+    } catch (err) {
+      console.error('Web Push (non bloquant):', err);
+    }
     return await prisma.strkCommunicationLog.update({
       where: { id: log.id },
       data: { status: 'delivered', sentAt: new Date(), deliveredAt: new Date() },

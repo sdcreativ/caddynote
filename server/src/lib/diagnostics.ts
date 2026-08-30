@@ -4,6 +4,8 @@ import { isStripeConfigured, isStripeWebhookConfigured } from './stripeClient.js
 import { isCinetPayConfigured } from './cinetpay.js';
 import { isEmailConfigured, isLocalSmtpRelay } from './email.js';
 import { isSmsConfigured, isWhatsAppConfigured } from './sms.js';
+import { isWebPushConfigured } from './webPush.js';
+import { getDespsStatus } from './despsClient.js';
 import {
   isAntivirusConfigured,
   isAntivirusRequired,
@@ -29,6 +31,7 @@ export interface IntegrationStatus {
 export const getIntegrationsStatus = (): IntegrationStatus[] => {
   const storageMode = getFileStorageMode();
   const jwtExpires = resolveAccessTokenExpiresIn();
+  const desps = getDespsStatus();
   return [
     {
       key: 'test_mode',
@@ -83,6 +86,18 @@ export const getIntegrationsStatus = (): IntegrationStatus[] => {
       key: 'cinetpay',
       configured: isCinetPayConfigured(),
       notes: isCinetPayConfigured() ? undefined : 'Mobile Money en 501',
+    },
+    {
+      key: 'web_push',
+      configured: isWebPushConfigured(),
+      notes: isWebPushConfigured()
+        ? 'VAPID actif — abonnements /push/subscribe'
+        : 'VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY absents',
+    },
+    {
+      key: 'desps',
+      configured: desps.configured,
+      notes: desps.notes,
     },
     {
       key: 'smtp',

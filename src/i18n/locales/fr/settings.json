@@ -33,6 +33,23 @@
     "title": "Canaux de communication",
     "subtitle": "Opt-in / opt-out par canal (API /communications/preferences)."
   },
+  "webPush": {
+    "title": "Notifications navigateur (Web Push)",
+    "subtitle": "Recevoir les alertes même lorsque l’onglet CaddyNote est fermé (PWA).",
+    "enable": "Activer sur cet appareil",
+    "disable": "Désactiver sur cet appareil",
+    "statusOn": "Abonnement actif",
+    "statusOff": "Non abonné",
+    "enabledTitle": "Notifications activées",
+    "enabledBody": "Cet appareil recevra les alertes push.",
+    "disabledTitle": "Notifications désactivées",
+    "unavailableTitle": "Web Push indisponible",
+    "unavailableBody": "Non configuré sur ce serveur (clés VAPID) ou navigateur incompatible.",
+    "deniedTitle": "Permission refusée",
+    "deniedBody": "Autorisez les notifications dans les réglages du navigateur.",
+    "errorTitle": "Échec",
+    "errorBody": "Impossible de gérer l’abonnement push."
+  },
   "attendance": {
     "title": "Paramètres d'Assiduité",
     "autoMarkAbsent": "Marquer automatiquement absent",

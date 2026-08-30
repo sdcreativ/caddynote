@@ -25,5 +25,15 @@
     "sms": "SMS",
     "whatsapp": "WhatsApp",
     "push": "Notification push"
+  },
+  "aiDraft": {
+    "intent": "Brouillon IA",
+    "placeholder": "Ex. rappeler le paiement des frais avant vendredi",
+    "cta": "Générer",
+    "loading": "Génération…",
+    "hint": "Remplit objet et message (flag exercises_ai + quota IA). Relisez avant envoi.",
+    "doneTitle": "Brouillon prêt",
+    "doneBody": "Vérifiez le texte puis envoyez.",
+    "errorTitle": "Brouillon IA impossible"
   }
 }

@@ -46,6 +46,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
         // Bundle principal > 2 MiB : on relève le plafond pour permettre le précache PWA.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Handlers Web Push (public/sw-push.js).
+        importScripts: ['/sw-push.js'],
       },
     }),
   ].filter(Boolean),

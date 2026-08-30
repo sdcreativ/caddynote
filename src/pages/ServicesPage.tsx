@@ -31,12 +31,23 @@ type Enrollment = {
   invoiceId?: string | null;
   invoice?: { id: string; invoiceNumber: string; totalCents: number; status: string } | null;
 };
+type TransportStop = { id: string; name: string; sequence: number; address?: string | null };
+type ScheduleSlot = {
+  id: string;
+  dayOfWeek: number;
+  departureTime: string;
+  direction: string;
+  label?: string | null;
+  stopId?: string | null;
+};
 type RouteRow = {
   id: string;
   name: string;
   capacity: number | null;
   isActive: boolean;
   enrollments: Enrollment[];
+  stops?: TransportStop[];
+  scheduleSlots?: ScheduleSlot[];
 };
 type PlanRow = {
   id: string;
@@ -88,6 +99,10 @@ const ServicesPage = () => {
   const [clinicReason, setClinicReason] = useState('');
   const [hrProfileId, setHrProfileId] = useState('');
   const [hrJobTitle, setHrJobTitle] = useState('');
+  const [stopName, setStopName] = useState('');
+  const [slotDay, setSlotDay] = useState('1');
+  const [slotTime, setSlotTime] = useState('07:30');
+  const [slotDirection, setSlotDirection] = useState<'outbound' | 'inbound'>('outbound');
   const [institutions, setInstitutions] = useState<InstitutionOption[]>([]);
   const [institutionId, setInstitutionId] = useState<string | null>(user?.institutionId ?? null);
   const [loading, setLoading] = useState(false);
@@ -427,7 +442,7 @@ const ServicesPage = () => {
                     {!r.isActive && <Badge variant="secondary">{t('inactive')}</Badge>}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 pb-4">
+                <CardContent className="space-y-4 pb-4">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -462,6 +477,136 @@ const ServicesPage = () => {
                       </li>
                     ))}
                   </ul>
+
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-sm font-medium">{t('planning.stops')}</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {(r.stops ?? []).map((s) => (
+                        <li key={s.id} className="flex items-center justify-between gap-2">
+                          <span>
+                            {s.sequence}. {s.name}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={saving}
+                            onClick={() =>
+                              void run(t('planning.stopRemoved'), () =>
+                                apiClient.delete(`/services/transport/stops/${s.id}`)
+                              )
+                            }
+                          >
+                            {tc('actions.remove')}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        className="max-w-xs"
+                        placeholder={t('planning.stopPlaceholder')}
+                        value={stopName}
+                        onChange={(e) => setStopName(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        disabled={saving || !stopName.trim()}
+                        onClick={() => {
+                          const name = stopName.trim();
+                          if (!name) return;
+                          void run(t('planning.stopAdded'), async () => {
+                            await apiClient.post(`/services/transport/routes/${r.id}/stops`, { name });
+                            setStopName('');
+                          });
+                        }}
+                      >
+                        {t('planning.addStop')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-sm font-medium">{t('planning.schedule')}</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {(r.scheduleSlots ?? []).map((slot) => (
+                        <li key={slot.id} className="flex items-center justify-between gap-2">
+                          <span>
+                            {t(`planning.day${slot.dayOfWeek}`)} · {slot.departureTime} ·{' '}
+                            {slot.direction === 'inbound' ? t('planning.inbound') : t('planning.outbound')}
+                            {slot.label ? ` — ${slot.label}` : ''}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={saving}
+                            onClick={() =>
+                              void run(t('planning.slotRemoved'), () =>
+                                apiClient.delete(`/services/transport/schedule/${slot.id}`)
+                              )
+                            }
+                          >
+                            {tc('actions.remove')}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div>
+                        <Label className="text-xs">{t('planning.day')}</Label>
+                        <Select value={slotDay} onValueChange={setSlotDay}>
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                              <SelectItem key={d} value={String(d)}>
+                                {t(`planning.day${d}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">{t('planning.time')}</Label>
+                        <Input
+                          className="w-[110px]"
+                          type="time"
+                          value={slotTime}
+                          onChange={(e) => setSlotTime(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">{t('planning.direction')}</Label>
+                        <Select
+                          value={slotDirection}
+                          onValueChange={(v) => setSlotDirection(v as 'outbound' | 'inbound')}
+                        >
+                          <SelectTrigger className="w-[130px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="outbound">{t('planning.outbound')}</SelectItem>
+                            <SelectItem value="inbound">{t('planning.inbound')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={saving || !slotTime}
+                        onClick={() =>
+                          void run(t('planning.slotAdded'), () =>
+                            apiClient.post(`/services/transport/routes/${r.id}/schedule`, {
+                              dayOfWeek: Number(slotDay),
+                              departureTime: slotTime,
+                              direction: slotDirection,
+                            })
+                          )
+                        }
+                      >
+                        {t('planning.addSlot')}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))

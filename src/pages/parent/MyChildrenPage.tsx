@@ -50,12 +50,28 @@ type ParentServicesChild = {
     currency: string;
     invoice?: { invoiceNumber: string; totalCents: number; status: string } | null;
   }>;
-  transportEnrollments: Array<{ id: string; routeName: string }>;
+  transportEnrollments: Array<{
+    id: string;
+    routeName: string;
+    scheduleSlots?: Array<{
+      id: string;
+      dayOfWeek: number;
+      departureTime: string;
+      direction: string;
+      label?: string | null;
+    }>;
+  }>;
   availableTransportRoutes?: Array<{
     id: string;
     name: string;
     capacity: number | null;
     seatsLeft: number | null;
+    scheduleSlots?: Array<{
+      id: string;
+      dayOfWeek: number;
+      departureTime: string;
+      direction: string;
+    }>;
   }>;
   availableCanteenPlans?: Array<{
     id: string;
@@ -903,8 +919,20 @@ const MyChildrenPage = () => {
                         <p className="text-muted-foreground">Pas d’inscription transport</p>
                       ) : (
                         servicesChild.transportEnrollments.map((e) => (
-                          <div key={e.id} className="rounded border px-3 py-2">
-                            {e.routeName}
+                          <div key={e.id} className="rounded border px-3 py-2 space-y-1">
+                            <p className="font-medium">{e.routeName}</p>
+                            {(e.scheduleSlots?.length ?? 0) > 0 ? (
+                              <ul className="text-xs text-muted-foreground space-y-0.5">
+                                {e.scheduleSlots!.slice(0, 6).map((s) => (
+                                  <li key={s.id}>
+                                    J{s.dayOfWeek} · {s.departureTime} ·{' '}
+                                    {s.direction === 'inbound' ? 'retour' : 'aller'}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Horaires à venir</p>
+                            )}
                           </div>
                         ))
                       )}

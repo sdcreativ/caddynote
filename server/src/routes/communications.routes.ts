@@ -7,6 +7,9 @@ import { isGlobalAdmin, isSameInstitution, getAllowedContactIds } from '../lib/a
 import { isValidTwilioSignature } from '../lib/sms.js';
 import { sendCommunication, queueCommunication } from '../lib/communications.js';
 import { logAudit } from '../lib/audit.js';
+import { isAiConfigured, aiMissingKeyMessage } from '../lib/anthropicClient.js';
+import { draftCommunicationMessage } from '../lib/aiDraft.js';
+import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 
 /**
  * Module Communication multicanal (chap. 17, COM-001 à 005) :
@@ -180,6 +183,59 @@ communicationsRouter.delete('/templates/:id', requireRole('admin', 'school_admin
   await prisma.strkMessageTemplate.update({ where: { id: req.params.id }, data: { isActive: false } });
   res.json({ success: true });
 });
+
+// --- Brouillon IA (hors exercices) ---
+
+const draftSchema = z.object({
+  intent: z.string().min(3).max(500),
+  audience: z.string().max(200).optional(),
+  tone: z.string().max(80).optional(),
+  locale: z.string().max(8).optional(),
+  context: z.string().max(1000).optional(),
+});
+
+communicationsRouter.post(
+  '/ai/draft',
+  requireRole('admin', 'school_admin', 'teacher', 'head_teacher', 'secretary'),
+  requireFeature('exercises_ai'),
+  async (req, res) => {
+    if (!isAiConfigured()) {
+      return res.status(501).json({ error: aiMissingKeyMessage() });
+    }
+    const parsed = draftSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
+    }
+    const institutionId = req.auth!.institutionId;
+    if (institutionId) {
+      const aiQuota = await checkQuota(institutionId, 'aiPerMonth', 1);
+      if (!aiQuota.allowed) {
+        return res.status(403).json({
+          error: `Quota de ${QUOTA_LABELS.aiPerMonth} atteint pour le plan actuel (${aiQuota.current}/${aiQuota.limit}).`,
+          code: 'quota_exceeded',
+          quota: aiQuota,
+        });
+      }
+    }
+    try {
+      const draft = await draftCommunicationMessage(parsed.data);
+      if (institutionId) {
+        await logAudit({
+          institutionId,
+          actorId: req.auth!.sub,
+          action: 'communications.ai.draft',
+          targetType: 'communication_draft',
+          metadata: { intent: parsed.data.intent.slice(0, 120) },
+          ipAddress: req.ip,
+        });
+      }
+      res.json({ draft });
+    } catch (err) {
+      console.error('AI draft error:', err);
+      res.status(502).json({ error: 'Échec de la génération du brouillon' });
+    }
+  }
+);
 
 // --- Envoi (COM-001) ---
 

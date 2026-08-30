@@ -8,13 +8,15 @@ import { logAudit } from '../lib/audit.js';
 import { optionalUuid } from '../lib/zodHelpers.js';
 import { subscribeStudentToCanteenPlan, ensureCanteenInvoice } from '../lib/canteenBilling.js';
 import { isFeatureEnabled } from '../lib/featureFlags.js';
+import type { JwtPayload } from '../lib/jwt.js';
 
 /**
  * Lot 9 — modules complémentaires (SHOULD/COULD) : transport, cantine,
  * bibliothèque, internat, santé scolaire (visites), RH (fiches hors paie).
  *
  * Socle opérationnel + facturation cantine (S1) + parent `/services/mine`
- * (lecture + self-service cantine/transport). Pas encore : planning bus, paie.
+ * (lecture + self-service cantine/transport) + planning bus (arrêts / créneaux).
+ * Pas encore : paie RH.
  */
 export const lot9Router = Router();
 lot9Router.use(requireAuth);
@@ -77,7 +79,29 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
       ? await prisma.strkTransportEnrollment.findMany({
           where: { studentId: { in: activeStudentIds }, endDate: null },
           include: {
-            route: { select: { id: true, name: true, institutionId: true, isActive: true } },
+            route: {
+              select: {
+                id: true,
+                name: true,
+                institutionId: true,
+                isActive: true,
+                stops: {
+                  orderBy: { sequence: 'asc' },
+                  select: { id: true, name: true, sequence: true },
+                },
+                scheduleSlots: {
+                  where: { isActive: true },
+                  orderBy: [{ dayOfWeek: 'asc' }, { departureTime: 'asc' }],
+                  select: {
+                    id: true,
+                    dayOfWeek: true,
+                    departureTime: true,
+                    direction: true,
+                    label: true,
+                  },
+                },
+              },
+            },
           },
         })
       : [];
@@ -112,7 +136,24 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
     lot9InstitutionIds.length > 0
       ? await prisma.strkTransportRoute.findMany({
           where: { institutionId: { in: lot9InstitutionIds }, isActive: true },
-          include: { enrollments: { where: { endDate: null }, select: { id: true } } },
+          include: {
+            enrollments: { where: { endDate: null }, select: { id: true } },
+            scheduleSlots: {
+              where: { isActive: true },
+              orderBy: [{ dayOfWeek: 'asc' }, { departureTime: 'asc' }],
+              select: {
+                id: true,
+                dayOfWeek: true,
+                departureTime: true,
+                direction: true,
+                label: true,
+              },
+            },
+            stops: {
+              orderBy: { sequence: 'asc' },
+              select: { id: true, name: true, sequence: true },
+            },
+          },
           orderBy: { name: 'asc' },
         })
       : [];
@@ -164,6 +205,8 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
             name: r.name,
             capacity: r.capacity,
             seatsLeft: r.capacity == null ? null : Math.max(0, r.capacity - r.enrollments.length),
+            stops: r.stops,
+            scheduleSlots: r.scheduleSlots,
           }))
           .filter((r) => r.seatsLeft === null || r.seatsLeft > 0)
       : [];
@@ -187,6 +230,8 @@ lot9Router.get('/mine', requireRole('parent'), async (req, res) => {
               routeId: e.route.id,
               routeName: e.route.name,
               startDate: e.startDate,
+              stops: e.route.stops,
+              scheduleSlots: e.route.scheduleSlots,
             }))
         : [],
       canteenSubscriptions:
@@ -343,7 +388,11 @@ lot9Router.get('/transport/routes', requireRole(...SECRETARIAT_ROLES), async (re
   if (!institutionId) return res.status(400).json({ error: 'Aucun établissement associé' });
   const routes = await prisma.strkTransportRoute.findMany({
     where: { institutionId },
-    include: { enrollments: { where: { endDate: null }, orderBy: { startDate: 'desc' } } },
+    include: {
+      enrollments: { where: { endDate: null }, orderBy: { startDate: 'desc' } },
+      stops: { orderBy: { sequence: 'asc' } },
+      scheduleSlots: { where: { isActive: true }, orderBy: [{ dayOfWeek: 'asc' }, { departureTime: 'asc' }] },
+    },
     orderBy: { name: 'asc' },
   });
   const labels = await loadStudentLabels(routes.flatMap((r) => r.enrollments.map((e) => e.studentId)));
@@ -440,6 +489,168 @@ lot9Router.post('/transport/enrollments/:id/end', requireRole(...SECRETARIAT_ROL
     data: { endDate: new Date() },
   });
   res.json({ enrollment: updated });
+});
+
+const timeHm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const dayOfWeekSchema = z.number().int().min(1).max(7);
+const directionSchema = z.enum(['outbound', 'inbound']);
+
+const assertRouteAccess = async (routeId: string, auth: JwtPayload | undefined) => {
+  const route = await prisma.strkTransportRoute.findUnique({ where: { id: routeId } });
+  if (!route || !auth || !isSameInstitution(auth, route.institutionId)) return null;
+  return route;
+};
+
+/** Arrêts ordonnés d’un circuit. */
+lot9Router.post('/transport/routes/:id/stops', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const route = await assertRouteAccess(req.params.id, req.auth);
+  if (!route) return res.status(404).json({ error: 'Circuit introuvable' });
+  const parsed = z
+    .object({
+      name: z.string().min(1).max(120),
+      sequence: z.number().int().min(1).max(99).optional(),
+      address: z.string().max(240).optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+
+  let sequence = parsed.data.sequence;
+  if (sequence == null) {
+    const agg = await prisma.strkTransportStop.aggregate({
+      where: { routeId: route.id },
+      _max: { sequence: true },
+    });
+    sequence = (agg._max.sequence ?? 0) + 1;
+  }
+
+  try {
+    const stop = await prisma.strkTransportStop.create({
+      data: {
+        routeId: route.id,
+        name: parsed.data.name,
+        sequence,
+        address: parsed.data.address,
+      },
+    });
+    res.status(201).json({ stop });
+  } catch {
+    return res.status(409).json({ error: 'Séquence déjà utilisée sur ce circuit' });
+  }
+});
+
+lot9Router.patch('/transport/stops/:id', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const stop = await prisma.strkTransportStop.findUnique({
+    where: { id: req.params.id },
+    include: { route: true },
+  });
+  if (!stop || !isSameInstitution(req.auth!, stop.route.institutionId)) {
+    return res.status(404).json({ error: 'Arrêt introuvable' });
+  }
+  const parsed = z
+    .object({
+      name: z.string().min(1).max(120).optional(),
+      sequence: z.number().int().min(1).max(99).optional(),
+      address: z.string().max(240).nullable().optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+  try {
+    const updated = await prisma.strkTransportStop.update({ where: { id: stop.id }, data: parsed.data });
+    res.json({ stop: updated });
+  } catch {
+    return res.status(409).json({ error: 'Séquence en conflit' });
+  }
+});
+
+lot9Router.delete('/transport/stops/:id', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const stop = await prisma.strkTransportStop.findUnique({
+    where: { id: req.params.id },
+    include: { route: true },
+  });
+  if (!stop || !isSameInstitution(req.auth!, stop.route.institutionId)) {
+    return res.status(404).json({ error: 'Arrêt introuvable' });
+  }
+  await prisma.strkTransportStop.delete({ where: { id: stop.id } });
+  res.status(204).end();
+});
+
+/** Créneaux hebdomadaires. */
+lot9Router.post('/transport/routes/:id/schedule', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const route = await assertRouteAccess(req.params.id, req.auth);
+  if (!route) return res.status(404).json({ error: 'Circuit introuvable' });
+  const parsed = z
+    .object({
+      dayOfWeek: dayOfWeekSchema,
+      departureTime: timeHm,
+      direction: directionSchema.default('outbound'),
+      label: z.string().max(80).optional(),
+      stopId: z.string().uuid().optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+
+  if (parsed.data.stopId) {
+    const stop = await prisma.strkTransportStop.findFirst({
+      where: { id: parsed.data.stopId, routeId: route.id },
+    });
+    if (!stop) return res.status(400).json({ error: 'Arrêt hors circuit' });
+  }
+
+  const slot = await prisma.strkTransportScheduleSlot.create({
+    data: {
+      routeId: route.id,
+      dayOfWeek: parsed.data.dayOfWeek,
+      departureTime: parsed.data.departureTime,
+      direction: parsed.data.direction,
+      label: parsed.data.label,
+      stopId: parsed.data.stopId,
+    },
+  });
+  res.status(201).json({ slot });
+});
+
+lot9Router.patch('/transport/schedule/:id', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const slot = await prisma.strkTransportScheduleSlot.findUnique({
+    where: { id: req.params.id },
+    include: { route: true },
+  });
+  if (!slot || !isSameInstitution(req.auth!, slot.route.institutionId)) {
+    return res.status(404).json({ error: 'Créneau introuvable' });
+  }
+  const parsed = z
+    .object({
+      dayOfWeek: dayOfWeekSchema.optional(),
+      departureTime: timeHm.optional(),
+      direction: directionSchema.optional(),
+      label: z.string().max(80).nullable().optional(),
+      stopId: z.string().uuid().nullable().optional(),
+      isActive: z.boolean().optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Données invalides' });
+  if (parsed.data.stopId) {
+    const stop = await prisma.strkTransportStop.findFirst({
+      where: { id: parsed.data.stopId, routeId: slot.routeId },
+    });
+    if (!stop) return res.status(400).json({ error: 'Arrêt hors circuit' });
+  }
+  const updated = await prisma.strkTransportScheduleSlot.update({
+    where: { id: slot.id },
+    data: parsed.data,
+  });
+  res.json({ slot: updated });
+});
+
+lot9Router.delete('/transport/schedule/:id', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
+  const slot = await prisma.strkTransportScheduleSlot.findUnique({
+    where: { id: req.params.id },
+    include: { route: true },
+  });
+  if (!slot || !isSameInstitution(req.auth!, slot.route.institutionId)) {
+    return res.status(404).json({ error: 'Créneau introuvable' });
+  }
+  await prisma.strkTransportScheduleSlot.delete({ where: { id: slot.id } });
+  res.status(204).end();
 });
 
 // --- Cantine (flag dédié `canteen` en plus de `lot9_services`) ---

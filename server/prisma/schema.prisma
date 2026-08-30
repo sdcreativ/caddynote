@@ -1715,6 +1715,21 @@ model StrkNotificationSetting {
   @@map("strk_notification_settings")
 }
 
+/// Abonnement Web Push (VAPID) — un appareil / navigateur par endpoint.
+model StrkPushSubscription {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("strk_push_subscriptions")
+}
+
 // Notifications applicatives génériques (canal historique, distinct de
 // strk_notifications).
 model Notification {
@@ -2765,10 +2780,51 @@ model StrkTransportRoute {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  institution StrkInstitution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  enrollments StrkTransportEnrollment[]
+  institution   StrkInstitution             @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  enrollments   StrkTransportEnrollment[]
+  stops         StrkTransportStop[]
+  scheduleSlots StrkTransportScheduleSlot[]
 
   @@map("strk_transport_routes")
+}
+
+/// Arrêt ordonné d’un circuit (planning bus Lot 9).
+model StrkTransportStop {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  routeId   String   @map("route_id") @db.Uuid
+  name      String
+  sequence  Int
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  route         StrkTransportRoute          @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  scheduleSlots StrkTransportScheduleSlot[]
+
+  @@unique([routeId, sequence])
+  @@index([routeId])
+  @@map("strk_transport_stops")
+}
+
+/// Créneau hebdomadaire (jour + heure + sens) pour un circuit.
+model StrkTransportScheduleSlot {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  routeId       String  @map("route_id") @db.Uuid
+  /// ISO : 1 = lundi … 7 = dimanche
+  dayOfWeek     Int     @map("day_of_week")
+  /// HH:mm (24h)
+  departureTime String  @map("departure_time") @db.VarChar(5)
+  /// outbound = aller (vers l’école), inbound = retour
+  direction     String  @default("outbound")
+  label         String?
+  stopId        String? @map("stop_id") @db.Uuid
+  isActive      Boolean @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  route StrkTransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop  StrkTransportStop? @relation(fields: [stopId], references: [id], onDelete: SetNull)
+
+  @@index([routeId, dayOfWeek])
+  @@map("strk_transport_schedule_slots")
 }
 
 model StrkTransportEnrollment {

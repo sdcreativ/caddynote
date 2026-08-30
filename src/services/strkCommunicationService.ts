@@ -64,6 +64,19 @@ export const sendCommunication = async (payload: {
   return res.log;
 };
 
+export const draftCommunication = async (payload: {
+  intent: string;
+  audience?: string;
+  tone?: string;
+  context?: string;
+}) => {
+  const res = await apiClient.post<{ draft: { subject: string; body: string } }>(
+    '/communications/ai/draft',
+    payload
+  );
+  return res.draft;
+};
+
 export const getCommunicationPreferences = async () => {
   const { preferences } = await apiClient.get<{ preferences: ChannelPreference[] }>(
     '/communications/preferences'

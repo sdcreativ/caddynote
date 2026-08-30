@@ -82,11 +82,11 @@ const countCurrentUsage = async (institutionId: string, type: QuotaType): Promis
         where: { institutionId, channel: { in: ['sms', 'whatsapp'] }, requestedAt: { gte: startOfCurrentMonth() } },
       });
     case 'aiPerMonth':
-      // Compteur = générations IA réussies journalisées (exercises.ai.generate).
+      // Compteur = générations IA (exercices + brouillons communications).
       return prisma.strkAuditLog.count({
         where: {
           institutionId,
-          action: 'exercises.ai.generate',
+          action: { in: ['exercises.ai.generate', 'communications.ai.draft'] },
           createdAt: { gte: startOfCurrentMonth() },
         },
       });

@@ -18,6 +18,7 @@ import { QuotasAndFlagsPanel } from '@/components/admin/QuotasAndFlagsPanel';
 import LogsCenter from '@/components/admin/LogsCenter';
 import { SessionsPanel } from '@/components/settings/SessionsPanel';
 import { CommunicationPreferencesPanel } from '@/components/settings/CommunicationPreferencesPanel';
+import { WebPushOptIn } from '@/components/settings/WebPushOptIn';
 import {
   Settings,
   Bell,
@@ -336,8 +337,13 @@ const SettingsPage = () => {
                 {t('notifications.subtitle')}
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <CommunicationPreferencesPanel />
+              <div className="space-y-2 border-t pt-4">
+                <p className="text-sm font-medium">{t('webPush.title')}</p>
+                <p className="text-sm text-muted-foreground">{t('webPush.subtitle')}</p>
+                <WebPushOptIn />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Megaphone, Send, RefreshCw } from 'lucide-react';
+import { Megaphone, Send, RefreshCw, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import {
   listCommunicationLogs,
   sendCommunication,
+  draftCommunication,
   type ComChannel,
   type CommunicationLog,
 } from '@/services/strkCommunicationService';
@@ -43,6 +44,8 @@ export default function CommunicationsPage() {
   const [channel, setChannel] = useState<ComChannel>('email');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [draftIntent, setDraftIntent] = useState('');
+  const [drafting, setDrafting] = useState(false);
 
   const canUseModule = Boolean(user?.institutionId);
   const canSend =
@@ -178,6 +181,44 @@ export default function CommunicationsPage() {
                   onChange={(e) => setBody(e.target.value)}
                   required
                 />
+              </div>
+              <div className="space-y-2 md:col-span-2 rounded-lg border border-dashed border-slate-200 p-3">
+                <Label htmlFor="ai-intent">{t('aiDraft.intent')}</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="ai-intent"
+                    value={draftIntent}
+                    onChange={(e) => setDraftIntent(e.target.value)}
+                    placeholder={t('aiDraft.placeholder')}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={drafting || draftIntent.trim().length < 3}
+                    onClick={async () => {
+                      setDrafting(true);
+                      try {
+                        const draft = await draftCommunication({ intent: draftIntent.trim() });
+                        setSubject(draft.subject);
+                        setBody(draft.body);
+                        toast({ title: t('aiDraft.doneTitle'), description: t('aiDraft.doneBody') });
+                      } catch (e) {
+                        toast({
+                          title: t('aiDraft.errorTitle'),
+                          description: e instanceof ApiError ? e.message : t('networkError'),
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setDrafting(false);
+                      }
+                    }}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {drafting ? t('aiDraft.loading') : t('aiDraft.cta')}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">{t('aiDraft.hint')}</p>
               </div>
               <div className="md:col-span-2">
                 <Button type="submit" disabled={sending} className="bg-[#1D70D8] hover:bg-[#1a63c2]">
