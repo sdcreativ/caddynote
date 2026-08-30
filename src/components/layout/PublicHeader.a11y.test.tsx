@@ -33,7 +33,7 @@ describe('PublicHeader (UX-004)', () => {
     expect(menuButton.tagName).toBe('BUTTON'); // focusable/activable au clavier nativement
   });
 
-  it('expose Se connecter hors menu sur mobile', () => {
+  it('expose la connexion via une icône nommée (hors menu)', () => {
     const { getAllByRole } = render(
       <MemoryRouter>
         <PublicHeader />
@@ -42,6 +42,8 @@ describe('PublicHeader (UX-004)', () => {
     const loginLinks = getAllByRole('link', { name: 'Se connecter' });
     expect(loginLinks.length).toBeGreaterThanOrEqual(1);
     expect(loginLinks[0]).toHaveAttribute('href', '/sign');
+    // Icône seule dans le chrome ; le libellé reste le nom accessible.
+    expect(loginLinks[0].querySelector('svg')).toBeTruthy();
   });
 });
 

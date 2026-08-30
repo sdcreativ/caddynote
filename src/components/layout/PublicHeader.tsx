@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { ArrowRight, MenuIcon } from 'lucide-react';
+import { ArrowRight, MenuIcon, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
 import { BRAND } from '@/lib/brand';
@@ -171,16 +171,18 @@ export function PublicHeader() {
           <div className="flex items-center gap-2 sm:gap-3">
             <NavLink
               to="/sign"
+              aria-label={t('auth.login')}
+              title={t('auth.login')}
               className={({ isActive }) =>
                 cn(
-                  'inline-flex h-10 items-center rounded-full px-3 text-sm font-semibold transition sm:px-3.5',
+                  'inline-flex h-10 w-10 items-center justify-center rounded-full border transition',
                   isActive
-                    ? 'bg-slate-100 text-[#0B1F3A]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-[#0B1F3A]'
+                    ? 'border-slate-300 bg-slate-100 text-[#0B1F3A]'
+                    : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-[#0B1F3A]'
                 )
               }
             >
-              {t('auth.login')}
+              <UserRound className="h-5 w-5" aria-hidden />
             </NavLink>
             <Button
               asChild
