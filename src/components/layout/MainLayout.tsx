@@ -85,7 +85,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   }
 
   const shell = (
-    <div className="relative flex h-screen bg-[#F5F7FB]">
+    <div className="relative flex h-screen max-w-[100vw] overflow-x-hidden bg-[#F5F7FB]">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -96,7 +96,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <StrkSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
-      <div className="flex min-h-screen flex-1 flex-col transition-all duration-300 lg:ml-[272px]">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden transition-all duration-300 lg:ml-[272px]">
         <div className="print-hidden">
           <StrkNavbar onToggleSidebar={toggleSidebar} />
           <OfflineBanner />
@@ -106,11 +106,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           id="main-content"
           tabIndex={-1}
           className={cn(
-            'min-h-[calc(100vh-64px)] flex-1 px-4 pt-6 sm:px-6 md:px-8 lg:px-10',
+            'min-h-[calc(100vh-64px)] min-w-0 flex-1 overflow-x-hidden px-4 pt-6 sm:px-6 md:px-8 lg:px-10',
             hasMobileBottomNav ? 'pb-28 lg:pb-10' : 'pb-10'
           )}
         >
-          <div className="mx-auto w-full max-w-[1400px]">
+          <div className="mx-auto w-full min-w-0 max-w-[1400px]">
             {mfaRecommended ? (
               <MfaSecurityBanner
                 graceUntil={mfaGraceUntil}

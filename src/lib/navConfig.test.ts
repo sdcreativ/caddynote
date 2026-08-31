@@ -121,7 +121,28 @@ describe('navConfig (NFR-009)', () => {
     expect(mobileBottomNavForRole('school_admin')).not.toBeNull();
     expect(mobileBottomNavForRole('secretary')).not.toBeNull();
     expect(mobileBottomNavForRole('supervisor')).not.toBeNull();
-    expect(mobileBottomNavForRole('accountant')).toBeNull();
+    expect(mobileBottomNavForRole('accountant')).not.toBeNull();
+    expect(mobileBottomNavForRole('group_owner')).not.toBeNull();
+  });
+
+  it('Comptable : barre du bas = Accueil · Finances · Élèves · Documents · Plus', () => {
+    const items = mobileBottomNavForRole('accountant');
+    expect(items).toHaveLength(5);
+    expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
+    expect(items![1]).toMatchObject({ kind: 'link', href: '/finance' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/students' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/documents' });
+    expect(items![4]).toMatchObject({ kind: 'more' });
+  });
+
+  it('Groupe scolaire : barre du bas = Accueil · Établissements · Messages · Support · Plus', () => {
+    const items = mobileBottomNavForRole('group_owner');
+    expect(items).toHaveLength(5);
+    expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
+    expect(items![1]).toMatchObject({ kind: 'link', href: '/institutions' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/support' });
+    expect(items![4]).toMatchObject({ kind: 'more' });
   });
 
   it('Équipe CaddyNote : barre du bas = Accueil · Établissements · Console · Support · Plus', () => {

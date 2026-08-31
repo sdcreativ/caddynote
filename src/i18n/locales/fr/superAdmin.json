@@ -1,6 +1,12 @@
 {
   "navAria": "Navigation ops plateforme",
   "logoAria": "CaddyNote — Super Admin",
+  "openMenu": "Ouvrir le menu",
+  "closeMenu": "Fermer le menu",
+  "bottomNav": {
+    "label": "Navigation ops rapide",
+    "more": "Plus"
+  },
   "spaces": "Espaces",
   "hereLabel": "Vous êtes ici",
   "console": "Ops plateforme",

@@ -243,7 +243,7 @@ export const QuickAttendance = ({
         <CardDescription>{t('quick.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="text-center">
             <div className="text-lg font-bold text-green-600">{statusCounts.present}</div>
             <div className="text-xs text-muted-foreground">{t('quick.present')}</div>
@@ -262,16 +262,16 @@ export const QuickAttendance = ({
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button type="button" onClick={() => markAll('present')} variant="outline" size="sm" className="flex-1">
-            <CheckCircle className="h-4 w-4 mr-1" />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="button" onClick={() => markAll('present')} variant="outline" size="sm" className="w-full flex-1">
+            <CheckCircle className="mr-1 h-4 w-4" />
             {t('quick.allPresent')}
           </Button>
-          <Button type="button" onClick={() => markAll('absent')} variant="outline" size="sm" className="flex-1">
-            <XCircle className="h-4 w-4 mr-1" />
+          <Button type="button" onClick={() => markAll('absent')} variant="outline" size="sm" className="w-full flex-1">
+            <XCircle className="mr-1 h-4 w-4" />
             {t('quick.allAbsent')}
           </Button>
-          <Button type="button" onClick={() => setAttendanceData({})} variant="outline" size="sm" className="flex-1">
+          <Button type="button" onClick={() => setAttendanceData({})} variant="outline" size="sm" className="w-full flex-1">
             {tc('actions.reset')}
           </Button>
         </div>

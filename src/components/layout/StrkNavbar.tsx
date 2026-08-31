@@ -132,8 +132,8 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
   ];
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur">
-      <div className="relative flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="relative flex h-16 min-w-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
         <div className="z-10 flex shrink-0 items-center gap-3">
           <Button
             size="icon"
@@ -168,7 +168,7 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
           )}
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center px-16 sm:px-24 lg:px-32">
+        <div className="pointer-events-none absolute inset-x-0 hidden justify-center px-24 md:flex lg:px-32">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
@@ -176,13 +176,22 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
           >
             <Search className="h-4 w-4 shrink-0 text-slate-400" />
             <span className="truncate">{t('searchPlaceholder')}</span>
-            <kbd className="ml-auto hidden shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 sm:inline-block">
+            <kbd className="ml-auto hidden shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 lg:inline-block">
               ⌘K
             </kbd>
           </button>
         </div>
 
         <div className="z-10 ml-auto flex items-center gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-slate-600 md:hidden"
+            aria-label={t('searchPlaceholder')}
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

@@ -290,17 +290,18 @@ const MessagesPage = () => {
         </Dialog>
       </div>
 
-      <div className="flex gap-6">
-        {/* Liste des messages */}
-        <div className="flex-1 space-y-4">
-          {/* Onglets et recherche */}
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-1 rounded-lg bg-muted p-1">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:gap-6">
+        {/* Liste — masquée sur mobile quand un détail est ouvert */}
+        <div
+          className={`min-w-0 flex-1 space-y-4 ${selectedMessage ? 'hidden lg:block' : 'block'}`}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full space-x-1 overflow-x-auto rounded-lg bg-muted p-1 sm:w-auto">
               <Button
                 variant={activeTab === 'received' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('received')}
-                className="relative"
+                className="relative shrink-0"
               >
                 <Mail className="mr-2 h-4 w-4" />
                 {t('received')}
@@ -314,27 +315,27 @@ const MessagesPage = () => {
                 variant={activeTab === 'sent' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('sent')}
+                className="shrink-0"
               >
                 <Send className="mr-2 h-4 w-4" />
                 {t('sent')}
               </Button>
             </div>
-            <div className="relative">
+            <div className="relative w-full min-w-0 sm:max-w-xs">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 w-64"
+                className="w-full pl-8"
               />
             </div>
           </div>
 
-          {/* Messages */}
           <div className="space-y-2">
             {filteredMessages.map((message) => (
-              <Card 
-                key={message.id} 
+              <Card
+                key={message.id}
                 className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                   selectedMessage?.id === message.id ? 'ring-2 ring-primary' : ''
                 } ${
@@ -348,33 +349,37 @@ const MessagesPage = () => {
                 }}
               >
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center space-x-3">
+                      <Avatar className="h-8 w-8 shrink-0">
                         <AvatarFallback>
                           {activeTab === 'received' ? 'E' : 'M'}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${!message.read_at && activeTab === 'received' ? 'font-bold' : ''}`}>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`truncate font-medium ${
+                              !message.read_at && activeTab === 'received' ? 'font-bold' : ''
+                            }`}
+                          >
                             {message.subject}
                           </span>
                           <Badge variant="outline" className={getPriorityColor(message.priority)}>
                             {message.priority}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
+                        <p className="line-clamp-1 text-sm text-muted-foreground">
                           {message.content}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <p className="text-xs text-muted-foreground">
                         {formatDate(message.created_at)}
                       </p>
                       {!message.read_at && activeTab === 'received' && (
-                        <div className="w-2 h-2 bg-primary rounded-full mt-1 ml-auto"></div>
+                        <div className="ml-auto mt-1 h-2 w-2 rounded-full bg-primary" />
                       )}
                     </div>
                   </div>
@@ -384,14 +389,15 @@ const MessagesPage = () => {
 
             {filteredMessages.length === 0 && (
               <Card>
-                <CardContent className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">{t('emptyTitle')}</h3>
+                <CardContent className="py-8 text-center">
+                  <MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-medium">{t('emptyTitle')}</h3>
                   <p className="text-muted-foreground">
-                    {searchTerm 
+                    {searchTerm
                       ? t('emptySearch')
-                      : activeTab === 'received' ? t('emptyReceived') : t('emptySent')
-                    }
+                      : activeTab === 'received'
+                        ? t('emptyReceived')
+                        : t('emptySent')}
                   </p>
                 </CardContent>
               </Card>
@@ -399,17 +405,29 @@ const MessagesPage = () => {
           </div>
         </div>
 
-        {/* Détail du message */}
+        {/* Détail — plein écran sur mobile, colonne fixe ≥ lg */}
         {selectedMessage && (
-          <Card className="w-96">
+          <Card className="w-full min-w-0 shrink-0 lg:w-96 lg:max-w-[24rem]">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{selectedMessage.subject}</CardTitle>
-                <Button variant="ghost" size="sm">
-                  <Reply className="h-4 w-4" />
-                </Button>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="min-w-0 text-lg leading-snug">{selectedMessage.subject}</CardTitle>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="ghost" size="icon" aria-label="Répondre" className="hidden sm:inline-flex">
+                    <Reply className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    aria-label={tc('actions.close')}
+                    onClick={() => setSelectedMessage(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                 <span>{formatDate(selectedMessage.created_at)}</span>
                 <Badge variant="outline" className={getPriorityColor(selectedMessage.priority)}>
                   {selectedMessage.priority}
@@ -422,9 +440,7 @@ const MessagesPage = () => {
                   <p className="whitespace-pre-wrap">{selectedMessage.content}</p>
                 </div>
                 {selectedMessage.message_type !== 'general' && (
-                  <Badge variant="secondary">
-                    {selectedMessage.message_type}
-                  </Badge>
+                  <Badge variant="secondary">{selectedMessage.message_type}</Badge>
                 )}
                 {attachmentKeys(selectedMessage).length > 0 ? (
                   <ul className="space-y-2 border-t pt-3">

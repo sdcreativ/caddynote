@@ -237,20 +237,40 @@ const SettingsPage = () => {
       )}
 
       <Tabs defaultValue={availableTabs[0]} className="space-y-4">
-        <TabsList className={`grid w-full ${
-          availableTabs.length === 1 ? 'grid-cols-1' :
-          availableTabs.length === 2 ? 'grid-cols-2' :
-          availableTabs.length === 3 ? 'grid-cols-3' :
-          availableTabs.length === 4 ? 'grid-cols-4' :
-          availableTabs.length === 5 ? 'grid-cols-5' : 'grid-cols-6'
-        }`}>
-          {availableTabs.includes('system') && <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>}
-          {availableTabs.includes('notifications') && <TabsTrigger value="notifications">{t('tabs.notifications')}</TabsTrigger>}
-          {availableTabs.includes('attendance') && <TabsTrigger value="attendance">{t('tabs.attendance')}</TabsTrigger>}
-          {availableTabs.includes('grading') && <TabsTrigger value="grading">{t('tabs.grading')}</TabsTrigger>}
-          {availableTabs.includes('security') && <TabsTrigger value="security">{t('tabs.security')}</TabsTrigger>}
-          {availableTabs.includes('saas') && <TabsTrigger value="saas">{t('tabs.saas')}</TabsTrigger>}
-        </TabsList>
+        <div className="w-full min-w-0 overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
+            {availableTabs.includes('system') && (
+              <TabsTrigger value="system" className="shrink-0">
+                {t('tabs.system')}
+              </TabsTrigger>
+            )}
+            {availableTabs.includes('notifications') && (
+              <TabsTrigger value="notifications" className="shrink-0">
+                {t('tabs.notifications')}
+              </TabsTrigger>
+            )}
+            {availableTabs.includes('attendance') && (
+              <TabsTrigger value="attendance" className="shrink-0">
+                {t('tabs.attendance')}
+              </TabsTrigger>
+            )}
+            {availableTabs.includes('grading') && (
+              <TabsTrigger value="grading" className="shrink-0">
+                {t('tabs.grading')}
+              </TabsTrigger>
+            )}
+            {availableTabs.includes('security') && (
+              <TabsTrigger value="security" className="shrink-0">
+                {t('tabs.security')}
+              </TabsTrigger>
+            )}
+            {availableTabs.includes('saas') && (
+              <TabsTrigger value="saas" className="shrink-0">
+                {t('tabs.saas')}
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         {availableTabs.includes('system') && (
         <TabsContent value="system" className="space-y-4">

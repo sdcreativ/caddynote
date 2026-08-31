@@ -28,10 +28,22 @@ describe('MobileBottomNav (enseignant)', () => {
   it('ne rend rien pour un rôle sans barre du bas', () => {
     const { container } = render(
       <MemoryRouter>
-        <MobileBottomNav role="accountant" onOpenMore={vi.fn()} />
+        <MobileBottomNav role="unknown_role" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('Comptable : Accueil · Finances · Élèves · Documents · Plus', () => {
+    render(
+      <MemoryRouter initialEntries={['/finance']}>
+        <MobileBottomNav role="accountant" onOpenMore={vi.fn()} />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: 'Finances' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Élèves' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Documents' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
   it('Direction : Accueil · Élèves · Présences · Finances · Plus', () => {

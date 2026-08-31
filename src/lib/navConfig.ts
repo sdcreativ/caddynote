@@ -239,6 +239,24 @@ export function mobileBottomNavForRole(
         { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
+    case 'accountant':
+      // Accueil · Finances · Élèves · Documents · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        { kind: 'link', titleKey: 'items.finance', href: '/finance', icon: Receipt },
+        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        { kind: 'link', titleKey: 'items.documents', href: '/documents', icon: FileText },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
+    case 'group_owner':
+      // Accueil · Établissements · Messages · Support · Plus
+      return [
+        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
+        { kind: 'link', titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
+        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'items.support', href: '/support', icon: LifeBuoy },
+        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+      ];
     default:
       return null;
   }

@@ -84,7 +84,7 @@ export function AttendanceHistory({ classId, className, students, refreshKey = 0
           <CardDescription>{t('page.historyForClass', { className })}</CardDescription>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
             <p className="text-xs font-medium text-slate-500">{t('history.statAbsences')}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{absentCount}</p>

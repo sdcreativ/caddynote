@@ -169,24 +169,26 @@ export default function ExercisesPage() {
 
       {/* Contenu principal */}
       <Tabs defaultValue="assigned" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="assigned" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            {t("tabTodo", { count: groupedExercises.assigned.length })}
-          </TabsTrigger>
-          <TabsTrigger value="overdue" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            {t("tabOverdue", { count: groupedExercises.overdue.length })}
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            {t("tabCompleted", { count: groupedExercises.completed.length })}
-          </TabsTrigger>
-          <TabsTrigger value="practice" className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            {t("tabPractice", { count: groupedExercises.practice.length })}
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full min-w-0 overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
+            <TabsTrigger value="assigned" className="shrink-0 gap-2">
+              <Target className="hidden h-4 w-4 sm:inline" />
+              {t("tabTodo", { count: groupedExercises.assigned.length })}
+            </TabsTrigger>
+            <TabsTrigger value="overdue" className="shrink-0 gap-2">
+              <Clock className="hidden h-4 w-4 sm:inline" />
+              {t("tabOverdue", { count: groupedExercises.overdue.length })}
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="shrink-0 gap-2">
+              <Trophy className="hidden h-4 w-4 sm:inline" />
+              {t("tabCompleted", { count: groupedExercises.completed.length })}
+            </TabsTrigger>
+            <TabsTrigger value="practice" className="shrink-0 gap-2">
+              <Star className="hidden h-4 w-4 sm:inline" />
+              {t("tabPractice", { count: groupedExercises.practice.length })}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="assigned" className="space-y-4">
           {groupedExercises.assigned.length > 0 ? (

@@ -319,7 +319,7 @@ const CalendarPage = () => {
               onValueChange={setSelectedChildId}
               disabled={childrenLoading}
             >
-              <SelectTrigger className="w-[220px]" aria-label={t('childSelect')}>
+              <SelectTrigger className="w-full min-w-0 sm:w-[220px]" aria-label={t('childSelect')}>
                 <SelectValue placeholder={t('childSelect')} />
               </SelectTrigger>
               <SelectContent>
@@ -354,7 +354,7 @@ const CalendarPage = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl">
+            <CardTitle className="truncate text-xl sm:text-2xl">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </CardTitle>
             <div className="flex gap-2">
@@ -379,11 +379,67 @@ const CalendarPage = () => {
         </CardHeader>
         <CardContent>
           {showInitialLoading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">{t('loading')}</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">{t('loading')}</p>
           ) : null}
-          <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
+
+          {/* Mobile : agenda du mois (évite grille 7 cols trop dense) */}
+          <div className="space-y-3 md:hidden">
+            {days
+              .filter((day) => day.isCurrentMonth && day.events.length > 0)
+              .map((day) => (
+                <div
+                  key={formatLocalYmd(day.date)}
+                  className={`rounded-xl border border-slate-200/80 p-3 ${
+                    day.date.toDateString() === today.toDateString() ? 'border-blue-200 bg-blue-50/60' : 'bg-white'
+                  }`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {day.date.toLocaleDateString('fr-FR', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </p>
+                    {canManageEvents ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => openEventDialog(day.date)}
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        {t('newEvent')}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <ul className="space-y-2">
+                    {day.events.map((event) => (
+                      <li key={event.id}>
+                        <button
+                          type="button"
+                          className={`flex w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left text-sm text-white ${getEventTypeColor(event.type)}`}
+                          onClick={(e) => openDetails(event, e)}
+                        >
+                          <span className="shrink-0 tabular-nums opacity-90">{event.time.split('-')[0]}</span>
+                          <span className="min-w-0 truncate font-medium">{event.title}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            {!showInitialLoading &&
+            days.filter((day) => day.isCurrentMonth && day.events.length > 0).length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">{t('emptyUpcoming')}</p>
+            ) : null}
+          </div>
+
+          {/* Desktop / tablette : grille mensuelle */}
+          <div className="hidden grid-cols-7 gap-px overflow-hidden rounded-lg bg-gray-200 md:grid">
             {daysOfWeekLabels.map((day) => (
-              <div key={day} className="bg-gray-50 p-3 text-center text-sm font-medium text-gray-700">
+              <div key={day} className="bg-gray-50 p-2 text-center text-sm font-medium text-gray-700 lg:p-3">
                 {day}
               </div>
             ))}
@@ -393,17 +449,17 @@ const CalendarPage = () => {
               return (
                 <div
                   key={index}
-                  className={`bg-white p-2 min-h-[120px] border-r border-b border-gray-100 ${
-                    !day.isCurrentMonth ? 'text-gray-400 bg-gray-50' : ''
-                  } ${isToday ? 'bg-blue-50 border-blue-200' : ''} ${
+                  className={`min-h-[88px] border-b border-r border-gray-100 bg-white p-1.5 lg:min-h-[120px] lg:p-2 ${
+                    !day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''
+                  } ${isToday ? 'border-blue-200 bg-blue-50' : ''} ${
                     day.isCurrentMonth && canManageEvents ? 'cursor-pointer hover:bg-gray-50' : ''
                   }`}
                   onClick={() => day.isCurrentMonth && canManageEvents && openEventDialog(day.date)}
                 >
                   <div
-                    className={`text-sm font-medium mb-1 ${
+                    className={`mb-1 text-sm font-medium ${
                       isToday
-                        ? 'text-blue-600 bg-blue-100 rounded-full w-6 h-6 flex items-center justify-center'
+                        ? 'flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600'
                         : ''
                     }`}
                   >
@@ -414,7 +470,7 @@ const CalendarPage = () => {
                       <button
                         key={event.id}
                         type="button"
-                        className={`w-full text-left text-xs p-1 rounded text-white truncate ${getEventTypeColor(event.type)}`}
+                        className={`w-full truncate rounded p-1 text-left text-xs text-white ${getEventTypeColor(event.type)}`}
                         title={t('eventTitle', { title: event.title, time: event.time })}
                         onClick={(e) => openDetails(event, e)}
                       >
@@ -422,7 +478,7 @@ const CalendarPage = () => {
                       </button>
                     ))}
                     {day.events.length > 3 && (
-                      <div className="text-xs text-gray-500 font-medium">
+                      <div className="text-xs font-medium text-gray-500">
                         {t('moreEvents', { count: day.events.length - 3 })}
                       </div>
                     )}

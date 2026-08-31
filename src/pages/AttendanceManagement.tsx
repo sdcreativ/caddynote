@@ -162,20 +162,22 @@ const AttendanceManagement = () => {
       </Card>
 
       <Tabs defaultValue="quick" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="quick" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            {t('page.tabQuick')}
-          </TabsTrigger>
-          <TabsTrigger value="scanner" className="flex items-center gap-2">
-            <Scan className="h-4 w-4" />
-            {t('page.tabScanner')}
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            {t('page.tabHistory')}
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full min-w-0 overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto min-w-max w-max justify-start sm:grid sm:w-full sm:min-w-0 sm:grid-cols-3">
+            <TabsTrigger value="quick" className="shrink-0 gap-2">
+              <Users className="hidden h-4 w-4 sm:inline" />
+              {t('page.tabQuick')}
+            </TabsTrigger>
+            <TabsTrigger value="scanner" className="shrink-0 gap-2">
+              <Scan className="hidden h-4 w-4 sm:inline" />
+              {t('page.tabScanner')}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="shrink-0 gap-2">
+              <Calendar className="hidden h-4 w-4 sm:inline" />
+              {t('page.tabHistory')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="quick" className="space-y-6">
           {selectedClass ? (

@@ -32,7 +32,12 @@ describe('SuperAdminSidebar a11y (§7)', () => {
     () => {
       const { getByLabelText, getByRole } = render(
         <MemoryRouter>
-          <SuperAdminSidebar activeSection="overview" onSectionChange={() => undefined} />
+          <SuperAdminSidebar
+            activeSection="overview"
+            onSectionChange={() => undefined}
+            isOpen
+            onClose={() => undefined}
+          />
         </MemoryRouter>
       );
       expect(getByLabelText('Navigation ops plateforme')).toBeInTheDocument();

@@ -296,15 +296,31 @@ const FinancePage = () => {
       </div>
 
       <Tabs defaultValue="invoices">
-        <TabsList>
-          <TabsTrigger value="invoices">{t('tabs.invoices')}</TabsTrigger>
-          <TabsTrigger value="lot54">{t('tabs.lot54')}</TabsTrigger>
-          <TabsTrigger value="plans">{t('tabs.plans')}</TabsTrigger>
-          <TabsTrigger value="schedules">{t('tabs.schedules')}</TabsTrigger>
-          <TabsTrigger value="balances">{t('tabs.balances')}</TabsTrigger>
-          <TabsTrigger value="fees">{t('tabs.fees')}</TabsTrigger>
-          <TabsTrigger value="bank">{t('tabs.bank')}</TabsTrigger>
-        </TabsList>
+        <div className="w-full min-w-0 overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
+            <TabsTrigger value="invoices" className="shrink-0">
+              {t('tabs.invoices')}
+            </TabsTrigger>
+            <TabsTrigger value="lot54" className="shrink-0">
+              {t('tabs.lot54')}
+            </TabsTrigger>
+            <TabsTrigger value="plans" className="shrink-0">
+              {t('tabs.plans')}
+            </TabsTrigger>
+            <TabsTrigger value="schedules" className="shrink-0">
+              {t('tabs.schedules')}
+            </TabsTrigger>
+            <TabsTrigger value="balances" className="shrink-0">
+              {t('tabs.balances')}
+            </TabsTrigger>
+            <TabsTrigger value="fees" className="shrink-0">
+              {t('tabs.fees')}
+            </TabsTrigger>
+            <TabsTrigger value="bank" className="shrink-0">
+              {t('tabs.bank')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="invoices" className="space-y-4">
           <div className="flex justify-end">
@@ -792,7 +808,7 @@ const FinancePage = () => {
               <Input value={planLabel} onChange={(e) => setPlanLabel(e.target.value)} placeholder={t('plans.labelPlaceholder')} />
             </div>
             {planInstallments.map((inst, idx) => (
-              <div key={idx} className="grid grid-cols-3 gap-2">
+              <div key={idx} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Input
                   type="date"
                   value={inst.dueDate}

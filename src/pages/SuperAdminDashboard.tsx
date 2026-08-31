@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Menu } from 'lucide-react';
 import { useStrkAuth } from "@/hooks/useStrkAuth";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import SuperAdminSidebar from "@/components/admin/SuperAdminSidebar";
+import SuperAdminMobileBottomNav from "@/components/admin/SuperAdminMobileBottomNav";
 import SuperAdminOverview from "@/components/admin/SuperAdminOverview";
 import SuperAdminUsers from "@/components/admin/SuperAdminUsers";
 import SuperAdminTeachers from "@/components/admin/SuperAdminTeachers";
@@ -27,6 +29,8 @@ import { CreateClassDialog } from '@/components/admin/CreateClassDialog';
 import { SuperAdminNotificationsBell } from '@/components/admin/SuperAdminNotificationsBell';
 import { RealtimeNotifications } from '@/components/notifications/RealtimeNotifications';
 import { Toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { ForceChangePasswordDialog } from '@/components/auth/ForceChangePasswordDialog';
 import { MfaSecurityBanner } from '@/components/auth/MfaSecurityBanner';
@@ -85,8 +89,24 @@ const SuperAdminDashboard = () => {
   const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
   const [demoRequestCount, setDemoRequestCount] = useState(0);
   const [mfaDialogOpen, setMfaDialogOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const mfaBlocking = mfaSetupRequired && !mustChangePassword;
   const mfaDialogVisible = mfaBlocking || mfaDialogOpen;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 1024);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, [activeSection]);
 
   useEffect(() => {
     if (!sectionParam) return;
@@ -229,25 +249,40 @@ const SuperAdminDashboard = () => {
         onSectionChange={setActiveSection}
         onCreateClass={() => setShowCreateClassDialog(true)}
         demoRequestCount={demoRequestCount}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      <main className="min-h-screen lg:ml-[272px]">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-[#F5F7FB]/95 px-6 py-3 backdrop-blur sm:px-8">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">{t('console')}</p>
-            {demoRequestCount > 0 ? (
-              <p className="truncate text-xs font-medium text-amber-700">
-                {t('notificationsBell.demoSummary', { count: demoRequestCount })}
-              </p>
-            ) : (
-              <p className="truncate text-xs text-slate-500">{t('consoleHint')}</p>
-            )}
+      <main className={cn('min-h-screen lg:ml-[272px]', 'pb-28 lg:pb-0')}>
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-[#F5F7FB]/95 px-4 py-3 backdrop-blur sm:px-8">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 lg:hidden"
+              onClick={() => setSidebarOpen((open) => !open)}
+              aria-label={t('openMenu')}
+              aria-expanded={sidebarOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{t('console')}</p>
+              {demoRequestCount > 0 ? (
+                <p className="truncate text-xs font-medium text-amber-700">
+                  {t('notificationsBell.demoSummary', { count: demoRequestCount })}
+                </p>
+              ) : (
+                <p className="truncate text-xs text-slate-500">{t('consoleHint')}</p>
+              )}
+            </div>
           </div>
           <SuperAdminNotificationsBell
             onOpenSupportOps={() => setActiveSection('support-ops')}
             onDemoCountChange={setDemoRequestCount}
           />
         </header>
-        <div className="mx-auto w-full max-w-[1400px] p-6 sm:p-8">
+        <div className="mx-auto w-full max-w-[1400px] p-4 sm:p-8">
           {mfaRecommended ? (
             <MfaSecurityBanner
               graceUntil={mfaGraceUntil}
@@ -258,6 +293,13 @@ const SuperAdminDashboard = () => {
           {renderContent()}
         </div>
       </main>
+
+      <SuperAdminMobileBottomNav
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onOpenMore={() => setSidebarOpen((open) => !open)}
+        demoRequestCount={demoRequestCount}
+      />
 
       <ForceChangePasswordDialog
         open={mustChangePassword}
