@@ -83,12 +83,13 @@ export function useInstitutionBrand(): BrandState & { showInstitutionBrand: bool
 
     const onUpdated = (event: Event) => {
       const detail = (event as CustomEvent<{ id?: string; name?: string; logo?: string | null }>).detail;
-      if (!detail?.id) return;
+      const updatedId = detail?.id;
+      if (!updatedId) return;
       setState((prev) => {
-        if (prev.institutionId && detail.id !== prev.institutionId) return prev;
-        if (!prev.institutionId && detail.id !== userInstitutionId) return prev;
+        if (prev.institutionId && updatedId !== prev.institutionId) return prev;
+        if (!prev.institutionId && updatedId !== userInstitutionId) return prev;
         return {
-          institutionId: detail.id,
+          institutionId: updatedId,
           institutionName: detail.name || prev.institutionName,
           institutionLogo: detail.logo !== undefined ? detail.logo : prev.institutionLogo,
         };

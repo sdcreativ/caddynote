@@ -8,6 +8,7 @@ import { brandTaglineForRole } from '@/lib/brand';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useInstitutionBrand } from '@/hooks/useInstitutionBrand';
+import { useResolvedStoredUrl } from '@/hooks/useResolvedStoredUrl';
 import { useEstablishmentDashboardContext } from '@/hooks/useEstablishmentDashboardContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -98,6 +99,7 @@ function RoleNavBody({
   const location = useLocation();
   const { user, logout } = useStrkAuth();
   const { t } = useTranslation('nav');
+  const avatarUrl = useResolvedStoredUrl(user?.profileImage);
   const sections = filterNavSectionsForUser(navSectionsForRole(user?.role), user?.institutionId);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -235,8 +237,12 @@ function RoleNavBody({
         )}
 
         <div className="flex items-center gap-3 rounded-2xl px-1 py-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
-            {initials(user?.name || 'U')}
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-xs font-semibold text-white">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-10 w-10 object-cover" />
+            ) : (
+              initials(user?.name || 'U')
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>

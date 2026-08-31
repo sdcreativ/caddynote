@@ -8,6 +8,7 @@ import { InstitutionBrand } from '@/components/brand/InstitutionBrand';
 import { useTranslation } from 'react-i18next';
 import { isSchoolShellRole } from '@/lib/navConfig';
 import { useInstitutionBrand } from '@/hooks/useInstitutionBrand';
+import { useResolvedStoredUrl } from '@/hooks/useResolvedStoredUrl';
 import {
   Bell,
   LogOut,
@@ -56,6 +57,7 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const { institutionName, institutionLogo, showInstitutionBrand } = useInstitutionBrand();
+  const avatarUrl = useResolvedStoredUrl(user?.profileImage);
   const isSchoolShell = isSchoolShellRole(user?.role);
 
   useEffect(() => {
@@ -201,8 +203,8 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
                   aria-label={t('accountMenu')}
                 >
                   <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-xs font-semibold text-white">
-                    {user.profileImage ? (
-                      <img src={user.profileImage} alt="" className="h-9 w-9 object-cover" />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="h-9 w-9 object-cover" />
                     ) : (
                       initials(user.name ?? user.email ?? '?')
                     )}
