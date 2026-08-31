@@ -12,6 +12,7 @@ import { PublicShell } from '@/components/public/PublicShell';
 import { useToast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/apiClient';
 import { BRAND } from '@/lib/brand';
+import { formatCentsAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import {
   attachAdmissionPacketItem,
@@ -219,8 +220,11 @@ function AdmissionConfirmation({
       {feeDue && (
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-700">
-            <strong>{t('confirm.feeLabel')}</strong> {(application.applicationFeeCents! / 100).toFixed(2)}{' '}
-            {application.applicationFeeCurrency ?? 'XOF'}
+            <strong>{t('confirm.feeLabel')}</strong>{' '}
+            {formatCentsAmount(
+              application.applicationFeeCents!,
+              application.applicationFeeCurrency ?? 'XOF'
+            )}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button

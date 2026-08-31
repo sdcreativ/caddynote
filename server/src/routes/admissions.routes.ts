@@ -712,17 +712,24 @@ admissionsPublicRouter.post('/status/:token/pay/stripe', submitLimiter, async (r
   if (application.applicationFeeCents == null || application.applicationFeeCents <= 0) {
     return res.status(400).json({ error: 'Aucun frais de dossier n’a été fixé pour ce dossier' });
   }
+  const currency = (application.applicationFeeCurrency || 'XOF').toLowerCase();
+  // XOF/XAF : monnaies sans décimales Stripe — unit_amount = francs, alors que
+  // applicationFeeCents est stocké en « centimes » (×100) comme pour CinetPay.
+  const zeroDecimal = currency === 'xof' || currency === 'xaf';
+  const unitAmount = zeroDecimal
+    ? Math.round(application.applicationFeeCents / 100)
+    : application.applicationFeeCents;
   const appUrl = process.env.APP_URL || 'http://localhost:8080';
   const session = await getStripeClient().checkout.sessions.create({
     mode: 'payment',
     line_items: [
       {
         price_data: {
-          currency: (application.applicationFeeCurrency || 'XOF').toLowerCase(),
+          currency,
           product_data: {
             name: `Frais de dossier — ${application.studentFirstName} ${application.studentLastName}`,
           },
-          unit_amount: application.applicationFeeCents,
+          unit_amount: unitAmount,
         },
         quantity: 1,
       },

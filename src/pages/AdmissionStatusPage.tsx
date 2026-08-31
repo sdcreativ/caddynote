@@ -11,6 +11,7 @@ import {
   initiateAdmissionFeeStripe,
   type AdmissionApplication,
 } from '@/services/strkAdmissionService';
+import { formatCentsAmount } from '@/lib/money';
 import { useToast } from '@/hooks/use-toast';
 
 const AdmissionStatusPage = () => {
@@ -105,7 +106,11 @@ const AdmissionStatusPage = () => {
               {application.applicationFeeCents != null && (
                 <div className="space-y-2 rounded-md border border-slate-200 p-3">
                   <p>
-                    <strong>{t('status.feeLabel')}</strong> {(application.applicationFeeCents / 100).toFixed(2)}{' '}
+                    <strong>{t('status.feeLabel')}</strong>{' '}
+                    {formatCentsAmount(
+                      application.applicationFeeCents,
+                      application.applicationFeeCurrency ?? 'XOF'
+                    )}{' '}
                     {application.applicationFeePaid ? t('status.settled') : t('status.pending')}
                   </p>
                   {!application.applicationFeePaid && application.applicationFeeCents > 0 && (

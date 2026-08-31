@@ -21,6 +21,7 @@ import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import { useToast } from '@/hooks/use-toast';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { ApiError } from '@/lib/apiClient';
+import { formatCentsAmount, majorToCents, parseMajorAmountInput } from '@/lib/money';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   confirmAdmissionFee,
@@ -261,23 +262,26 @@ const AdmissionsAdminPage = () => {
       fields: [
         {
           name: 'amount',
-          label: t('admin.feePrompt'),
-          defaultValue: '5000',
-          type: 'number',
+          label: t('admin.feePromptLabel'),
+          defaultValue: '12000',
+          type: 'text',
           required: true,
         },
       ],
       confirmLabel: tc('actions.confirm'),
     });
     if (!values) return;
-    const amount = Number(values.amount);
-    if (!Number.isFinite(amount) || amount < 0) {
+    const amount = parseMajorAmountInput(String(values.amount ?? ''));
+    if (amount == null) {
       toast({ title: t('admin.feeInvalid'), variant: 'destructive' });
       return;
     }
     try {
-      await setAdmissionFee(id, Math.round(amount * 100));
-      toast({ title: t('admin.feeSavedTitle'), description: t('admin.feeSavedBody', { amount }) });
+      await setAdmissionFee(id, majorToCents(amount));
+      toast({
+        title: t('admin.feeSavedTitle'),
+        description: t('admin.feeSavedBody', { amount: formatCentsAmount(majorToCents(amount), 'XOF') }),
+      });
       void load();
     } catch (error) {
       toast({
@@ -303,8 +307,8 @@ const AdmissionsAdminPage = () => {
   };
 
   return (
-    <div className="space-y-6 py-6">
-      <h1 className="text-3xl font-bold">{t('admin.title')}</h1>
+    <div className="min-w-0 space-y-6 py-4 sm:py-6">
+      <h1 className="text-2xl font-bold sm:text-3xl">{t('admin.title')}</h1>
 
       {!institutionId ? (
         <Card>
@@ -330,13 +334,19 @@ const AdmissionsAdminPage = () => {
           </CardContent>
         </Card>
       ) : (
-      <Tabs defaultValue="queue">
-        <TabsList>
-          <TabsTrigger value="queue">{t('admin.tabQueue')}</TabsTrigger>
-          <TabsTrigger value="config">{t('admin.tabConfig')}</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="queue" className="min-w-0">
+        <div className="w-full min-w-0 overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
+            <TabsTrigger value="queue" className="shrink-0">
+              {t('admin.tabQueue')}
+            </TabsTrigger>
+            <TabsTrigger value="config" className="shrink-0">
+              {t('admin.tabConfig')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="queue" className="space-y-4">
+        <TabsContent value="queue" className="min-w-0 space-y-4">
           {isPlatformAdmin && !user?.institutionId && (
             <div className="max-w-md space-y-2">
               <p className="text-sm font-medium">{t('admin.pickInstitution')}</p>
@@ -354,8 +364,8 @@ const AdmissionsAdminPage = () => {
               </Select>
             </div>
           )}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="min-w-0 rounded-xl border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-slate-500">{t('admin.filters.status')}</Label>
                 <Select value={status} onValueChange={setStatus}>
@@ -460,19 +470,21 @@ const AdmissionsAdminPage = () => {
                 const feeLabel =
                   app.applicationFeeCents != null
                     ? t('admin.feeAmount', {
-                        amount: (app.applicationFeeCents / 100).toFixed(0),
-                        currency: app.applicationFeeCurrency ?? 'XOF',
+                        amount: formatCentsAmount(
+                          app.applicationFeeCents,
+                          app.applicationFeeCurrency ?? 'XOF'
+                        ),
                       })
                     : null;
 
                 return (
                   <li key={app.id}>
                     <Card className="overflow-hidden border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                      <CardHeader className="space-y-3 pb-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <CardHeader className="space-y-3 p-4 pb-3 sm:p-6 sm:pb-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0 space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <CardTitle className="text-lg font-semibold tracking-tight text-slate-900">
+                              <CardTitle className="text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
                                 {app.studentFirstName} {app.studentLastName}
                               </CardTitle>
                               <Badge variant={statusBadgeVariant(app.status)}>{statusLabel}</Badge>
@@ -482,31 +494,43 @@ const AdmissionsAdminPage = () => {
                                 </Badge>
                               ) : null}
                             </div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
+                            <div className="flex flex-col gap-1 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
                               {app.contactEmail ? (
-                                <span className="truncate">{app.contactEmail}</span>
+                                <span className="min-w-0 break-all sm:truncate">{app.contactEmail}</span>
                               ) : null}
                               {kindLabel ? <span>{kindLabel}</span> : null}
                               {app.level ? <span>{app.level}</span> : null}
                               {app.academicYear ? <span>{app.academicYear}</span> : null}
-                              {feeLabel ? <span>{feeLabel}</span> : null}
+                              {feeLabel ? (
+                                <span className="font-medium tabular-nums text-slate-800">{feeLabel}</span>
+                              ) : null}
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                            <Button size="sm" variant="outline" onClick={() => void togglePacket(app.id)}>
+                          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full sm:w-auto"
+                              onClick={() => void togglePacket(app.id)}
+                            >
                               {openPacketId === app.id ? t('admin.hidePieces') : t('admin.showPieces')}
                             </Button>
                             {app.status !== 'enrolled' ? (
-                              <Button size="sm" onClick={() => void enroll(app.id)}>
+                              <Button size="sm" className="w-full sm:w-auto" onClick={() => void enroll(app.id)}>
                                 {t('admin.enroll')}
                               </Button>
                             ) : null}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" aria-label={t('admin.moreActions')}>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="col-span-2 w-full sm:col-auto sm:w-auto"
+                                  aria-label={t('admin.moreActions')}
+                                >
                                   <MoreHorizontal className="h-4 w-4" />
-                                  <span className="ml-1.5 hidden sm:inline">{t('admin.moreActions')}</span>
+                                  <span className="ml-1.5">{t('admin.moreActions')}</span>
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-56">
