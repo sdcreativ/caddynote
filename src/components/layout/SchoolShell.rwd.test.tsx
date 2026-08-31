@@ -87,10 +87,10 @@ describe('Shell métier mobile RWD (P0–P2)', () => {
   });
 
   it.each([
-    ['teacher', 'Présences'],
+    ['teacher', 'Appel'],
     ['school_admin', 'Élèves'],
     ['parent', 'Enfants'],
-    ['student', 'Mes notes'],
+    ['student', 'Notes'],
     ['accountant', 'Finances'],
   ] as const)('bottom nav %s expose Plus et un slot cœur', (role, heartLabel) => {
     const onOpenMore = vi.fn();

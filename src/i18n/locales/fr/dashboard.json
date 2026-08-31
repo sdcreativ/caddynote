@@ -207,6 +207,12 @@
     "stepStudents": "Inscrire des élèves (puis les affecter à une classe)",
     "stepCourses": "Créer un cours lié à un enseignant et une classe",
     "stepCall": "Faire un premier appel",
+    "continue": "Continuer",
+    "ctaTeachers": "Créer un enseignant",
+    "ctaClasses": "Créer une classe",
+    "ctaStudents": "Inscrire des élèves",
+    "ctaCourses": "Créer un cours",
+    "ctaCall": "Faire un appel",
     "nextAction": "Continuer : {{step}}"
   },
   "finance": {

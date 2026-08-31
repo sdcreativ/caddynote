@@ -108,14 +108,15 @@ export function MobilePrimaryCta({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full touch-manipulation items-center justify-center gap-3 rounded-2xl bg-blue-600',
-        'px-5 py-5 text-lg font-semibold text-white',
+        'flex w-full min-w-0 touch-manipulation items-center justify-center gap-3 rounded-2xl bg-blue-600',
+        'px-4 py-4 text-base font-semibold leading-snug text-white sm:px-5 sm:py-5 sm:text-lg',
+        'whitespace-normal break-words text-center',
         'shadow-[0_12px_28px_-12px_rgba(37,99,235,0.7)] transition hover:bg-blue-700 active:bg-blue-800',
-        '[&_svg]:h-7 [&_svg]:w-7'
+        '[&_svg]:h-6 [&_svg]:w-6 sm:[&_svg]:h-7 sm:[&_svg]:w-7'
       )}
     >
-      {icon}
-      {label}
+      <span className="shrink-0">{icon}</span>
+      <span className="min-w-0">{label}</span>
     </button>
   );
 }

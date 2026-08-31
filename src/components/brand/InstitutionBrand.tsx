@@ -10,6 +10,8 @@ type InstitutionBrandProps = {
   to?: string;
   size?: number;
   className?: string;
+  /** Masque le nom (logo / initiales seuls) — utile en navbar mobile. */
+  hideName?: boolean;
   onClick?: () => void;
   'aria-label'?: string;
 };
@@ -31,6 +33,7 @@ export function InstitutionBrand({
   to = '/dashboard',
   size = 36,
   className,
+  hideName = false,
   onClick,
   'aria-label': ariaLabel,
 }: InstitutionBrandProps) {
@@ -76,7 +79,7 @@ export function InstitutionBrand({
   }, [logoKey]);
 
   const content = (
-    <span className={cn('inline-flex min-w-0 items-center gap-2.5', className)}>
+    <span className={cn('inline-flex min-w-0 max-w-full items-center gap-2.5', className)}>
       {logoUrl ? (
         <img
           src={logoUrl}
@@ -96,16 +99,18 @@ export function InstitutionBrand({
           {initialsFromName(displayName)}
         </span>
       )}
-      <span className="min-w-0 leading-tight">
-        <span className="block truncate font-display text-[1.05rem] font-semibold tracking-tight text-[#0B1F3A]">
-          {displayName}
-        </span>
-        {tagline ? (
-          <span className="block truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            {tagline}
+      {!hideName ? (
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate font-display text-[1.05rem] font-semibold tracking-tight text-[#0B1F3A]">
+            {displayName}
           </span>
-        ) : null}
-      </span>
+          {tagline ? (
+            <span className="block truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              {tagline}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </span>
   );
 

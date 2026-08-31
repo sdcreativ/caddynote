@@ -15,9 +15,9 @@ describe('MobileBottomNav (enseignant)', () => {
 
     expect(screen.getByRole('navigation', { name: 'Navigation principale' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Présences' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cahier / cours' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cahier' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Plus' }));
     expect(onOpenMore).toHaveBeenCalledTimes(1);
@@ -46,14 +46,14 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
-  it('Direction : Accueil · Élèves · Présences · Finances · Plus', () => {
+  it('Direction : Accueil · Élèves · Appel · Finances · Plus', () => {
     render(
       <MemoryRouter initialEntries={['/students']}>
         <MobileBottomNav role="school_admin" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
     expect(screen.getByRole('button', { name: 'Élèves' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Présences' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Finances' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
@@ -79,41 +79,40 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(screen.getByRole('button', { name: 'Enfants' })).not.toHaveAttribute('aria-current');
   });
 
-  it('Élève : Accueil · Notes · Devoirs · Messages · Plus', () => {
+  it('Élève : Accueil · Notes · Devoirs · Msgs · Plus', () => {
     render(
       <MemoryRouter initialEntries={['/my-grades']}>
         <MobileBottomNav role="student" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Mes notes' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Devoirs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
-  it('Secrétariat : Accueil · Élèves · Présences · Messages · Plus', () => {
+  it('Secrétariat : Accueil · Élèves · Appel · Msgs · Plus', () => {
     render(
       <MemoryRouter initialEntries={['/students']}>
         <MobileBottomNav role="secretary" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
     expect(screen.getByRole('button', { name: 'Élèves' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Présences' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
-  it('Vie scolaire : Accueil · Présences · Élèves · Messagerie · Plus', () => {
+  it('Vie scolaire : Accueil · Appel · Élèves · Msgs · Plus', () => {
     render(
       <MemoryRouter initialEntries={['/attendance']}>
         <MobileBottomNav role="supervisor" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Présences' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Appel' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Élèves' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Absences' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Appel' })).not.toBeInTheDocument();
   });
 });

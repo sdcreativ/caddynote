@@ -50,7 +50,14 @@
     "label": "Navigation principale",
     "home": "Accueil",
     "more": "Plus",
-    "children": "Enfants"
+    "children": "Enfants",
+    "students": "Élèves",
+    "call": "Appel",
+    "finance": "Finances",
+    "messages": "Msgs",
+    "notes": "Notes",
+    "homework": "Devoirs",
+    "teaching": "Cahier"
   },
   "items": {
     "overview": "Vue d'ensemble",

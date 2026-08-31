@@ -147,7 +147,7 @@ export function EstablishmentOverview() {
         <h1 className="mt-2 font-display text-[1.75rem] font-semibold leading-tight tracking-tight text-slate-900 md:text-4xl">
           {t('overview.welcomeBack', { name: data.firstName })}
         </h1>
-        <p className="mt-1 text-base text-slate-500">{data.institutionName}</p>
+        <p className="mt-1 hidden text-base text-slate-500 sm:block">{data.institutionName}</p>
       </header>
 
       {tenantStatus.frozen && (
@@ -309,7 +309,30 @@ export function EstablishmentOverview() {
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('directionMobile.primaryCtaHint')}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {/* Mobile : 4 raccourcis cœur — le reste via bottom nav / Plus */}
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          <MobileQuickTile
+            label={t('quickActions.students')}
+            icon={<Users aria-hidden />}
+            onClick={() => navigate('/students')}
+          />
+          <MobileQuickTile
+            label={t('quickActions.attendance')}
+            icon={<ClipboardCheck aria-hidden />}
+            onClick={() => navigate('/attendance')}
+          />
+          <MobileQuickTile
+            label={t('quickActions.admissions')}
+            icon={<School aria-hidden />}
+            onClick={() => navigate('/admissions/admin')}
+          />
+          <MobileQuickTile
+            label={t('quickActions.messages')}
+            icon={<MessageSquare aria-hidden />}
+            onClick={() => navigate('/messages')}
+          />
+        </div>
+        <div className="hidden gap-3 md:grid md:grid-cols-4">
           <MobileQuickTile
             label={t('quickActions.students')}
             icon={<Users aria-hidden />}

@@ -134,11 +134,11 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="relative flex h-16 min-w-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
-        <div className="z-10 flex shrink-0 items-center gap-3">
+        <div className="z-10 flex min-w-0 shrink items-center gap-2 sm:gap-3">
           <Button
             size="icon"
             variant="ghost"
-            className="lg:hidden text-slate-600"
+            className="shrink-0 lg:hidden text-slate-600"
             onClick={onToggleSidebar}
             type="button"
             aria-label={t('openMenu')}
@@ -152,8 +152,9 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
               logoKey={institutionLogo}
               to="/dashboard"
               size={28}
-              className="lg:hidden shrink-0 [&_.font-display]:text-sm"
-              aria-label={t('logoHome')}
+              hideName
+              className="lg:hidden shrink-0"
+              aria-label={institutionName || t('logoHome')}
             />
           ) : (
             <CaddyNoteLogo
@@ -182,7 +183,7 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
           </button>
         </div>
 
-        <div className="z-10 ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="z-10 ml-auto flex shrink-0 items-center gap-0.5 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"

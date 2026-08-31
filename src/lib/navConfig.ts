@@ -147,31 +147,31 @@ export function mobileBottomNavForRole(
   switch (role) {
     case 'teacher':
     case 'head_teacher':
-      // Accueil · Présences · Notes · Cahier · Plus (messages dans la sidebar)
+      // Accueil · Appel · Notes · Cahier · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         {
           kind: 'link',
-          titleKey: 'items.attendance',
+          titleKey: 'bottomNav.call',
           href: '/teacher-attendance',
           icon: ClipboardCheck,
         },
-        { kind: 'link', titleKey: 'items.notes', href: '/grades', icon: GraduationCap },
-        { kind: 'link', titleKey: 'items.teaching', href: '/teaching', icon: School },
+        { kind: 'link', titleKey: 'bottomNav.notes', href: '/grades', icon: GraduationCap },
+        { kind: 'link', titleKey: 'bottomNav.teaching', href: '/teaching', icon: School },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'school_admin':
-      // Accueil · Élèves · Présences · Finances · Plus (messages / admissions en sidebar + tuiles)
+      // Accueil · Élèves · Appel · Finances · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
-        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        { kind: 'link', titleKey: 'bottomNav.students', href: '/students', icon: Users },
         {
           kind: 'link',
-          titleKey: 'items.attendance',
+          titleKey: 'bottomNav.call',
           href: '/attendance',
           icon: ClipboardCheck,
         },
-        { kind: 'link', titleKey: 'items.finance', href: '/finance', icon: Receipt },
+        { kind: 'link', titleKey: 'bottomNav.finance', href: '/finance', icon: Receipt },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'admin':
@@ -195,56 +195,56 @@ export function mobileBottomNavForRole(
         },
         {
           kind: 'link',
-          titleKey: 'items.finance',
+          titleKey: 'bottomNav.finance',
           href: '/my-children?tab=finance',
           icon: CreditCard,
         },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'student':
       // Accueil · Notes · Devoirs · Messages · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
-        { kind: 'link', titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
-        { kind: 'link', titleKey: 'items.assignments', href: '/assignments', icon: FileText },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.notes', href: '/my-grades', icon: GraduationCap },
+        { kind: 'link', titleKey: 'bottomNav.homework', href: '/assignments', icon: FileText },
+        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'secretary':
-      // Accueil · Élèves · Présences · Messages · Plus
+      // Accueil · Élèves · Appel · Messages · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
-        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        { kind: 'link', titleKey: 'bottomNav.students', href: '/students', icon: Users },
         {
           kind: 'link',
-          titleKey: 'items.attendance',
+          titleKey: 'bottomNav.call',
           href: '/attendance',
           icon: ClipboardCheck,
         },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'supervisor':
-      // Accueil · Présences · Élèves · Messages · Plus
+      // Accueil · Appel · Élèves · Messages · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         {
           kind: 'link',
-          titleKey: 'items.attendance',
+          titleKey: 'bottomNav.call',
           href: '/attendance',
           icon: ClipboardCheck,
         },
-        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.students', href: '/students', icon: Users },
+        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'accountant':
       // Accueil · Finances · Élèves · Documents · Plus
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
-        { kind: 'link', titleKey: 'items.finance', href: '/finance', icon: Receipt },
-        { kind: 'link', titleKey: 'items.students', href: '/students', icon: Users },
+        { kind: 'link', titleKey: 'bottomNav.finance', href: '/finance', icon: Receipt },
+        { kind: 'link', titleKey: 'bottomNav.students', href: '/students', icon: Users },
         { kind: 'link', titleKey: 'items.documents', href: '/documents', icon: FileText },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
@@ -253,7 +253,7 @@ export function mobileBottomNavForRole(
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
         { kind: 'link', titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
-        { kind: 'link', titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
         { kind: 'link', titleKey: 'items.support', href: '/support', icon: LifeBuoy },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];

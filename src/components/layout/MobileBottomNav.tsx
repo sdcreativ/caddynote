@@ -53,15 +53,15 @@ const MobileBottomNav = ({ role, onOpenMore }: MobileBottomNavProps) => {
                 onClick={() => handleItem(item)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[13px] font-semibold leading-tight transition-colors',
+                  'relative flex w-full flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-2 text-[11px] font-semibold leading-tight transition-colors',
                   active ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <Icon
-                  className={cn('h-6 w-6 shrink-0', active ? 'text-blue-600' : 'text-slate-500')}
+                  className={cn('h-5 w-5 shrink-0', active ? 'text-blue-600' : 'text-slate-500')}
                   aria-hidden
                 />
-                <span className="max-w-full truncate px-0.5">{label}</span>
+                <span className="max-w-full px-0.5">{label}</span>
               </button>
             </li>
           );
