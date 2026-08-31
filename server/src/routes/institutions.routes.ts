@@ -118,9 +118,32 @@ institutionsRouter.patch('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });
   }
   const { adminId, ...rest } = parsed.data;
-  // Logo : clé S3 dossier avatars du tenant uniquement (upload via /files/presign-upload).
+  // Logo : clé issue de POST /files/presign-upload (dossier avatars).
+  // Un admin global uploade sous `avatars/user-{id}/…` (pas d’institutionId JWT) ;
+  // un school_admin sous `avatars/inst-{id}/…`. On accepte les deux périmètres,
+  // plus le maintien d’une valeur déjà enregistrée (legacy / autre uploader).
   if (rest.logo) {
-    if (!isOwnedObjectKey(rest.logo, 'avatars', req.params.id, req.auth!.sub)) {
+    const existing = await prisma.strkInstitution.findUnique({
+      where: { id: req.params.id },
+      select: { logo: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Établissement introuvable' });
+    }
+    const unchanged = rest.logo === existing.logo;
+    const ownedByCaller = isOwnedObjectKey(
+      rest.logo,
+      'avatars',
+      req.auth!.institutionId,
+      req.auth!.sub
+    );
+    const ownedByInstitution = isOwnedObjectKey(
+      rest.logo,
+      'avatars',
+      req.params.id,
+      req.auth!.sub
+    );
+    if (!unchanged && !ownedByCaller && !ownedByInstitution) {
       return res.status(403).json({ error: 'Ce logo ne provient pas de votre espace de stockage' });
     }
   }
