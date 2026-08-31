@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import type { StrkInstitution } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isGlobalAdmin, isSameInstitution, canViewInstitutionBrand } from '../lib/authz.js';
@@ -20,7 +21,7 @@ institutionsRouter.use(requireAuth);
 // tenant — sauf un `group_owner` (ORG-002), limité aux établissements de
 // son propre groupe (jamais tous les établissements de la plateforme).
 institutionsRouter.get('/', async (req, res) => {
-  let institutions;
+  let institutions: StrkInstitution[];
   if (isGlobalAdmin(req.auth!)) {
     institutions = await prisma.strkInstitution.findMany({ orderBy: { name: 'asc' } });
   } else if (req.auth!.role === 'group_owner' && req.auth!.groupId) {
