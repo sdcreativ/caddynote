@@ -5,15 +5,21 @@ import { PublicMobileCtaBar } from './PublicMobileCtaBar';
 import { checkA11y } from '@/test/a11y';
 
 describe('PublicMobileCtaBar', () => {
-  it('affiche Connexion et Démo sur les pages marketing', async () => {
+  it('affiche Connexion (icône) et Démo sur les pages marketing', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/']}>
         <PublicMobileCtaBar />
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute('href', '/sign');
-    expect(screen.getByRole('link', { name: /Demander une démo/i })).toBeInTheDocument();
+    const login = screen.getByRole('link', { name: 'Se connecter' });
+    expect(login).toHaveAttribute('href', '/sign');
+    expect(login.querySelector('svg')).toBeTruthy();
+    expect(login).not.toHaveTextContent('Se connecter');
+
+    const demo = screen.getByRole('link', { name: /Demander une démo/i });
+    expect(demo).toBeInTheDocument();
+    expect(demo).toHaveAttribute('href', expect.stringContaining('/contact'));
     expect(await checkA11y(container)).toHaveNoViolations();
   });
 
