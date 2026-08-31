@@ -6,6 +6,7 @@ import { requirePlatformPerm, requirePlatformPermission } from '../middleware/re
 import { registry } from '../lib/metrics.js';
 import { isQueueStarted } from '../lib/queue.js';
 import { getProcessRole, shouldRunJobs, shouldServeHttp } from '../lib/processRole.js';
+import { optionalEmail } from '../lib/zodHelpers.js';
 
 /**
  * Recherche globale + métriques ops + RoPA pour la console super-admin.
@@ -1043,7 +1044,7 @@ adminOpsRouter.post(
           'elementary_school',
           'private_school',
         ]),
-        adminEmail: z.string().email().optional(),
+        adminEmail: optionalEmail,
         adminFirstName: z.string().min(1).max(100).optional(),
         adminLastName: z.string().min(1).max(100).optional(),
         adminPhone: z.string().max(40).optional(),

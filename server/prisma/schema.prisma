@@ -378,6 +378,7 @@ model StrkProfile {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firstName     String?      @map("first_name")
   lastName      String?      @map("last_name")
+  /// Identifiant de connexion ; unique pour tous les rôles. Toujours stocké en minuscules (cf. normalizeEmail).
   email         String?      @unique
   phoneNumber   String?      @map("phone_number")
   profileImage  String?      @map("profile_image")

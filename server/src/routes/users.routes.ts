@@ -12,7 +12,7 @@ import { sendAccountInvite } from '../lib/accountInvite.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
 import { isOwnedObjectKey } from '../lib/s3.js';
-import { optionalEmail, optionalString } from '../lib/zodHelpers.js';
+import { optionalEmail, optionalString, requiredEmail } from '../lib/zodHelpers.js';
 import { importTeachersFromCsv } from '../lib/teacherImport.js';
 import { parseCsvWithHeader } from '../lib/csvImport.js';
 import { computeMfaGraceUntil } from '../lib/mfa.js';
@@ -96,7 +96,7 @@ usersRouter.get('/:id', async (req, res) => {
 });
 
 const createUserSchema = z.object({
-  email: z.string().email(),
+  email: requiredEmail,
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   role: z.enum(['admin', 'school_admin', 'teacher', 'student', 'parent', 'group_owner', 'secretary', 'accountant', 'supervisor', 'head_teacher']),
@@ -204,6 +204,9 @@ usersRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
     });
     res.status(201).json({ user, tempPassword, emailSent, smsSent });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       return res.status(400).json({ error: "L'établissement indiqué est introuvable" });
     }
@@ -260,28 +263,42 @@ usersRouter.patch('/:id', async (req, res) => {
     }
   }
 
-  const user = await prisma.strkProfile.update({
-    where: { id: target.id },
-    data,
-    select: PUBLIC_PROFILE_SELECT,
-  });
-  if (data.role && data.role !== target.role) {
-    // Même correctif que la création (lib/roleExtensions.ts) : un compte
-    // promu/reconverti vers élève ou enseignant a besoin de la même ligne
-    // d'extension, sans quoi il resterait tout aussi inutilisable qu'un
-    // compte créé directement avec ce rôle.
-    await ensureRoleExtension(target.id, data.role, user.institutionId);
-    await logAudit({
-      institutionId: target.institutionId,
-      actorId: req.auth!.sub,
-      action: 'user.role_changed',
-      targetType: 'user',
-      targetId: target.id,
-      metadata: { previousRole: target.role, newRole: data.role },
-      ipAddress: req.ip,
-    });
+  if (data.email && data.email !== target.email) {
+    const emailTaken = await prisma.strkProfile.findUnique({ where: { email: data.email } });
+    if (emailTaken) {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
   }
-  res.json({ user });
+
+  try {
+    const user = await prisma.strkProfile.update({
+      where: { id: target.id },
+      data,
+      select: PUBLIC_PROFILE_SELECT,
+    });
+    if (data.role && data.role !== target.role) {
+      // Même correctif que la création (lib/roleExtensions.ts) : un compte
+      // promu/reconverti vers élève ou enseignant a besoin de la même ligne
+      // d'extension, sans quoi il resterait tout aussi inutilisable qu'un
+      // compte créé directement avec ce rôle.
+      await ensureRoleExtension(target.id, data.role, user.institutionId);
+      await logAudit({
+        institutionId: target.institutionId,
+        actorId: req.auth!.sub,
+        action: 'user.role_changed',
+        targetType: 'user',
+        targetId: target.id,
+        metadata: { previousRole: target.role, newRole: data.role },
+        ipAddress: req.ip,
+      });
+    }
+    res.json({ user });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
+    throw error;
+  }
 });
 
 // Réassignation d'établissement : action sensible réservée à l'admin global (ORG-004).

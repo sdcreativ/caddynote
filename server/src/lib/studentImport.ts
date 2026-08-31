@@ -5,6 +5,7 @@ import { logAudit } from './audit.js';
 import { sendAccountInvite } from './accountInvite.js';
 import { parseCsvWithHeader } from './csvImport.js';
 import { parseStudentGender } from './studentGender.js';
+import { normalizeEmail } from './emailNormalize.js';
 
 /**
  * ELV-005 : import en masse d'élèves (colonnes attendues : firstName,
@@ -45,7 +46,7 @@ export const importStudentsFromCsv = async (
   for (let i = 0; i < rows.length; i++) {
     const rowNum = i + 2; // ligne 1 = en-tête, lignes de données à partir de 2
     const raw = rows[i];
-    const email = raw.email?.trim().toLowerCase();
+    const email = raw.email ? normalizeEmail(raw.email) : '';
     const firstName = raw.firstName?.trim();
     const lastName = raw.lastName?.trim();
 

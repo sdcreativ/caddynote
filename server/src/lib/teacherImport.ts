@@ -6,6 +6,7 @@ import { sendAccountInvite } from './accountInvite.js';
 import { parseCsvWithHeader } from './csvImport.js';
 import { ensureRoleExtension } from './roleExtensions.js';
 import type { StrkUserRole } from '@prisma/client';
+import { normalizeEmail } from './emailNormalize.js';
 
 /**
  * Chap. 22.1 — import CSV d’enseignants (reprise de données).
@@ -41,7 +42,7 @@ export const importTeachersFromCsv = async (
   for (let i = 0; i < rows.length; i++) {
     const rowNum = i + 2;
     const raw = rows[i];
-    const email = raw.email?.trim().toLowerCase();
+    const email = raw.email ? normalizeEmail(raw.email) : '';
     const firstName = raw.firstName?.trim();
     const lastName = raw.lastName?.trim();
     const roleRaw = (raw.role?.trim().toLowerCase() || 'teacher') as StrkUserRole;

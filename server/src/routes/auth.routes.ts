@@ -16,6 +16,7 @@ import { logAudit } from '../lib/audit.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
 import { isTestMode } from '../lib/testMode.js';
 import { canSelfAssignRole } from '../lib/publicRegister.js';
+import { requiredEmail } from '../lib/zodHelpers.js';
 
 /** IAM-004 : crée la session servant de base au jeton, puis signe le jeton
  * avec son id (`sid`) — un point de passage unique pour les 3 endroits qui
@@ -51,7 +52,7 @@ const authLimiter = rateLimit({
 });
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: requiredEmail,
   password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -104,6 +105,9 @@ authRouter.post('/register', authLimiter, async (req, res) => {
     const token = await issueAccessToken(req, profile);
     res.status(201).json({ token, user: profile });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       return res.status(400).json({ error: "L'établissement indiqué (institutionId) est introuvable" });
     }
@@ -113,7 +117,7 @@ authRouter.post('/register', authLimiter, async (req, res) => {
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: requiredEmail,
   password: z.string().min(1),
 });
 
@@ -444,7 +448,7 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-const forgotPasswordSchema = z.object({ email: z.string().email() });
+const forgotPasswordSchema = z.object({ email: requiredEmail });
 
 authRouter.post('/forgot-password', authLimiter, async (req, res) => {
   const parsed = forgotPasswordSchema.safeParse(req.body);

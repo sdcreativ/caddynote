@@ -9,6 +9,7 @@ import { createSession } from './sessions.js';
 import { logAudit } from './audit.js';
 import { PUBLIC_PROFILE_SELECT } from './profileSelect.js';
 import type { SsoConfigStored } from './ssoConfig.js';
+import { normalizeEmail } from './emailNormalize.js';
 
 export type SsoLoginResult =
   | { kind: 'token'; token: string; user: Record<string, unknown> }
@@ -22,7 +23,7 @@ export const completeSsoLogin = async (opts: {
   config: SsoConfigStored;
   idpSub: string;
 }): Promise<SsoLoginResult> => {
-  const email = opts.email.trim().toLowerCase();
+  const email = normalizeEmail(opts.email);
   const domain = email.split('@')[1];
   if (opts.config.emailDomains?.length && domain && !opts.config.emailDomains.includes(domain)) {
     return { kind: 'error', status: 403, error: 'Domaine e-mail non autorisé pour cet établissement', code: 'sso_domain_forbidden' };

@@ -8,6 +8,7 @@ import {
   isDemoContactSubject,
   notifyPlatformAdminsOfContact,
 } from '../lib/contactDemo.js';
+import { requiredEmail } from '../lib/zodHelpers.js';
 
 /**
  * Formulaire contact public — plus de simulation côté front : persistance
@@ -26,7 +27,7 @@ const contactLimiter = rateLimit({
 
 const contactSchema = z.object({
   name: z.string().min(1).max(200),
-  email: z.string().email(),
+  email: requiredEmail,
   subject: z.string().min(1).max(300),
   message: z.string().min(10).max(5000),
 });

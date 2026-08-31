@@ -26,6 +26,7 @@ import { logAudit } from '../lib/audit.js';
 import { isCinetPayConfigured, initiatePayment } from '../lib/cinetpay.js';
 import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
 import { isTestMode } from '../lib/testMode.js';
+import { requiredEmail } from '../lib/zodHelpers.js';
 import {
   sendAdmissionFollowEmail,
   notifyAdmissionContact,
@@ -150,7 +151,7 @@ admissionsPublicRouter.get('/institutions/:id/classes', async (req, res) => {
 const guardianInputSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  email: z.string().email(),
+  email: requiredEmail,
   phone: z.string().optional(),
   relationship: z.enum(['father', 'mother', 'tutor', 'payer', 'other_authorized']),
 });
@@ -176,7 +177,7 @@ const applicationInputSchema = z.object({
     z.enum(['female', 'male'], { errorMap: () => ({ message: 'Genre invalide (fille ou garçon)' }) })
   ),
   guardians: z.array(guardianInputSchema).min(1),
-  contactEmail: z.string().email(),
+  contactEmail: requiredEmail,
 });
 
 admissionsPublicRouter.post('/', createLimiter, async (req, res) => {
@@ -317,7 +318,7 @@ admissionsPublicRouter.post('/', createLimiter, async (req, res) => {
 });
 
 const recoverSchema = z.object({
-  email: z.string().email().max(320),
+  email: requiredEmail,
 });
 
 /**
@@ -329,7 +330,7 @@ admissionsPublicRouter.post('/recover', recoverLimiter, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: 'E-mail invalide' });
   }
-  const email = parsed.data.email.trim().toLowerCase();
+  const email = parsed.data.email;
 
   const applications = await prisma.strkAdmissionApplication.findMany({
     where: { contactEmail: { equals: email, mode: 'insensitive' } },

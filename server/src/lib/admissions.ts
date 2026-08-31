@@ -9,6 +9,7 @@ import {
   maybeAssignAndInvoiceAfterEnroll,
   resolveCycleCodeFromLabel,
 } from './feeSchedules.js';
+import { normalizeEmail } from './emailNormalize.js';
 
 /**
  * Chap. 8.1/8.2 : préinscription publique et admission.
@@ -87,7 +88,8 @@ export const resolveGuardianAccount = async (
   guardian: GuardianInput,
   institutionId?: string | null
 ): Promise<{ id: string; created: boolean; tempPassword?: string }> => {
-  const existing = await prisma.strkProfile.findUnique({ where: { email: guardian.email } });
+  const email = normalizeEmail(guardian.email);
+  const existing = await prisma.strkProfile.findUnique({ where: { email } });
   if (existing) {
     if (institutionId && !existing.institutionId) {
       await prisma.strkProfile.update({
@@ -101,7 +103,7 @@ export const resolveGuardianAccount = async (
   const passwordHash = await hashPassword(tempPassword);
   const created = await prisma.strkProfile.create({
     data: {
-      email: guardian.email,
+      email,
       firstName: guardian.firstName,
       lastName: guardian.lastName,
       phoneNumber: guardian.phone,

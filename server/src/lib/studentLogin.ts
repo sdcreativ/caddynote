@@ -4,6 +4,7 @@ import { generateTempPassword } from './tempPassword.js';
 import { sendAccountInvite } from './accountInvite.js';
 import { logAudit } from './audit.js';
 import { PUBLIC_PROFILE_SELECT } from './profileSelect.js';
+import { normalizeEmail, normalizeOptionalEmail } from './emailNormalize.js';
 
 /**
  * Identifiant de connexion opaque pour un élève sans e-mail famille.
@@ -21,7 +22,7 @@ export const buildOpaqueStudentLogin = (studentId: string): string => {
 
 export const isOpaqueStudentLogin = (email: string | null | undefined): boolean => {
   if (!email) return false;
-  const e = email.trim().toLowerCase();
+  const e = normalizeEmail(email);
   return e.startsWith('s-') && e.endsWith(`@${OPAQUE_STUDENT_LOGIN_DOMAIN}`);
 };
 
@@ -77,7 +78,7 @@ export const provisionStudentLogin = async (params: {
     throw Object.assign(new Error('Cet élève a déjà un accès de connexion'), { status: 409 });
   }
 
-  const rawEmail = params.email?.trim().toLowerCase();
+  const rawEmail = normalizeOptionalEmail(params.email ?? undefined);
   const loginMode: 'email' | 'opaque' = rawEmail ? 'email' : 'opaque';
   const email = rawEmail || buildOpaqueStudentLogin(student.id);
 

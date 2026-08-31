@@ -17,7 +17,7 @@ import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { logAudit } from '../lib/audit.js';
 import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
 import { provisionStudentLogin } from '../lib/studentLogin.js';
-import { optionalUuid } from '../lib/zodHelpers.js';
+import { optionalEmail, optionalUuid } from '../lib/zodHelpers.js';
 
 export const studentsRouter = Router();
 
@@ -201,7 +201,7 @@ studentsRouter.post('/', requireRole(...SECRETARIAT_ROLES), async (req, res) => 
 
 const activateLoginSchema = z.object({
   /** E-mail famille réel. Absent → alias opaque s-{id}@eleves.caddynote.app */
-  email: z.string().email().optional(),
+  email: optionalEmail,
 });
 
 studentsRouter.post('/:id/activate-login', requireRole(...SECRETARIAT_ROLES), async (req, res) => {
