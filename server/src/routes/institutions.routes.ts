@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { isGlobalAdmin, isSameInstitution, isGroupOwnerOf } from '../lib/authz.js';
+import { isGlobalAdmin, isSameInstitution, canViewInstitutionBrand } from '../lib/authz.js';
 import { getQuotaOverview } from '../lib/quotas.js';
 import { setFeatureOverride, getFeatureSnapshot } from '../lib/featureFlags.js';
 import { OPS_FROZEN_FLAG } from '../lib/subscriptionSuspension.js';
@@ -20,31 +20,41 @@ institutionsRouter.use(requireAuth);
 // tenant — sauf un `group_owner` (ORG-002), limité aux établissements de
 // son propre groupe (jamais tous les établissements de la plateforme).
 institutionsRouter.get('/', async (req, res) => {
-  const institutions = isGlobalAdmin(req.auth!)
-    ? await prisma.strkInstitution.findMany({ orderBy: { name: 'asc' } })
-    : req.auth!.role === 'group_owner' && req.auth!.groupId
-      ? await prisma.strkInstitution.findMany({ where: { groupId: req.auth!.groupId }, orderBy: { name: 'asc' } })
-      : req.auth!.institutionId
-        ? await prisma.strkInstitution.findMany({ where: { id: req.auth!.institutionId } })
-        : [];
+  let institutions;
+  if (isGlobalAdmin(req.auth!)) {
+    institutions = await prisma.strkInstitution.findMany({ orderBy: { name: 'asc' } });
+  } else if (req.auth!.role === 'group_owner' && req.auth!.groupId) {
+    institutions = await prisma.strkInstitution.findMany({
+      where: { groupId: req.auth!.groupId },
+      orderBy: { name: 'asc' },
+    });
+  } else if (req.auth!.role === 'parent') {
+    const links = await prisma.strkStudentGuardian.findMany({
+      where: { guardianId: req.auth!.sub, status: 'active' },
+      select: { institutionId: true },
+    });
+    const ids = [...new Set(links.map((l) => l.institutionId))];
+    institutions = ids.length
+      ? await prisma.strkInstitution.findMany({ where: { id: { in: ids } }, orderBy: { name: 'asc' } })
+      : [];
+  } else if (req.auth!.institutionId) {
+    institutions = await prisma.strkInstitution.findMany({
+      where: { id: req.auth!.institutionId },
+    });
+  } else {
+    institutions = [];
+  }
 
   res.json({ institutions });
 });
 
 institutionsRouter.get('/:id', async (req, res) => {
-  if (isSameInstitution(req.auth!, req.params.id)) {
-    const institution = await prisma.strkInstitution.findUnique({ where: { id: req.params.id } });
-    if (!institution) {
-      return res.status(404).json({ error: 'Établissement introuvable' });
-    }
-    return res.json({ institution });
-  }
-  // ORG-002 : accès en lecture pour le `group_owner` du groupe auquel cet
-  // établissement appartient — nécessite de charger l'établissement pour
-  // connaître son groupId, donc traité séparément de `isSameInstitution`.
-  const institution = await prisma.strkInstitution.findUnique({ where: { id: req.params.id } });
-  if (!institution || !isGroupOwnerOf(req.auth!, institution.groupId)) {
+  if (!(await canViewInstitutionBrand(req.auth!, req.params.id))) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
+  }
+  const institution = await prisma.strkInstitution.findUnique({ where: { id: req.params.id } });
+  if (!institution) {
+    return res.status(404).json({ error: 'Établissement introuvable' });
   }
   res.json({ institution });
 });

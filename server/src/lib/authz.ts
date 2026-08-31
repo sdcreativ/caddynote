@@ -51,6 +51,29 @@ export const isSameInstitution = (auth: JwtPayload, institutionId: string | null
 };
 
 /**
+ * Lecture « marque » établissement (nom / logo chrome) — personnel & élève du
+ * tenant, parent lié à un enfant de cet établissement, admin / group_owner.
+ */
+export const canViewInstitutionBrand = async (
+  auth: JwtPayload,
+  institutionId: string
+): Promise<boolean> => {
+  if (isSameInstitution(auth, institutionId)) return true;
+  if (auth.role === 'parent') {
+    const link = await prisma.strkStudentGuardian.findFirst({
+      where: { guardianId: auth.sub, institutionId, status: 'active' },
+      select: { id: true },
+    });
+    return Boolean(link);
+  }
+  const institution = await prisma.strkInstitution.findUnique({
+    where: { id: institutionId },
+    select: { groupId: true },
+  });
+  return Boolean(institution && isGroupOwnerOf(auth, institution.groupId));
+};
+
+/**
  * Filtre Prisma de liste : le périmètre vient du JWT, jamais d’un
  * `institutionId` fourni par le client (ORG-004). L’admin global n’est pas
  * restreint ; un compte sans établissement ne voit rien (`__none__`).

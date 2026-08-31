@@ -9,7 +9,7 @@ import {
   createPresignedUploadPost,
   getPresignedDownloadUrl,
 } from '../lib/s3.js';
-import { isGlobalAdmin } from '../lib/authz.js';
+import { isGlobalAdmin, isSameInstitution, canViewInstitutionBrand } from '../lib/authz.js';
 import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
 import { putStoredObject, getFileStorageMode, getStoredObjectBytes, isAtRestEncryptionEnabled } from '../lib/fileStorage.js';
@@ -22,6 +22,7 @@ import {
   maybeOptimizeUploadedImage,
   withWebpExtension,
 } from '../lib/imageOptimize.js';
+import { prisma } from '../lib/prisma.js';
 
 export const filesRouter = Router();
 filesRouter.use(requireAuth);
@@ -52,6 +53,8 @@ const presignUploadSchema = z.object({
   folder: z.enum(UPLOAD_FOLDERS),
   filename: z.string().min(1).max(255),
   contentType: z.string().min(1),
+  /** Cible un établissement (ex. logo) — admin global ou membre du tenant. */
+  institutionId: z.string().uuid().optional(),
 });
 
 filesRouter.post('/presign-upload', async (req, res) => {
@@ -65,8 +68,17 @@ filesRouter.post('/presign-upload', async (req, res) => {
       error: `Type de fichier non autorisé pour ce dossier (autorisés : ${rules.types.join(', ')})`,
     });
   }
-  if (req.auth!.institutionId) {
-    const storageQuota = await checkQuota(req.auth!.institutionId, 'storageGb', 0);
+
+  let scopeInstitutionId = req.auth!.institutionId;
+  if (parsed.data.institutionId) {
+    if (!isSameInstitution(req.auth!, parsed.data.institutionId)) {
+      return res.status(403).json({ error: 'Permissions insuffisantes pour ce périmètre de stockage' });
+    }
+    scopeInstitutionId = parsed.data.institutionId;
+  }
+
+  if (scopeInstitutionId) {
+    const storageQuota = await checkQuota(scopeInstitutionId, 'storageGb', 0);
     if (!storageQuota.allowed) {
       return res.status(403).json({
         error: `Quota de ${QUOTA_LABELS.storageGb} atteint (${storageQuota.current}/${storageQuota.limit} Go).`,
@@ -74,7 +86,7 @@ filesRouter.post('/presign-upload', async (req, res) => {
       });
     }
   }
-  const tenantScope = buildTenantScope(req.auth!.institutionId, req.auth!.sub);
+  const tenantScope = buildTenantScope(scopeInstitutionId, req.auth!.sub);
   const willOptimize = isOptimizableImageMime(parsed.data.contentType);
   const filenameForKey = willOptimize
     ? withWebpExtension(parsed.data.filename)
@@ -210,7 +222,7 @@ const contentTypeForObjectKey = (key: string): string => {
   return 'application/octet-stream';
 };
 
-const assertCanAccessObjectKey = (
+const assertOwnsObjectKey = (
   auth: NonNullable<import('express').Request['auth']>,
   key: string,
   folder: StorageFolder
@@ -218,6 +230,26 @@ const assertCanAccessObjectKey = (
   isGlobalAdmin(auth) ||
   isOwnedObjectKey(key, folder, auth.institutionId, auth.sub) ||
   isOwnedObjectKey(key, folder, null, auth.sub);
+
+/**
+ * Accès lecture : propriétaire de la clé, ou logo d’un établissement auquel
+ * l’appelant a accès (personnel, élève, parent lié — y compris upload admin
+ * sous `avatars/user-…`).
+ */
+const assertCanAccessObjectKey = async (
+  auth: NonNullable<import('express').Request['auth']>,
+  key: string,
+  folder: StorageFolder
+): Promise<boolean> => {
+  if (assertOwnsObjectKey(auth, key, folder)) return true;
+  if (folder !== 'avatars') return false;
+  const institution = await prisma.strkInstitution.findFirst({
+    where: { logo: key },
+    select: { id: true },
+  });
+  if (!institution) return false;
+  return canViewInstitutionBrand(auth, institution.id);
+};
 
 const presignDownloadSchema = z.object({ key: z.string().min(1) });
 
@@ -240,7 +272,7 @@ filesRouter.post('/presign-download', async (req, res) => {
   if (folder === 'inscription') {
     return res.status(403).json({ error: 'Téléchargement via le module inscription uniquement' });
   }
-  if (!assertCanAccessObjectKey(req.auth!, parsed.data.key, folder)) {
+  if (!(await assertCanAccessObjectKey(req.auth!, parsed.data.key, folder))) {
     return res.status(403).json({ error: 'Accès refusé à ce fichier' });
   }
 
@@ -277,7 +309,7 @@ filesRouter.get('/content', async (req, res) => {
   if (folder === 'inscription') {
     return res.status(403).json({ error: 'Téléchargement via le module inscription uniquement' });
   }
-  if (!assertCanAccessObjectKey(req.auth!, key, folder)) {
+  if (!(await assertCanAccessObjectKey(req.auth!, key, folder))) {
     return res.status(403).json({ error: 'Accès refusé à ce fichier' });
   }
 

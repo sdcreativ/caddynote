@@ -114,7 +114,9 @@ const InstitutionsPage = () => {
     if (!file) return;
     setUploadingLogo(true);
     try {
-      const key = await uploadViaPresignedPost('avatars', file);
+      const key = await uploadViaPresignedPost('avatars', file, {
+        institutionId: selectedInstitution?.id,
+      });
       setFormData((prev) => ({ ...prev, logo: key }));
       await loadLogoPreview(key);
       toast({ title: t('logo.uploadedTitle'), description: t('logo.uploadedBody') });

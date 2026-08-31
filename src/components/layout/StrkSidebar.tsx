@@ -7,7 +7,7 @@ import { InstitutionBrand } from '@/components/brand/InstitutionBrand';
 import { brandTaglineForRole } from '@/lib/brand';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
+import { useInstitutionBrand } from '@/hooks/useInstitutionBrand';
 import { useEstablishmentDashboardContext } from '@/hooks/useEstablishmentDashboardContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -326,34 +326,10 @@ function SimpleRoleNav({ onNavigate }: { onNavigate: (href: string) => void }) {
 const StrkSidebar: React.FC<StrkSidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user } = useStrkAuth();
-  const { getInstitutionById, institutions } = useStrkInstitutions();
-  const [institutionName, setInstitutionName] = useState('');
-  const [institutionLogo, setInstitutionLogo] = useState<string | null>(null);
+  const { institutionName, institutionLogo, showInstitutionBrand } = useInstitutionBrand();
   const { t } = useTranslation('nav');
 
   const isSchoolShell = isSchoolShellRole(user?.role);
-
-  useEffect(() => {
-    if (!user?.institutionId) return;
-    const apply = (inst: { name?: string; logo?: string | null } | null) => {
-      if (inst?.name) setInstitutionName(inst.name);
-      setInstitutionLogo(inst?.logo ?? null);
-    };
-    const fromList = institutions.find((i) => i.id === user.institutionId);
-    if (fromList) {
-      apply(fromList);
-    } else {
-      void getInstitutionById(user.institutionId).then(apply);
-    }
-
-    const onUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ id?: string; name?: string; logo?: string | null }>).detail;
-      if (!detail?.id || detail.id !== user.institutionId) return;
-      apply(detail);
-    };
-    window.addEventListener('strk:institution-updated', onUpdated);
-    return () => window.removeEventListener('strk:institution-updated', onUpdated);
-  }, [user?.institutionId, getInstitutionById, institutions]);
 
   const go = (href: string) => {
     if (window.innerWidth < 1024) onClose();
@@ -371,7 +347,7 @@ const StrkSidebar: React.FC<StrkSidebarProps> = ({ isOpen, onClose }) => {
         )}
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
-          {isSchoolShell && institutionName ? (
+          {showInstitutionBrand ? (
             <InstitutionBrand
               name={institutionName}
               logoKey={institutionLogo}

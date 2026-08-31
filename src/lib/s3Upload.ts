@@ -46,13 +46,22 @@ const uploadViaDirectApi = async (
   return body?.key || key;
 };
 
+export type PresignUploadOptions = {
+  /** Périmètre établissement (logo admin global → `avatars/inst-…`). */
+  institutionId?: string;
+};
+
 /**
  * Upload navigateur → stockage (DOC-005).
  * 1) POST signé S3 si proposé ;
  * 2) sinon / en secours : PUT `/files/direct-upload` (local ou S3 côté API).
  * Toute image est forcée via l’API et convertie en WebP.
  */
-export const uploadViaPresignedPost = async (folder: string, file: File): Promise<string> => {
+export const uploadViaPresignedPost = async (
+  folder: string,
+  file: File,
+  options?: PresignUploadOptions
+): Promise<string> => {
   const contentType = inferUploadContentType(file);
   const isImage = contentType.startsWith('image/');
   const presign = await apiClient.post<{
@@ -66,6 +75,7 @@ export const uploadViaPresignedPost = async (folder: string, file: File): Promis
     folder,
     filename: file.name,
     contentType,
+    ...(options?.institutionId ? { institutionId: options.institutionId } : {}),
   });
 
   if (
