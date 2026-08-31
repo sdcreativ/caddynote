@@ -15,5 +15,30 @@
   "importDoneTitle": "Import terminé",
   "importDoneBody": "{{created}} enseignant(s) créé(s), {{skipped}} doublon(s), {{errors}} erreur(s).",
   "importErrorTitle": "Erreur d'import",
-  "importErrorBody": "L'import a échoué."
+  "importErrorBody": "L'import a échoué.",
+  "assign": {
+    "action": "Attribuer une classe",
+    "title": "Attribuer une classe",
+    "description": "Définir {{name}} comme professeur principal d’une classe.",
+    "currentLabel": "Classes actuelles (titulaire)",
+    "none": "Aucune classe attribuée pour le moment.",
+    "noneShort": "Aucune classe titulaire",
+    "loading": "Chargement des classes…",
+    "selectLabel": "Nouvelle classe",
+    "selectPlaceholder": "Choisir une classe",
+    "selectNone": "— Sélectionner —",
+    "currentlyHeldBy": "actuellement : {{name}}",
+    "noAvailable": "Toutes les classes lui sont déjà attribuées, ou aucune classe n’existe encore.",
+    "hint": "L’enseignant devient titulaire (professeur principal) de la classe. Si un autre titulaire était défini, il est remplacé.",
+    "confirm": "Attribuer",
+    "saving": "Enregistrement…",
+    "unassign": "Retirer",
+    "successTitle": "Classe attribuée",
+    "successBody": "{{name}} est désormais titulaire de la classe.",
+    "error": "Impossible d’attribuer la classe.",
+    "unassignTitle": "Titulaire retiré",
+    "unassignBody": "L’enseignant n’est plus titulaire de cette classe.",
+    "unassignError": "Impossible de retirer le titulaire.",
+    "loadError": "Impossible de charger les classes."
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Mail, Phone, Users, Download, Upload } from 'lucide-react';
+import { Plus, Mail, Phone, Download, Upload, School } from 'lucide-react';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkUsers } from '@/hooks/useStrkUsers';
 import { useToast } from '@/hooks/use-toast';
@@ -20,13 +20,19 @@ import { hasAnyRole, SECRETARIAT_ROLES } from '@/lib/roles';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import CreateUserDialog from '@/components/admin/CreateUserDialog';
+import {
+  AssignTeacherClassDialog,
+  TeacherHomeroomBadges,
+} from '@/components/teachers/AssignTeacherClassDialog';
+import { fetchClassesByInstitution, type ClassWithDetails } from '@/services/strkClassService';
+import type { User as StrkUser } from '@/types/strk';
 import { useTranslation } from 'react-i18next';
 
 const TEACHER_CSV_TEMPLATE =
   'firstName,lastName,email,phoneNumber,role\nJean,Dupont,jean.dupont@ecole.fr,0600000000,teacher\nMarie,Martin,marie.martin@ecole.fr,,head_teacher\n';
 
 /**
- * Chap. 22.1 — liste enseignants + import CSV (gabarit, aperçu, rapport).
+ * Chap. 22.1 — liste enseignants + import CSV + attribution classe titulaire.
  */
 const TeachersPage = () => {
   const { t } = useTranslation('teachers');
@@ -37,13 +43,29 @@ const TeachersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [importPreview, setImportPreview] = useState<{ csv: string; rows: string[][] } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [classes, setClasses] = useState<ClassWithDetails[]>([]);
+  const [assignTeacher, setAssignTeacher] = useState<StrkUser | null>(null);
   const canImport = hasAnyRole(user?.role, SECRETARIAT_ROLES);
+  const canAssign = hasAnyRole(user?.role, SECRETARIAT_ROLES);
+
+  const refreshClasses = useCallback(async () => {
+    if (!user?.institutionId) {
+      setClasses([]);
+      return;
+    }
+    try {
+      setClasses(await fetchClassesByInstitution(user.institutionId));
+    } catch {
+      setClasses([]);
+    }
+  }, [user?.institutionId]);
 
   useEffect(() => {
     if (user?.institutionId) {
       loadUsersByInstitution(user.institutionId);
+      void refreshClasses();
     }
-  }, [user?.institutionId, loadUsersByInstitution]);
+  }, [user?.institutionId, loadUsersByInstitution, refreshClasses]);
 
   const teachers = users.filter(
     (u) => (u.role === 'teacher' || u.role === 'head_teacher') && u.institutionId === user?.institutionId
@@ -174,7 +196,25 @@ const TeachersPage = () => {
                     {teacher.phoneNumber}
                   </div>
                 )}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <School className="h-3.5 w-3.5" aria-hidden />
+                    {t('assign.currentLabel')}
+                  </div>
+                  <TeacherHomeroomBadges teacherId={teacher.id} classes={classes} />
+                </div>
                 {teacher.isActive === false && <Badge variant="secondary">{t('inactive')}</Badge>}
+                {canAssign && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setAssignTeacher(teacher)}
+                  >
+                    {t('assign.action')}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -185,7 +225,22 @@ const TeachersPage = () => {
         open={createOpen}
         onOpenChange={setCreateOpen}
         defaultRole="teacher"
-        onUserCreated={() => user?.institutionId && loadUsersByInstitution(user.institutionId)}
+        onUserCreated={() => {
+          if (user?.institutionId) {
+            loadUsersByInstitution(user.institutionId);
+            void refreshClasses();
+          }
+        }}
+      />
+
+      <AssignTeacherClassDialog
+        open={!!assignTeacher}
+        onOpenChange={(open) => {
+          if (!open) setAssignTeacher(null);
+        }}
+        teacher={assignTeacher}
+        institutionId={user?.institutionId}
+        onChanged={() => void refreshClasses()}
       />
 
       <Dialog open={!!importPreview} onOpenChange={(open) => { if (!open) setImportPreview(null); }}>
