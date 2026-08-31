@@ -111,7 +111,7 @@ describe('SuperAdmin mobile RWD (P0+P1)', () => {
     expect(screen.getByLabelText('Navigation ops rapide')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Plus$/i }));
     expect(onOpenMore).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: /Établissements/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Écoles/i }));
     expect(onSectionChange).toHaveBeenCalledWith('institutions');
   });
 });

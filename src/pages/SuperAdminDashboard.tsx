@@ -25,7 +25,6 @@ import PlatformSettings from "@/components/admin/PlatformSettings";
 import SupportOpsCenter from "@/components/admin/SupportOpsCenter";
 import PlatformHabilitationsCenter from "@/components/admin/PlatformHabilitationsCenter";
 import { usePlatformPermissions } from "@/hooks/usePlatformPermissions";
-import { CreateClassDialog } from '@/components/admin/CreateClassDialog';
 import { SuperAdminNotificationsBell } from '@/components/admin/SuperAdminNotificationsBell';
 import { RealtimeNotifications } from '@/components/notifications/RealtimeNotifications';
 import { Toaster } from '@/components/ui/toaster';
@@ -86,7 +85,6 @@ const SuperAdminDashboard = () => {
     () => (isValidSection(sectionParam) ? sectionParam : 'overview'),
     [sectionParam]
   );
-  const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
   const [demoRequestCount, setDemoRequestCount] = useState(0);
   const [mfaDialogOpen, setMfaDialogOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -247,7 +245,6 @@ const SuperAdminDashboard = () => {
       <SuperAdminSidebar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        onCreateClass={() => setShowCreateClassDialog(true)}
         demoRequestCount={demoRequestCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -273,7 +270,7 @@ const SuperAdminDashboard = () => {
                   {t('notificationsBell.demoSummary', { count: demoRequestCount })}
                 </p>
               ) : (
-                <p className="truncate text-xs text-slate-500">{t('consoleHint')}</p>
+                <p className="hidden truncate text-xs text-slate-500 sm:block">{t('consoleHint')}</p>
               )}
             </div>
           </div>
@@ -316,10 +313,6 @@ const SuperAdminDashboard = () => {
           markMfaEnabled();
           setMfaDialogOpen(false);
         }}
-      />
-      <CreateClassDialog
-        open={showCreateClassDialog}
-        onOpenChange={setShowCreateClassDialog}
       />
       <RealtimeNotifications />
       <Toaster />

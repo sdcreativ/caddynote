@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useSystemMetrics } from "@/hooks/useSystemMetrics";
 import { useInstitutionStats } from "@/hooks/useInstitutionStats";
 import { useStrkInstitutions } from "@/hooks/useStrkInstitutions";
-import { useExercises } from "@/hooks/useExercises";
 import { ReportFilters } from "@/components/reports/ReportFilters";
 import { fetchDiagnostics } from "@/services/strkOpsService";
 import {
@@ -14,15 +12,14 @@ import {
   Shield,
   TrendingUp,
   Clock,
-  Database,
-  Server,
-  BookOpen,
-  Briefcase,
+  Headphones,
+  CreditCard,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { MobileCompactStat } from "@/components/dashboard/MobileActionPrimitives";
 
 const COLORS = [
   'hsl(var(--primary))',
@@ -37,20 +34,18 @@ const COLORS = [
   '#06b6d4',
 ];
 
+/**
+ * Accueil console ops plateforme — métriques & raccourcis CaddyNote.
+ * Pas de parcours métier école (élèves / classes / exercices / espace établissement).
+ */
 const SuperAdminOverview = () => {
   const { t } = useTranslation('superAdmin');
-  // RPT-001 : filtre établissement sur la vue de supervision /super-admin.
+  const navigate = useNavigate();
+  // RPT-001 : filtre établissement (desktop) pour scopper les métriques utilisateurs.
   const [institutionId, setInstitutionId] = useState<string | undefined>(undefined);
   const { metrics, loading: metricsLoading } = useSystemMetrics(institutionId);
-  // Comparaison inter-établissements par nature : ne se filtre pas par
-  // établissement (filtrer à un seul établissement viderait le sens de
-  // "types d'établissements" et "top établissements par utilisateurs").
   const { stats, loading: statsLoading } = useInstitutionStats();
   const { institutions, loadInstitutions } = useStrkInstitutions();
-  const { exercises } = useExercises();
-  const scopedExercises = institutionId
-    ? exercises.filter((ex) => ex.institution_id === institutionId)
-    : exercises;
   const [systemOk, setSystemOk] = useState<boolean | null>(null);
   const [systemDetail, setSystemDetail] = useState('Vérification…');
 
@@ -92,8 +87,6 @@ const SuperAdminOverview = () => {
     group_owner: 'Groupe',
   };
 
-  // Agrégation par libellé affiché (évite plusieurs tranches « Admin » pour
-  // secretary / accountant / parent / etc. qui tombaient dans le même fallback).
   const userRoleData = Object.entries(metrics.usersByRole)
     .filter(([, count]) => count > 0)
     .reduce<{ name: string; value: number; role: string }[]>((acc, [role, count]) => {
@@ -115,21 +108,33 @@ const SuperAdminOverview = () => {
 
   const institutionTypeData = Object.entries(stats.institutionTypes).map(([type, count]) => ({
     name: INSTITUTION_TYPE_LABELS[type] ?? type,
-    value: count
+    value: count,
   }));
+
+  const systemStatusLabel =
+    systemOk === null
+      ? t('overview.systemChecking')
+      : systemOk
+        ? t('overview.systemOk')
+        : t('overview.systemDegraded');
 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 rounded-2xl bg-muted" />
+          ))}
+        </div>
+        <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
-                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 rounded bg-muted" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-muted rounded mb-2"></div>
-                <div className="h-3 bg-muted rounded w-2/3"></div>
+                <div className="mb-2 h-8 rounded bg-muted" />
+                <div className="h-3 w-2/3 rounded bg-muted" />
               </CardContent>
             </Card>
           ))}
@@ -140,57 +145,11 @@ const SuperAdminOverview = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground">{t('hereLabel')}</p>
-          <p className="text-sm font-semibold">{t('console')}</p>
-          <p className="text-sm text-muted-foreground">{t('consoleHint')}</p>
-        </div>
-        <div className="shrink-0 space-y-1 sm:max-w-xs sm:text-right">
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link to="/dashboard">
-              <Briefcase className="mr-2 h-4 w-4" aria-hidden />
-              {t('businessPilotage')}
-            </Link>
-          </Button>
-          <p className="text-xs text-muted-foreground">{t('businessPilotageHint')}</p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Actions rapides
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/institutions">Établissements</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/subscriptions">Abonnements</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/support-ops">Support ops</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/habilitations">Habilitations</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/analytics">Analytics</Link>
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/super-admin/logs">Audit / logs</Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Vue d'ensemble du système</h2>
-          <p className="text-muted-foreground">Dernières métriques plateforme (rafraîchissement manuel)</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1" title={systemDetail}>
+      {/* Mobile : pulse plateforme uniquement */}
+      <div className="space-y-4 md:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-900">{t('overview.titleShort')}</h2>
+          <div className="flex shrink-0 items-center gap-1.5" title={systemDetail}>
             <div
               className={`h-2 w-2 rounded-full ${
                 systemOk === null
@@ -200,20 +159,98 @@ const SuperAdminOverview = () => {
                     : 'bg-destructive'
               }`}
             />
-            <span className="text-sm text-muted-foreground">
-              {systemOk === null
-                ? 'Vérification…'
-                : systemOk
-                  ? 'Système opérationnel'
-                  : 'Système dégradé'}
-            </span>
+            <span className="text-xs font-medium text-slate-600">{systemStatusLabel}</span>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <MobileCompactStat
+            title={t('overview.kpiUsers')}
+            value={metrics.totalUsers.toLocaleString()}
+            tone="blue"
+            hint={`${metrics.activeUsers} actifs`}
+            onClick={() => navigate('/super-admin/users')}
+          />
+          <MobileCompactStat
+            title={t('overview.kpiSchools')}
+            value={stats.totalInstitutions.toLocaleString()}
+            tone="emerald"
+            onClick={() => navigate('/super-admin/institutions')}
+          />
+          <MobileCompactStat
+            title={t('overview.kpiNew')}
+            value={String(metrics.newUsersLast30Days)}
+            tone="amber"
+            hint="30 jours"
+          />
+          <MobileCompactStat
+            title={t('overview.kpiPlatformAdmins')}
+            value={String(metrics.usersByRole.admin ?? 0)}
+            tone="violet"
+            onClick={() => navigate('/super-admin/users')}
+          />
         </div>
       </div>
 
-      {/* RPT-001 : filtre par établissement — scope les métriques ci-dessous
-          (utilisateurs, alertes, activité récente) à un seul établissement. */}
-      <div className="w-full max-w-xs">
+      {/* Desktop : contexte ops (sans CTA école — déjà dans la sidebar) */}
+      <div className="hidden rounded-xl border border-border bg-muted/40 px-4 py-3 md:block">
+        <p className="text-[11px] font-medium text-muted-foreground">{t('hereLabel')}</p>
+        <p className="text-sm font-semibold">{t('console')}</p>
+        <p className="text-sm text-muted-foreground">{t('consoleHint')}</p>
+      </div>
+
+      <div className="hidden space-y-2 md:block">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t('overview.quickActions')}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/institutions">
+              <Building2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {t('items.institutions')}
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/subscriptions">
+              <CreditCard className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {t('items.subscriptions')}
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/support-ops">
+              <Headphones className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {t('items.supportOps')}
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/super-admin/observability">
+              <Activity className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {t('items.observability')}
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="hidden items-center justify-between md:flex">
+        <div>
+          <h2 className="text-2xl font-bold">{t('overview.title')}</h2>
+          <p className="text-muted-foreground">{t('overview.subtitle')}</p>
+        </div>
+        <div className="flex items-center space-x-1" title={systemDetail}>
+          <div
+            className={`h-2 w-2 rounded-full ${
+              systemOk === null
+                ? 'bg-slate-300'
+                : systemOk
+                  ? 'bg-success animate-pulse'
+                  : 'bg-destructive'
+            }`}
+          />
+          <span className="text-sm text-muted-foreground">{systemStatusLabel}</span>
+        </div>
+      </div>
+
+      <div className="hidden w-full max-w-xs md:block">
         <ReportFilters
           value={{ institutionId }}
           onChange={(next) => setInstitutionId(next.institutionId)}
@@ -222,19 +259,18 @@ const SuperAdminOverview = () => {
         />
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-l-4 border-l-primary">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-              <Users className="h-4 w-4 mr-2" />
-              Utilisateurs Total
+              <Users className="mr-2 h-4 w-4" />
+              {t('overview.kpiUsers')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.totalUsers.toLocaleString()}</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
+            <div className="mt-1 flex items-center text-xs text-muted-foreground">
+              <TrendingUp className="mr-1 h-3 w-3" />
               {metrics.activeUsers} actifs
             </div>
           </CardContent>
@@ -243,70 +279,47 @@ const SuperAdminOverview = () => {
         <Card className="border-l-4 border-l-success">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-              <Building2 className="h-4 w-4 mr-2" />
-              Établissements
+              <Building2 className="mr-2 h-4 w-4" />
+              {t('items.institutions')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalInstitutions.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Institutions actives
-            </div>
+            <div className="mt-1 text-xs text-muted-foreground">{t('overview.kpiSchoolsHint')}</div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-warning">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-              <Activity className="h-4 w-4 mr-2" />
-              Nouveaux Comptes
+              <Activity className="mr-2 h-4 w-4" />
+              {t('overview.kpiNew')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.newUsersLast30Days}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Derniers 30 jours
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Exercices Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{scopedExercises.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {scopedExercises.filter((ex) => ex.is_published).length} publiés
-              {institutionId ? ' · filtre établissement' : ''}
-            </div>
+            <div className="mt-1 text-xs text-muted-foreground">30 jours</div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-info">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-              <Shield className="h-4 w-4 mr-2" />
-              Comptes Administrateurs
+              <Shield className="mr-2 h-4 w-4" />
+              {t('overview.kpiPlatformAdmins')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.usersByRole.admin ?? 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Accès global à la plateforme
-            </div>
+            <div className="mt-1 text-xs text-muted-foreground">{t('overview.kpiPlatformAdminsHint')}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="hidden grid-cols-1 gap-6 md:grid lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Répartition des utilisateurs</CardTitle>
+            <CardTitle>{t('overview.chartRoles')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -322,7 +335,7 @@ const SuperAdminOverview = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {userRoleData.map((entry, index) => (
+                    {userRoleData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -335,7 +348,7 @@ const SuperAdminOverview = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Types d'établissements</CardTitle>
+            <CardTitle>{t('overview.chartSchoolTypes')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -353,49 +366,46 @@ const SuperAdminOverview = () => {
         </Card>
       </div>
 
-      {/* Recent Activity */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="h-4 w-4 mr-2" />
-            Activité récente
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base md:text-lg">
+            <Clock className="mr-2 h-4 w-4" />
+            {t('overview.recentActivity')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {metrics.recentActivities.length > 0 ? (
-              // RPT-003 : bug réel trouvé au passage — cette carte référençait
-              // des champs Supabase (`activity_type`, `strk_profiles`,
-              // `created_at`) disparus depuis la migration Express/Prisma ;
-              // chaque entrée s'affichait vide/« Invalid Date » malgré des
-              // activités réellement journalisées. `type`/`description`/
-              // `createdAt` sont les champs réels ; `actor` est une jointure
-              // manuelle ajoutée côté serveur (userId n'a pas de relation
-              // Prisma déclarée vers le profil).
-              metrics.recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-2 w-2 bg-primary rounded-full"></div>
-                    <div>
-                      <p className="text-sm font-medium">{activity.description || activity.type}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.actor ? `${activity.actor.firstName ?? ''} ${activity.actor.lastName ?? ''}`.trim() : 'Système'}
+              metrics.recentActivities.slice(0, 5).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-muted/50 p-3"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-snug">
+                        {activity.description || activity.type}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {activity.actor
+                          ? `${activity.actor.firstName ?? ''} ${activity.actor.lastName ?? ''}`.trim()
+                          : 'Système'}
                         {activity.institution?.name ? ` · ${activity.institution.name}` : ''}
                       </p>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {activity.createdAt ? new Date(activity.createdAt).toLocaleDateString('fr-FR') : ''}
+                  <div className="shrink-0 text-xs text-muted-foreground">
+                    {activity.createdAt
+                      ? new Date(activity.createdAt).toLocaleDateString('fr-FR')
+                      : ''}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Aucune activité récente</p>
-                <p className="mt-1 text-xs">
-                  Les connexions et actions métier apparaîtront ici dès qu’elles seront journalisées.
-                </p>
+              <div className="py-6 text-center text-muted-foreground">
+                <Activity className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p>{t('overview.recentActivityEmpty')}</p>
               </div>
             )}
           </div>

@@ -11,10 +11,7 @@ import {
   Bell,
   LogOut,
   User,
-  Plus,
   Briefcase,
-  GraduationCap,
-  School,
   Activity,
   ScrollText,
   Megaphone,
@@ -35,7 +32,6 @@ import { cn } from '@/lib/utils';
 interface SuperAdminSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
-  onCreateClass?: () => void;
   /** Demandes de démo en file contact (badge Support ops). */
   demoRequestCount?: number;
   /** Drawer mobile : ouvert / fermé. Toujours visible ≥ lg. */
@@ -66,9 +62,6 @@ const NAV_GROUPS: NavGroupDef[] = [
       { titleKey: 'items.users', hintKey: 'items.usersHint', icon: Users, value: 'users' },
       { titleKey: 'items.advancedUsers', hintKey: 'items.advancedUsersHint', icon: UserCog, value: 'advanced-users' },
       { titleKey: 'items.institutions', icon: Building2, value: 'institutions' },
-      { titleKey: 'items.teachers', icon: GraduationCap, value: 'teachers' },
-      { titleKey: 'items.students', icon: School, value: 'students' },
-      { titleKey: 'items.classes', icon: Building2, value: 'classes' },
     ],
   },
   {
@@ -109,7 +102,6 @@ const NAV_GROUPS: NavGroupDef[] = [
 const SuperAdminSidebar = ({
   activeSection,
   onSectionChange,
-  onCreateClass,
   demoRequestCount = 0,
   isOpen,
   onClose,
@@ -244,17 +236,6 @@ const SuperAdminSidebar = ({
                           </span>
                         ) : null}
                       </button>
-                      {item.value === 'classes' && onCreateClass && (
-                        <button
-                          type="button"
-                          onClick={onCreateClass}
-                          className="shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                          title={t('addClass')}
-                          aria-label={t('addClass')}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      )}
                     </li>
                   );
                 })}

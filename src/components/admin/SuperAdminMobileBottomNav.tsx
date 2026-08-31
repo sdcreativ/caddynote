@@ -15,10 +15,10 @@ type BottomItem =
   | { kind: 'more'; titleKey: string; icon: LucideIcon };
 
 const BOTTOM_ITEMS: BottomItem[] = [
-  { kind: 'section', section: 'overview', titleKey: 'items.overview', icon: LayoutDashboard },
-  { kind: 'section', section: 'support-ops', titleKey: 'items.supportOps', icon: Headphones },
-  { kind: 'section', section: 'institutions', titleKey: 'items.institutions', icon: Building2 },
-  { kind: 'section', section: 'subscriptions', titleKey: 'items.subscriptions', icon: CreditCard },
+  { kind: 'section', section: 'overview', titleKey: 'bottomNav.home', icon: LayoutDashboard },
+  { kind: 'section', section: 'support-ops', titleKey: 'bottomNav.support', icon: Headphones },
+  { kind: 'section', section: 'institutions', titleKey: 'bottomNav.schools', icon: Building2 },
+  { kind: 'section', section: 'subscriptions', titleKey: 'bottomNav.billing', icon: CreditCard },
   { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
 ];
 
@@ -76,13 +76,13 @@ const SuperAdminMobileBottomNav = ({
                 }}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[13px] font-semibold leading-tight transition-colors',
+                  'relative flex w-full flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-2 text-[11px] font-semibold leading-tight transition-colors',
                   active ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <span className="relative">
                   <Icon
-                    className={cn('h-6 w-6 shrink-0', active ? 'text-blue-600' : 'text-slate-500')}
+                    className={cn('h-5 w-5 shrink-0', active ? 'text-blue-600' : 'text-slate-500')}
                     aria-hidden
                   />
                   {showBadge ? (
@@ -91,7 +91,7 @@ const SuperAdminMobileBottomNav = ({
                     </span>
                   ) : null}
                 </span>
-                <span className="max-w-full truncate px-0.5">{label}</span>
+                <span className="max-w-full px-0.5">{label}</span>
               </button>
             </li>
           );
