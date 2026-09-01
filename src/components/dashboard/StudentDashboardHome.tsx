@@ -4,15 +4,11 @@ import {
   GraduationCap,
   AlertCircle,
   BookOpen,
-  ClipboardCheck,
   ChevronRight,
   MessageSquare,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
-import {
-  MobileCompactStat,
-  MobilePrimaryCta,
-} from '@/components/dashboard/MobileActionPrimitives';
+import { MobileCompactStat } from '@/components/dashboard/MobileActionPrimitives';
 import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfile';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -118,30 +114,6 @@ const StudentDashboardHome = ({
       tone: 'blue',
     });
   }
-
-  const primaryCta = hasHomework
-    ? {
-        label: t('studentMobile.primaryCtaHomework'),
-        href: '/assignments',
-        icon: <BookOpen aria-hidden />,
-      }
-    : hasAbsences
-      ? {
-          label: t('studentMobile.primaryCtaAbsences'),
-          href: '/my-absences',
-          icon: <ClipboardCheck aria-hidden />,
-        }
-      : hasUnread
-        ? {
-            label: t('studentMobile.messagesToHandleHint'),
-            href: '/messages',
-            icon: <MessageSquare aria-hidden />,
-          }
-        : {
-            label: t('studentMobile.primaryCta'),
-            href: '/my-grades',
-            icon: <GraduationCap aria-hidden />,
-          };
 
   const gradesHint =
     state === 'ready' || state === 'empty'
@@ -291,18 +263,6 @@ const StudentDashboardHome = ({
           color="red"
           onClick={() => navigate('/my-absences')}
         />
-      </div>
-
-      <div className="space-y-3" data-testid="student-accueil-aller-ou">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          {t('studentMobile.shortcutsTitle')}
-        </p>
-        <MobilePrimaryCta
-          label={primaryCta.label}
-          icon={primaryCta.icon}
-          onClick={() => navigate(primaryCta.href)}
-        />
-        <p className="sr-only">{t('studentMobile.primaryCtaHint')}</p>
       </div>
     </div>
   );

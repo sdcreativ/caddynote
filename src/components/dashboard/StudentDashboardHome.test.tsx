@@ -38,7 +38,7 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     expect(screen.getByText(/3 devoir\(s\) en cours/i)).toBeInTheDocument();
   });
 
-  it('oriente le CTA vers les absences s’il n’y a pas de devoirs', () => {
+  it('oriente vers les absences depuis À traiter s’il n’y a pas de devoirs', () => {
     render(
       <MemoryRouter>
         <StudentDashboardHome
@@ -52,9 +52,6 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     );
 
     expect(screen.getByText(/2 absence\(s\) sur 30 jours/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Voir mes absences/i }).length).toBeGreaterThanOrEqual(
-      1
-    );
     expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
       'href',
       '/my-absences'
@@ -82,7 +79,7 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     );
   });
 
-  it('affiche un empty calme et CTA notes sans devoirs ni absences', () => {
+  it('affiche un empty calme sans devoirs ni absences', () => {
     render(
       <MemoryRouter>
         <StudentDashboardHome
@@ -99,6 +96,7 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     expect(screen.queryByRole('link', { name: /Traiter maintenant/i })).not.toBeInTheDocument();
     expect(screen.getAllByText(/Aucune note pour l/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Aucun devoir en cours/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Mes notes$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Aller où/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Mes notes$/i })).not.toBeInTheDocument();
   });
 });
