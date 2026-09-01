@@ -46,8 +46,9 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil élève — cockpit deux clics :
- * À traiter → Pulsation (KPI) → CTA + raccourcis.
+ * Accueil élève (mobile = maquette Accueil) :
+ * Bonjour → À traiter → Notes/Devoirs + Absences → Aller où (CTA).
+ * Desktop : mêmes KPI + grille de raccourcis.
  */
 const StudentDashboardHome = ({
   userName,
@@ -61,13 +62,14 @@ const StudentDashboardHome = ({
 
   const dateLabel = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long',
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 
   const homeworkCount = state === 'ready' || state === 'empty' ? Number(homework ?? 0) : 0;
   const absenceCount = state === 'ready' || state === 'empty' ? Number(absences ?? 0) : 0;
+  const gradesCount = state === 'ready' || state === 'empty' ? Number(grades ?? 0) : 0;
   const hasHomework = state === 'ready' && homeworkCount > 0;
   const hasAbsences = state === 'ready' && absenceCount > 0;
 
@@ -109,6 +111,19 @@ const StudentDashboardHome = ({
           icon: <GraduationCap aria-hidden />,
         };
 
+  const gradesHint =
+    state === 'ready' || state === 'empty'
+      ? gradesCount === 0
+        ? t('empty.studentNoGrades')
+        : undefined
+      : undefined;
+  const homeworkHint =
+    state === 'ready' || state === 'empty'
+      ? homeworkCount === 0
+        ? t('empty.studentNoHomework')
+        : undefined
+      : undefined;
+
   if (state === 'error') {
     return (
       <div className="space-y-6 py-4 animate-fade-in md:py-6">
@@ -123,17 +138,17 @@ const StudentDashboardHome = ({
   }
 
   return (
-    <div className="space-y-6 py-4 animate-fade-in md:space-y-8 md:py-6">
-      <header className="space-y-1.5">
-        <h1 className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight md:text-3xl">
+    <div className="space-y-5 py-4 animate-fade-in md:space-y-8 md:py-6">
+      <header className="space-y-1">
+        <h1 className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight text-slate-900 md:text-3xl">
           {t('hello', { name: userName })}
         </h1>
-        <p className="text-base text-slate-600 md:text-slate-500">
+        <p className="text-sm text-slate-500 md:text-base">
           {roleLabel('student')} • {dateLabel}
         </p>
       </header>
 
-      {/* Q1 — À traiter */}
+      {/* À traiter */}
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -185,37 +200,46 @@ const StudentDashboardHome = ({
         )}
       </section>
 
-      {/* Q2 — Pulsation */}
+      {/* KPI mobile : Notes | Devoirs, Absences pleine largeur */}
       <div className="grid grid-cols-2 gap-3 md:hidden">
         <MobileCompactStat
           title={t('stats.grades')}
           value={String(kpiValue(state, grades))}
           tone="blue"
-          hint={state === 'empty' ? t('empty.studentNoGrades') : undefined}
+          hint={gradesHint}
           onClick={() => navigate('/my-grades')}
         />
         <MobileCompactStat
           title={t('stats.homework')}
           value={String(kpiValue(state, homework))}
           tone="amber"
-          hint={state === 'empty' ? t('empty.studentNoHomework') : undefined}
+          hint={homeworkHint}
           onClick={() => navigate('/assignments')}
         />
-        <MobileCompactStat
-          title={t('stats.absences30d')}
-          value={String(kpiValue(state, absences))}
-          tone="rose"
-          onClick={() => navigate('/my-absences')}
-        />
+        <div className="col-span-2">
+          <MobileCompactStat
+            title={t('stats.absences30d')}
+            value={String(kpiValue(state, absences))}
+            tone="rose"
+            onClick={() => navigate('/my-absences')}
+          />
+        </div>
       </div>
 
       <div className="hidden gap-4 md:grid md:grid-cols-3">
         <StatCard
           title={t('stats.grades')}
           value={kpiValue(state, grades)}
-          description={state === 'empty' ? t('empty.studentNoGrades') : undefined}
+          description={gradesHint}
           icon={<GraduationCap className="h-5 w-5" />}
           onClick={() => navigate('/my-grades')}
+        />
+        <StatCard
+          title={t('stats.homework')}
+          value={kpiValue(state, homework)}
+          description={homeworkHint}
+          icon={<BookOpen className="h-5 w-5" />}
+          onClick={() => navigate('/assignments')}
         />
         <StatCard
           title={t('stats.absences30d')}
@@ -224,16 +248,9 @@ const StudentDashboardHome = ({
           color="red"
           onClick={() => navigate('/my-absences')}
         />
-        <StatCard
-          title={t('stats.homework')}
-          value={kpiValue(state, homework)}
-          description={state === 'empty' ? t('empty.studentNoHomework') : undefined}
-          icon={<BookOpen className="h-5 w-5" />}
-          onClick={() => navigate('/assignments')}
-        />
       </div>
 
-      {/* Q3 — Deux clics */}
+      {/* Aller où — CTA principal (maquette mobile) + raccourcis desktop */}
       <div className="space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('studentMobile.shortcutsTitle')}
@@ -244,7 +261,7 @@ const StudentDashboardHome = ({
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('studentMobile.primaryCtaHint')}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="hidden grid-cols-2 gap-3 md:grid md:grid-cols-3 lg:grid-cols-5">
           <MobileQuickTile
             label={t('quickActions.myGrades')}
             icon={<GraduationCap aria-hidden />}

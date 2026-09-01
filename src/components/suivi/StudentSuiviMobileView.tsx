@@ -1,13 +1,22 @@
-import { Link } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, Clock, MessageSquare, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  MessageSquare,
+  ChevronRight,
+  ChevronLeft,
+  MoreVertical,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useResolvedStoredUrl } from '@/hooks/useResolvedStoredUrl';
+import { useMobileShell } from '@/hooks/useMobileShell';
 import { presenceTodayFromAbsences, type PresenceToday } from '@/lib/presenceToday';
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 import { cn } from '@/lib/utils';
 
 type StudentSuiviMobileViewProps = {
-  /** Titre bandeau (ex. « Suivi de Koffi » / « Mon suivi »). */
+  /** Titre bandeau (ex. « Suivi de Koffi »). */
   headerTitle: string;
   firstName: string;
   lastName: string;
@@ -17,6 +26,8 @@ type StudentSuiviMobileViewProps = {
   absencesLoading?: boolean;
   messageHref?: string;
   messageLabel?: string;
+  /** Retour (défaut : /dashboard). */
+  backHref?: string;
   classNameOuter?: string;
 };
 
@@ -49,15 +60,17 @@ const presenceCopy = (
   }
   return {
     title: 'Présence confirmée',
-    body: `${firstName} est présent(e) aujourd’hui`,
-    badge: 'Aujourd’hui',
+    body: status.timeLabel
+      ? `${firstName} est présent(e) aujourd’hui à ${status.timeLabel}`
+      : `${firstName} est présent(e) aujourd’hui`,
+    badge: status.timeLabel ? `Aujourd’hui à ${status.timeLabel}` : 'Aujourd’hui',
     tone: 'ok',
   };
 };
 
 /**
- * Bloc mobile « Suivi » (maquette parent/élève) :
- * bandeau titre + avatar + carte présence + CTA message.
+ * Écran Suivi mobile (maquette) : header bleu ← / titre / ⋮,
+ * avatar, carte présence, CTA message.
  */
 export const StudentSuiviMobileView = ({
   headerTitle,
@@ -69,23 +82,56 @@ export const StudentSuiviMobileView = ({
   absencesLoading,
   messageHref = '/messages',
   messageLabel = 'Envoyer un message',
+  backHref = '/dashboard',
   classNameOuter,
 }: StudentSuiviMobileViewProps) => {
+  const navigate = useNavigate();
+  const { openMoreMenu } = useMobileShell();
   const avatarUrl = useResolvedStoredUrl(profileImage);
   const status = presenceTodayFromAbsences(absences);
   const copy = presenceCopy(firstName || 'L’élève', status);
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate(backHref);
+  };
+
   return (
     <div className={cn('space-y-4', classNameOuter)}>
-      <div className="-mx-4 -mt-2 bg-blue-600 px-4 pb-5 pt-3 text-white sm:-mx-6">
-        <h1 className="text-center text-lg font-semibold tracking-tight">{headerTitle}</h1>
-      </div>
+      <header className="-mx-4 -mt-6 bg-blue-600 text-white sm:-mx-6 md:mx-0 md:mt-0 md:rounded-2xl">
+        <div className="flex items-center gap-2 px-2 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-3">
+          <button
+            type="button"
+            onClick={goBack}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            aria-label="Retour"
+          >
+            <ChevronLeft className="h-6 w-6" aria-hidden />
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-lg font-semibold tracking-tight">
+            {headerTitle}
+          </h1>
+          <button
+            type="button"
+            onClick={openMoreMenu}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 md:hidden"
+            aria-label="Menu"
+          >
+            <MoreVertical className="h-5 w-5" aria-hidden />
+          </button>
+          {/* Équilibre visuelle desktop (pas de ⋮) */}
+          <span className="hidden h-11 w-11 shrink-0 md:block" aria-hidden />
+        </div>
+      </header>
 
       <div className="flex flex-col items-center pt-1 text-center">
-        <Avatar className="h-20 w-20 border-4 border-white shadow-md ring-1 ring-slate-200/80">
+        <Avatar className="h-24 w-24 border-4 border-white shadow-md ring-1 ring-slate-200/80">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={fullName} /> : null}
-          <AvatarFallback className="bg-blue-100 text-lg font-semibold text-blue-700">
+          <AvatarFallback className="bg-blue-100 text-xl font-semibold text-blue-700">
             {initials(firstName, lastName)}
           </AvatarFallback>
         </Avatar>
@@ -103,12 +149,12 @@ export const StudentSuiviMobileView = ({
             <div
               className={cn(
                 'mx-auto flex h-14 w-14 items-center justify-center rounded-full',
-                copy.tone === 'ok' && 'bg-emerald-100 text-emerald-600',
+                copy.tone === 'ok' && 'bg-emerald-500 text-white',
                 copy.tone === 'warn' && 'bg-amber-100 text-amber-600',
                 copy.tone === 'bad' && 'bg-rose-100 text-rose-600'
               )}
             >
-              {copy.tone === 'ok' && <CheckCircle2 className="h-8 w-8" aria-hidden />}
+              {copy.tone === 'ok' && <CheckCircle2 className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
               {copy.tone === 'warn' && <Clock className="h-8 w-8" aria-hidden />}
               {copy.tone === 'bad' && <AlertTriangle className="h-8 w-8" aria-hidden />}
             </div>

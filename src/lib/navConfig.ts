@@ -40,6 +40,7 @@ import {
   MoreHorizontal,
   Bell,
   BarChart3,
+  Menu,
 } from 'lucide-react';
 import i18n from '@/i18n/config';
 
@@ -202,7 +203,7 @@ export function mobileBottomNavForRole(
           href: '/notifications',
           icon: Bell,
         },
-        { kind: 'more', titleKey: 'bottomNav.menu', icon: MoreHorizontal },
+        { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'student':
       // Accueil · Suivi · Messages · Notifications · Menu
@@ -216,7 +217,7 @@ export function mobileBottomNavForRole(
           href: '/notifications',
           icon: Bell,
         },
-        { kind: 'more', titleKey: 'bottomNav.menu', icon: MoreHorizontal },
+        { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'secretary':
       // Accueil · Élèves · Appel · Messages · Plus

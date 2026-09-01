@@ -8,8 +8,8 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
   return { ...actual, roleLabel: () => 'Élève' };
 });
 
-describe('StudentDashboardHome (cockpit deux clics)', () => {
-  it('expose À traiter, KPI et CTA + raccourcis quand il y a des devoirs', () => {
+describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
+  it('expose À traiter, KPI Notes/Devoirs/Absences et CTA quand il y a des devoirs', () => {
     render(
       <MemoryRouter>
         <StudentDashboardHome
@@ -23,7 +23,9 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Bonjour, Sam/i })).toBeInTheDocument();
+    expect(screen.getByText(/Élève/i)).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
+    expect(screen.getByText(/Priorités du jour/i)).toBeInTheDocument();
     expect(screen.getByText(/3 devoir\(s\) en cours/i)).toBeInTheDocument();
     expect(screen.getByText(/1 absence\(s\) sur 30 jours/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
@@ -31,16 +33,14 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
       '/assignments'
     );
 
+    expect(screen.getAllByText('Notes').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Devoirs').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Absences/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
 
+    expect(screen.getByText(/Aller où/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Voir mes devoirs/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Mes notes/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Devoirs$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Mes cours$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Absences$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Emploi du temps/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('oriente le CTA vers les absences s’il n’y a pas de devoirs', () => {
@@ -71,7 +71,7 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
       <MemoryRouter>
         <StudentDashboardHome
           userName="Sam"
-          grades={8}
+          grades={0}
           absences={0}
           homework={0}
           state="ready"
@@ -81,6 +81,8 @@ describe('StudentDashboardHome (cockpit deux clics)', () => {
 
     expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Traiter maintenant/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Aucune note pour l/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Aucun devoir en cours/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Mes notes$/i }).length).toBeGreaterThanOrEqual(1);
   });
 });

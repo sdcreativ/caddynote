@@ -60,7 +60,7 @@ const MySuiviPage = () => {
   return (
     <div className="space-y-6 pb-2">
       <StudentSuiviMobileView
-        headerTitle="Mon suivi"
+        headerTitle={`Suivi de ${firstName}`}
         firstName={firstName}
         lastName={lastName}
         className={className}
