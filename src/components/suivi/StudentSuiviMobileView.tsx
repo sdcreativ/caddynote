@@ -26,7 +26,7 @@ type StudentSuiviMobileViewProps = {
   absencesLoading?: boolean;
   messageHref?: string;
   messageLabel?: string;
-  /** Retour (défaut : /dashboard). */
+  /** Retour (défaut : /my-suivi pour élève via historique, sinon dashboard). */
   backHref?: string;
   classNameOuter?: string;
 };
@@ -187,7 +187,7 @@ export const StudentSuiviMobileView = ({
         to={messageHref}
         className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm transition-colors hover:bg-slate-50"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
           <MessageSquare className="h-5 w-5" aria-hidden />
         </span>
         <span className="flex-1 text-left text-sm font-semibold text-slate-900">{messageLabel}</span>

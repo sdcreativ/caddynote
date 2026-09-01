@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { homePathForRole } from '@/lib/homePath';
 
 const BLUE = '#1D70D8';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -65,15 +66,18 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
       'rounded-[1.5rem] border border-slate-200/80 bg-white p-6 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)] sm:p-8'
   );
 
-  const handleManualRedirect = useCallback(() => {
-    const dest = '/dashboard';
-    window.location.href = dest;
-    setTimeout(() => {
-      if (window.location.pathname !== dest) {
-        navigate(dest, { replace: true });
-      }
-    }, 1000);
-  }, [navigate, user?.role]);
+  const handleManualRedirect = useCallback(
+    (role?: string | null) => {
+      const dest = homePathForRole(role ?? user?.role);
+      window.location.href = dest;
+      setTimeout(() => {
+        if (window.location.pathname !== dest) {
+          navigate(dest, { replace: true });
+        }
+      }, 1000);
+    },
+    [navigate, user?.role]
+  );
 
   // Callback SSO : fragment #sso_token= / #sso_mfa= / #sso_error=
   useEffect(() => {
@@ -105,9 +109,9 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     if (token) {
       setIsLoading(true);
       acceptSsoToken(token)
-        .then(() => {
+        .then(({ role }) => {
           toast({ title: t('login.successTitle'), description: t('login.redirecting') });
-          setTimeout(handleManualRedirect, 400);
+          setTimeout(() => handleManualRedirect(role), 400);
         })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : t('login.invalidCredentials');
@@ -195,7 +199,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     setIsLoading(true);
 
     try {
-      const { mfaRequired } = await login(email, password);
+      const { mfaRequired, role } = await login(email, password);
       if (mfaRequired) {
         setMfaStep(true);
         setIsLoading(false);
@@ -208,7 +212,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
       });
 
       setTimeout(() => {
-        handleManualRedirect();
+        handleManualRedirect(role);
       }, 500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('login.invalidCredentials');
@@ -233,9 +237,9 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
 
     setIsLoading(true);
     try {
-      await verifyMfaCode(trimmed);
+      const { role } = await verifyMfaCode(trimmed);
       toast({ title: t('login.successTitle'), description: t('login.redirecting') });
-      setTimeout(handleManualRedirect, 500);
+      setTimeout(() => handleManualRedirect(role), 500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('login.mfaInvalid');
       toast({

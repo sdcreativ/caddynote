@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 import { User as StrkUser, StrkUserRole } from '@/types/strk';
 import { apiClient, ApiError, getToken, setToken, clearToken, setUnauthorizedHandler } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { homePathForRole } from '@/lib/homePath';
 
 interface ApiProfile {
   id: string;
@@ -37,11 +38,14 @@ interface StrkAuthContextType {
   user: StrkUser | null;
   isLoading: boolean;
   authError: string | null;
-  login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
-  verifyMfaCode: (code: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ mfaRequired: boolean; role?: StrkUserRole }>;
+  verifyMfaCode: (code: string) => Promise<{ role: StrkUserRole }>;
   cancelMfaChallenge: () => void;
   /** Applique un jeton issu du callback SSO (fragment URL). */
-  acceptSsoToken: (token: string) => Promise<void>;
+  acceptSsoToken: (token: string) => Promise<{ role: StrkUserRole }>;
   /** Démarre l’étape MFA après SSO (challenge dans le fragment). */
   beginSsoMfaChallenge: (challengeToken: string) => void;
   logout: () => Promise<void>;
@@ -153,7 +157,10 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       .finally(() => setIsLoading(false));
   }, [refreshMe]);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ mfaRequired: boolean }> => {
+  const login = useCallback(async (
+    email: string,
+    password: string
+  ): Promise<{ mfaRequired: boolean; role?: StrkUserRole }> => {
     setAuthError(null);
     try {
       const response = await apiClient.post<
@@ -173,7 +180,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       } catch {
         applyMfaFlags({});
       }
-      return { mfaRequired: false };
+      return { mfaRequired: false, role: response.user.role };
     } catch (error) {
       const message = error instanceof ApiError ? error.message : 'Erreur de connexion inattendue';
       setAuthError(message);
@@ -182,7 +189,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   }, [applyMfaFlags, refreshMe]);
 
   const verifyMfaCode = useCallback(
-    async (code: string) => {
+    async (code: string): Promise<{ role: StrkUserRole }> => {
       if (!mfaChallengeToken) {
         throw new Error('Aucune vérification MFA en attente, reconnectez-vous');
       }
@@ -197,6 +204,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(mapApiProfileToUser(profile));
         setMfaChallengeToken(null);
         await refreshMe().catch(() => undefined);
+        return { role: profile.role };
       } catch (error) {
         const message = error instanceof ApiError ? error.message : 'Erreur de vérification inattendue';
         setAuthError(message);
@@ -212,10 +220,11 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const acceptSsoToken = useCallback(
-    async (token: string) => {
+    async (token: string): Promise<{ role: StrkUserRole }> => {
       setAuthError(null);
       setToken(token);
-      await refreshMe();
+      const me = await refreshMe();
+      return { role: me.user.role };
     },
     [refreshMe]
   );
@@ -289,7 +298,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
         title: 'Impersonation active',
         description: `Session limitée jusqu’à ${new Date(res.expiresAt).toLocaleString('fr-FR')}`,
       });
-      window.location.href = '/dashboard';
+      window.location.href = homePathForRole(res.user.role);
     },
     [toast]
   );

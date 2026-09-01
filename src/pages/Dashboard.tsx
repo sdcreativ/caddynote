@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import { useStrkUsers } from '@/hooks/useStrkUsers';
@@ -5,22 +6,17 @@ import { useEffect, useState } from 'react';
 import { EstablishmentOverview } from '@/components/dashboard/establishment/EstablishmentOverview';
 import TeacherDashboardHome from '@/components/dashboard/TeacherDashboardHome';
 import ParentDashboardHome from '@/components/dashboard/ParentDashboardHome';
-import StudentDashboardHome from '@/components/dashboard/StudentDashboardHome';
 import SecretaryDashboardHome from '@/components/dashboard/SecretaryDashboardHome';
 import SupervisorDashboardHome from '@/components/dashboard/SupervisorDashboardHome';
 import AdminDashboardHome from '@/components/dashboard/AdminDashboardHome';
 import AccountantDashboardHome from '@/components/dashboard/AccountantDashboardHome';
 import { StrkAnalyticsService, type DashboardMetrics } from '@/services/strkAnalyticsService';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
-import { fetchGradesByStudent } from '@/services/strkGradeService';
 import { fetchAbsencesByStudent } from '@/services/strkAbsenceService';
-import { fetchAssignmentsByStudent } from '@/services/strkAssignmentService';
 import { fetchInvoicesByStudent, fetchInvoicesByInstitution } from '@/services/strkFinanceService';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import {
   summarizeOpenInvoices,
-  countAbsencesSince,
-  countOpenHomework,
 } from '@/lib/dashboardKpis';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
@@ -35,13 +31,6 @@ const Dashboard = () => {
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [metricsState, setMetricsState] = useState<LoadState>('idle');
-
-  const [studentKpis, setStudentKpis] = useState<{
-    grades: number;
-    absences: number;
-    homework: number;
-  } | null>(null);
-  const [studentState, setStudentState] = useState<LoadState>('idle');
 
   const [parentKpis, setParentKpis] = useState<{
     invoicesOpen: number;
@@ -99,34 +88,6 @@ const Dashboard = () => {
     };
     void loadDashboardData();
   }, [user, loadInstitutions, loadUsersByInstitution]);
-
-  useEffect(() => {
-    if (user?.role !== 'student' || !user.id) return;
-    setStudentState('loading');
-    void (async () => {
-      try {
-        const [grades, absences, assignments] = await Promise.all([
-          fetchGradesByStudent(user.id),
-          fetchAbsencesByStudent(user.id),
-          fetchAssignmentsByStudent(user.id),
-        ]);
-        const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
-        setStudentKpis({
-          grades: grades.length,
-          absences: countAbsencesSince(absences, since),
-          homework: countOpenHomework(assignments),
-        });
-        setStudentState(
-          grades.length === 0 && absences.length === 0 && assignments.length === 0
-            ? 'empty'
-            : 'ready'
-        );
-      } catch {
-        setStudentKpis(null);
-        setStudentState('error');
-      }
-    })();
-  }, [user]);
 
   useEffect(() => {
     if (user?.role !== 'accountant' || !user.institutionId) return;
@@ -255,16 +216,9 @@ const Dashboard = () => {
     );
   }
 
+  // Élève : l’Accueil mobile = écran Suivi (maquette « Suivi de {prénom} »).
   if (user?.role === 'student') {
-    return (
-      <StudentDashboardHome
-        userName={user.name?.split(' ')[0] ?? ''}
-        grades={studentKpis?.grades ?? null}
-        absences={studentKpis?.absences ?? null}
-        homework={studentKpis?.homework ?? null}
-        state={studentState}
-      />
-    );
+    return <Navigate to="/my-suivi" replace />;
   }
 
   if (user?.role === 'secretary') {

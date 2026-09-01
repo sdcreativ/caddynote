@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
+import { homePathForRole } from '@/lib/homePath';
 import { PublicShell } from '@/components/public/PublicShell';
 import { FadeIn, Stagger, StaggerItem } from '@/components/public/FadeIn';
 import { HeroDashboardPreview } from '@/components/public/HeroDashboardPreview';
@@ -143,7 +144,9 @@ const Index = () => {
         }));
 
   useEffect(() => {
-    if (user && window.location.pathname === '/') window.location.href = '/dashboard';
+    if (user && window.location.pathname === '/') {
+      window.location.href = homePathForRole(user.role);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -174,7 +177,7 @@ const Index = () => {
           <p className="mb-4 text-slate-500">{t('redirecting')}</p>
           {showFallbackButton && (
             <Button asChild className="rounded-full" style={{ backgroundColor: BLUE }}>
-              <Link to="/dashboard">{t('goDashboard')}</Link>
+              <Link to={homePathForRole(user.role)}>{t('goDashboard')}</Link>
             </Button>
           )}
         </div>
