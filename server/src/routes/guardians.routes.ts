@@ -35,7 +35,7 @@ guardiansRouter.get('/for-student/:studentId', async (req, res) => {
 guardiansRouter.get('/my-children', requireRole('parent'), async (req, res) => {
   const links = await prisma.strkStudentGuardian.findMany({
     where: { guardianId: req.auth!.sub, status: 'active' },
-    include: { student: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    include: { student: { select: { id: true, firstName: true, lastName: true, email: true, profileImage: true } } },
   });
 
   // StrkStudentGuardian.student pointe vers StrkProfile (identité) ; les
@@ -55,6 +55,7 @@ guardiansRouter.get('/my-children', requireRole('parent'), async (req, res) => {
       firstName: link.student.firstName || '',
       lastName: link.student.lastName || '',
       email: link.student.email,
+      profileImage: link.student.profileImage,
       classId: extension?.classId,
       className: extension?.class?.name,
       institutionId: link.institutionId,

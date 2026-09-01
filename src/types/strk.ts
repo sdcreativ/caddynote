@@ -98,6 +98,7 @@ export interface GuardianChildSummary {
   firstName: string;
   lastName: string;
   email?: string;
+  profileImage?: string | null;
   classId?: string;
   className?: string;
   institutionId: string;

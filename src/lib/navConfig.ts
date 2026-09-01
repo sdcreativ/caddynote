@@ -38,6 +38,8 @@ import {
   Shield,
   ScrollText,
   MoreHorizontal,
+  Bell,
+  BarChart3,
 } from 'lucide-react';
 import i18n from '@/i18n/config';
 
@@ -184,32 +186,37 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'parent':
-      // Accueil · Enfants · Finances · Messages · Plus
+      // Accueil · Suivi · Messages · Notifications · Menu
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
         {
           kind: 'link',
-          titleKey: 'bottomNav.children',
+          titleKey: 'bottomNav.suivi',
           href: '/my-children',
-          icon: Users,
+          icon: BarChart3,
         },
+        { kind: 'link', titleKey: 'bottomNav.messagesLong', href: '/messages', icon: MessageSquare },
         {
           kind: 'link',
-          titleKey: 'bottomNav.finance',
-          href: '/my-children?tab=finance',
-          icon: CreditCard,
+          titleKey: 'bottomNav.notifications',
+          href: '/notifications',
+          icon: Bell,
         },
-        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
-        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+        { kind: 'more', titleKey: 'bottomNav.menu', icon: MoreHorizontal },
       ];
     case 'student':
-      // Accueil · Notes · Devoirs · Messages · Plus
+      // Accueil · Suivi · Messages · Notifications · Menu
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
-        { kind: 'link', titleKey: 'bottomNav.notes', href: '/my-grades', icon: GraduationCap },
-        { kind: 'link', titleKey: 'bottomNav.homework', href: '/assignments', icon: FileText },
-        { kind: 'link', titleKey: 'bottomNav.messages', href: '/messages', icon: MessageSquare },
-        { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
+        { kind: 'link', titleKey: 'bottomNav.suivi', href: '/my-suivi', icon: BarChart3 },
+        { kind: 'link', titleKey: 'bottomNav.messagesLong', href: '/messages', icon: MessageSquare },
+        {
+          kind: 'link',
+          titleKey: 'bottomNav.notifications',
+          href: '/notifications',
+          icon: Bell,
+        },
+        { kind: 'more', titleKey: 'bottomNav.menu', icon: MoreHorizontal },
       ];
     case 'secretary':
       // Accueil · Élèves · Appel · Messages · Plus
@@ -456,6 +463,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           labelKey: 'sections.journey',
           items: [
             { titleKey: 'items.dashboard', href: '/dashboard', icon: Home },
+            { titleKey: 'items.mySuivi', href: '/my-suivi', icon: BarChart3 },
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.myCourses', href: '/my-courses', icon: BookOpen },
             { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },

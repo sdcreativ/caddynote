@@ -58,6 +58,7 @@ import TeachersPage from "./pages/TeachersPage";
 import MyCoursesPage from "./pages/MyCoursesPage";
 import AssignmentsPage from "./pages/AssignmentsPage";
 import MyAbsencesPage from "./pages/MyAbsencesPage";
+import MySuiviPage from "./pages/MySuiviPage";
 import MyGradesPage from "./pages/student/MyGradesPage";
 import TeacherAttendancePage from "./pages/teacher/TeacherAttendancePage";
 import GradesPage from "./pages/GradesPage";
@@ -80,6 +81,7 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import ExercisesPage from "./pages/ExercisesPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import MyChildrenPage from "./pages/parent/MyChildrenPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import AdmissionApplyPage from "./pages/AdmissionApplyPage";
@@ -412,6 +414,20 @@ function App() {
                   <ProtectedRoute requiredRole="parent">
                     <MainLayout>
                       <MyChildrenPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/my-suivi" element={
+                  <ProtectedRoute requiredRole="student">
+                    <MainLayout>
+                      <MySuiviPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <NotificationsPage />
                     </MainLayout>
                   </ProtectedRoute>
                 } />

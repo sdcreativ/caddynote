@@ -245,26 +245,26 @@ describe('navConfig (NFR-009)', () => {
     expect(sections.find((s) => s.collapsible)).toBeUndefined();
   });
 
-  it('Parent : barre du bas mobile = Accueil · Enfants · Finances · Messages · Plus', () => {
+  it('Parent : barre du bas mobile = Accueil · Suivi · Messages · Notifications · Menu', () => {
     const items = mobileBottomNavForRole('parent');
     expect(items).toHaveLength(5);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/my-children' });
-    expect(items![2]).toMatchObject({ kind: 'link', href: '/my-children?tab=finance' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/notifications' });
     expect(items![4]).toMatchObject({ kind: 'more' });
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
     }
   });
 
-  it('Élève : barre du bas mobile = Accueil · Notes · Devoirs · Messages · Plus', () => {
+  it('Élève : barre du bas mobile = Accueil · Suivi · Messages · Notifications · Menu', () => {
     const items = mobileBottomNavForRole('student');
     expect(items).toHaveLength(5);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
-    expect(items![1]).toMatchObject({ kind: 'link', href: '/my-grades' });
-    expect(items![2]).toMatchObject({ kind: 'link', href: '/assignments' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![1]).toMatchObject({ kind: 'link', href: '/my-suivi' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/notifications' });
     expect(items![4]).toMatchObject({ kind: 'more' });
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
@@ -280,6 +280,7 @@ describe('navConfig (NFR-009)', () => {
     expect(advanced?.defaultCollapsed).toBe(true);
     const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
     expect(hrefs).toContain('/dashboard');
+    expect(hrefs).toContain('/my-suivi');
     expect(hrefs).toContain('/calendar');
     expect(hrefs).toContain('/my-courses');
     expect(hrefs).toContain('/my-grades');

@@ -247,7 +247,7 @@ studentsRouter.get('/:id', async (req, res) => {
   const student = await prisma.strkStudent.findUnique({
     where: { id: req.params.id },
     include: {
-      profile: { select: { firstName: true, lastName: true, email: true, phoneNumber: true } },
+      profile: { select: { firstName: true, lastName: true, email: true, phoneNumber: true, profileImage: true } },
       class: { select: { id: true, name: true } },
       institution: { select: { id: true, name: true } },
     },
