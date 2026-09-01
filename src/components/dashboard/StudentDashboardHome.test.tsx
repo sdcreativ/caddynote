@@ -13,7 +13,31 @@ vi.mock('@/hooks/useResolvedStoredUrl', () => ({
 }));
 
 describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
+  it('affiche Bonsoir le soir', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T21:24:00'));
+    render(
+      <MemoryRouter>
+        <StudentDashboardHome
+          userName="Esmone"
+          firstName="Esmone"
+          lastName="GNONZION"
+          className="6e"
+          grades={0}
+          absences={0}
+          homework={0}
+          absencesToday={[]}
+          state="ready"
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('heading', { name: /Bonsoir, Esmone/i })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it('conserve photo/présence et expose À traiter', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T10:00:00'));
     render(
       <MemoryRouter>
         <StudentDashboardHome
@@ -36,6 +60,7 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     expect(screen.getByText('Présence confirmée')).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
     expect(screen.getByText(/3 devoir\(s\) en cours/i)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('oriente vers les absences depuis À traiter s’il n’y a pas de devoirs', () => {

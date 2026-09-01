@@ -13,6 +13,7 @@ import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfil
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { roleLabel } from '@/lib/navConfig';
+import { dayGreetingKey } from '@/lib/dayGreeting';
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
@@ -133,7 +134,7 @@ const StudentDashboardHome = ({
       <div className="space-y-6 py-4 animate-fade-in md:py-6">
         <header className="space-y-1.5">
           <h1 className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight md:text-3xl">
-            {t('hello', { name: userName })}
+            {t(dayGreetingKey(), { name: userName })}
           </h1>
         </header>
         <EmptyState title={t('empty.loadErrorTitle')} description={t('empty.loadErrorBody')} />
@@ -145,7 +146,7 @@ const StudentDashboardHome = ({
     <div className="space-y-5 py-4 animate-fade-in md:space-y-8 md:py-6">
       <header className="space-y-1">
         <h1 className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight text-slate-900 md:text-3xl">
-          {t('hello', { name: userName })}
+          {t(dayGreetingKey(), { name: userName })}
         </h1>
         <p className="text-sm text-slate-500 md:text-base">
           {roleLabel('student')} • {dateLabel}

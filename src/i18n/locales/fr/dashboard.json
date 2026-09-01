@@ -1,5 +1,6 @@
 {
   "hello": "Bonjour, {{name}}",
+  "helloEvening": "Bonsoir, {{name}}",
   "spaces": {
     "businessTitle": "Espace établissement",
     "businessHint": "Tableau de bord et outils d’une école (élèves, finances, communications).",

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AccountantDashboardHome from './AccountantDashboardHome';
@@ -9,6 +9,14 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
 });
 
 describe('AccountantDashboardHome', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T10:00:00'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('expose À traiter finance et CTA finances', () => {
     render(
       <MemoryRouter>

@@ -45,7 +45,7 @@ describe('AdminDashboardHome (équipe CaddyNote)', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: /Bonjour, Alex/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /(?:Bonjour|Bonsoir), Alex/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Ops plateforme/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Raccourcis ops/i)).toBeInTheDocument();
 

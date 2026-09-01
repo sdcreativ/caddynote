@@ -60,7 +60,7 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: /Bonjour, Ada/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /(?:Bonjour|Bonsoir), Ada/i })).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText(/3 absence\(s\) à suivre/i)).toBeInTheDocument();

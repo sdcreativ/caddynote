@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { dayGreetingKey } from '@/lib/dayGreeting';
 import {
   School,
   Users,
@@ -192,7 +193,7 @@ const AdminDashboardHome = ({
     <div className="space-y-6 py-4 animate-fade-in md:space-y-8 md:py-6">
       <header className="space-y-1.5">
         <h1 className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight md:text-3xl">
-          {t('hello', { name: userName })}
+          {t(dayGreetingKey(), { name: userName })}
         </h1>
         <p className="text-base text-slate-600 md:text-slate-500">
           {roleLabel('admin')} • {dateLabel}

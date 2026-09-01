@@ -32,7 +32,7 @@ describe('ParentDashboardHome (cockpit deux clics)', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: /Bonjour, Léa/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /(?:Bonjour|Bonsoir), Léa/i })).toBeInTheDocument();
     expect(screen.getByText(/Enfant : Awa Koné/i)).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
     await waitFor(() => {

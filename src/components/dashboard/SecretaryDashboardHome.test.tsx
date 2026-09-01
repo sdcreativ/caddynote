@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import SecretaryDashboardHome from './SecretaryDashboardHome';
@@ -21,6 +21,14 @@ const metrics: DashboardMetrics = {
 };
 
 describe('SecretaryDashboardHome', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T10:00:00'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('propose Gérer les élèves et les raccourcis essentiels', () => {
     render(
       <MemoryRouter>
