@@ -7,6 +7,12 @@ import {
   ChevronRight,
   ChevronLeft,
   MoreVertical,
+  Calendar,
+  BookOpen,
+  GraduationCap,
+  ClipboardCheck,
+  FileText,
+  type LucideIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useResolvedStoredUrl } from '@/hooks/useResolvedStoredUrl';
@@ -14,6 +20,21 @@ import { useMobileShell } from '@/hooks/useMobileShell';
 import { presenceTodayFromAbsences, type PresenceToday } from '@/lib/presenceToday';
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 import { cn } from '@/lib/utils';
+
+type SuiviAction = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+const STUDENT_ACTIONS: SuiviAction[] = [
+  { label: 'Emploi du temps', href: '/calendar', icon: Calendar },
+  { label: 'Cours', href: '/my-courses', icon: BookOpen },
+  { label: 'Notes', href: '/my-grades', icon: GraduationCap },
+  { label: 'Absences', href: '/my-absences', icon: ClipboardCheck },
+  { label: 'Devoirs', href: '/assignments', icon: FileText },
+  { label: 'Message', href: '/messages', icon: MessageSquare },
+];
 
 type StudentSuiviMobileViewProps = {
   /** Titre bandeau (ex. « Suivi de Koffi »). */
@@ -26,7 +47,12 @@ type StudentSuiviMobileViewProps = {
   absencesLoading?: boolean;
   messageHref?: string;
   messageLabel?: string;
-  /** Retour (défaut : /my-suivi pour élève via historique, sinon dashboard). */
+  /**
+   * `student` : raccourcis Emploi du temps / Cours / Notes / Absences / Devoirs / Message.
+   * `message` : CTA unique « Envoyer un message » (parent).
+   */
+  actionsMode?: 'student' | 'message';
+  /** Retour (défaut : /dashboard). */
   backHref?: string;
   classNameOuter?: string;
 };
@@ -68,9 +94,22 @@ const presenceCopy = (
   };
 };
 
+const ActionRow = ({ label, href, icon: Icon }: SuiviAction) => (
+  <Link
+    to={href}
+    className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm transition-colors hover:bg-slate-50"
+  >
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+      <Icon className="h-5 w-5" aria-hidden />
+    </span>
+    <span className="flex-1 text-left text-sm font-semibold text-slate-900">{label}</span>
+    <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+  </Link>
+);
+
 /**
  * Écran Suivi mobile (maquette) : header bleu ← / titre / ⋮,
- * avatar, carte présence, CTA message.
+ * avatar, carte présence, CTA(s).
  */
 export const StudentSuiviMobileView = ({
   headerTitle,
@@ -82,6 +121,7 @@ export const StudentSuiviMobileView = ({
   absencesLoading,
   messageHref = '/messages',
   messageLabel = 'Envoyer un message',
+  actionsMode = 'message',
   backHref = '/dashboard',
   classNameOuter,
 }: StudentSuiviMobileViewProps) => {
@@ -99,6 +139,11 @@ export const StudentSuiviMobileView = ({
     }
     navigate(backHref);
   };
+
+  const actions: SuiviAction[] =
+    actionsMode === 'student'
+      ? STUDENT_ACTIONS.map((a) => (a.href === '/messages' ? { ...a, href: messageHref } : a))
+      : [{ label: messageLabel, href: messageHref, icon: MessageSquare }];
 
   return (
     <div className={cn('space-y-4', classNameOuter)}>
@@ -183,16 +228,11 @@ export const StudentSuiviMobileView = ({
         )}
       </div>
 
-      <Link
-        to={messageHref}
-        className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm transition-colors hover:bg-slate-50"
-      >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
-          <MessageSquare className="h-5 w-5" aria-hidden />
-        </span>
-        <span className="flex-1 text-left text-sm font-semibold text-slate-900">{messageLabel}</span>
-        <ChevronRight className="h-5 w-5 text-slate-400" aria-hidden />
-      </Link>
+      <nav className="space-y-2" aria-label="Raccourcis">
+        {actions.map((action) => (
+          <ActionRow key={`${action.href}-${action.label}`} {...action} />
+        ))}
+      </nav>
     </div>
   );
 };

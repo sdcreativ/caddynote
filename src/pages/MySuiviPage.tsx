@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { StudentSuiviMobileView } from '@/components/suivi/StudentSuiviMobileView';
 import { fetchAbsencesByStudent, type StrkAbsence } from '@/services/strkAbsenceService';
 import { apiClient } from '@/lib/apiClient';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, GraduationCap, Calendar } from 'lucide-react';
 
 type StudentDetail = {
   id: string;
@@ -15,8 +11,7 @@ type StudentDetail = {
 };
 
 /**
- * Suivi mobile élève — présence du jour, identité, accès messages.
- * Desktop : même héros + raccourcis notes / devoirs / absences.
+ * Suivi mobile élève — présence du jour, identité, raccourcis scolaires.
  */
 const MySuiviPage = () => {
   const { user } = useStrkAuth();
@@ -67,37 +62,8 @@ const MySuiviPage = () => {
         profileImage={profileImage}
         absences={absences}
         absencesLoading={loading}
+        actionsMode="student"
       />
-
-      <div className="hidden grid-cols-3 gap-3 md:grid">
-        <Card>
-          <CardContent className="flex flex-col items-start gap-2 p-4">
-            <GraduationCap className="h-5 w-5 text-blue-600" />
-            <p className="font-semibold">Notes</p>
-            <Button asChild variant="link" className="h-auto p-0">
-              <Link to="/my-grades">Voir</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-start gap-2 p-4">
-            <BookOpen className="h-5 w-5 text-blue-600" />
-            <p className="font-semibold">Devoirs</p>
-            <Button asChild variant="link" className="h-auto p-0">
-              <Link to="/assignments">Voir</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-start gap-2 p-4">
-            <Calendar className="h-5 w-5 text-blue-600" />
-            <p className="font-semibold">Absences</p>
-            <Button asChild variant="link" className="h-auto p-0">
-              <Link to="/my-absences">Voir</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };
