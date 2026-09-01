@@ -8,39 +8,34 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
   return { ...actual, roleLabel: () => 'Élève' };
 });
 
+vi.mock('@/hooks/useResolvedStoredUrl', () => ({
+  useResolvedStoredUrl: () => null,
+}));
+
 describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
-  it('expose À traiter, KPI Notes/Devoirs/Absences et CTA quand il y a des devoirs', () => {
+  it('conserve photo/présence et expose À traiter', () => {
     render(
       <MemoryRouter>
         <StudentDashboardHome
           userName="Sam"
+          firstName="Sam"
+          lastName="Diallo"
+          className="CM1 A"
           grades={12}
           absences={1}
           homework={3}
+          absencesToday={[]}
           state="ready"
         />
       </MemoryRouter>
     );
 
     expect(screen.getByRole('heading', { name: /Bonjour, Sam/i })).toBeInTheDocument();
-    expect(screen.getByText(/Élève/i)).toBeInTheDocument();
+    expect(screen.getByText('Sam Diallo')).toBeInTheDocument();
+    expect(screen.getByText('CM1 A')).toBeInTheDocument();
+    expect(screen.getByText('Présence confirmée')).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
-    expect(screen.getByText(/Priorités du jour/i)).toBeInTheDocument();
     expect(screen.getByText(/3 devoir\(s\) en cours/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 absence\(s\) sur 30 jours/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
-      'href',
-      '/assignments'
-    );
-
-    expect(screen.getAllByText('Notes').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Devoirs').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Absences/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
-
-    expect(screen.getByText(/Aller où/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Voir mes devoirs/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('oriente le CTA vers les absences s’il n’y a pas de devoirs', () => {

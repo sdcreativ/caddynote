@@ -13,10 +13,11 @@ import AccountantDashboardHome from '@/components/dashboard/AccountantDashboardH
 import { StrkAnalyticsService, type DashboardMetrics } from '@/services/strkAnalyticsService';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { fetchGradesByStudent } from '@/services/strkGradeService';
-import { fetchAbsencesByStudent } from '@/services/strkAbsenceService';
+import { fetchAbsencesByStudent, type StrkAbsence } from '@/services/strkAbsenceService';
 import { fetchAssignmentsByStudent } from '@/services/strkAssignmentService';
 import { fetchInvoicesByStudent, fetchInvoicesByInstitution } from '@/services/strkFinanceService';
 import { fetchReceivedMessages } from '@/services/strkMessageService';
+import { apiClient } from '@/lib/apiClient';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import {
   summarizeOpenInvoices,
@@ -25,6 +26,12 @@ import {
 } from '@/lib/dashboardKpis';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
+
+type StudentDetail = {
+  id: string;
+  class?: { id: string; name: string } | null;
+  profile?: { firstName: string | null; lastName: string | null; profileImage?: string | null };
+};
 
 const STAFF_ROLES = ['teacher', 'head_teacher', 'secretary', 'supervisor'] as const;
 
@@ -42,6 +49,13 @@ const Dashboard = () => {
     absences: number;
     homework: number;
     unreadMessages: number;
+  } | null>(null);
+  const [studentAbsences, setStudentAbsences] = useState<StrkAbsence[]>([]);
+  const [studentProfile, setStudentProfile] = useState<{
+    firstName: string;
+    lastName: string;
+    className: string | null;
+    profileImage: string | null | undefined;
   } | null>(null);
   const [studentState, setStudentState] = useState<LoadState>('idle');
 
@@ -107,19 +121,31 @@ const Dashboard = () => {
     setStudentState('loading');
     void (async () => {
       try {
-        const [grades, absences, assignments, received] = await Promise.all([
+        const [grades, absences, assignments, received, detail] = await Promise.all([
           fetchGradesByStudent(user.id),
           fetchAbsencesByStudent(user.id),
           fetchAssignmentsByStudent(user.id),
           fetchReceivedMessages(user.id).catch(() => []),
+          apiClient
+            .get<{ student: StudentDetail }>(`/students/${user.id}`)
+            .then((r) => r.student)
+            .catch(() => null),
         ]);
         const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
         const unreadMessages = received.filter((m) => !m.read_at).length;
+        setStudentAbsences(absences);
         setStudentKpis({
           grades: grades.length,
           absences: countAbsencesSince(absences, since),
           homework: countOpenHomework(assignments),
           unreadMessages,
+        });
+        const nameParts = (user.name || '').split(' ');
+        setStudentProfile({
+          firstName: detail?.profile?.firstName || nameParts[0] || '',
+          lastName: detail?.profile?.lastName ?? nameParts.slice(1).join(' '),
+          className: detail?.class?.name ?? null,
+          profileImage: detail?.profile?.profileImage ?? user.profileImage,
         });
         setStudentState(
           grades.length === 0 &&
@@ -131,6 +157,8 @@ const Dashboard = () => {
         );
       } catch {
         setStudentKpis(null);
+        setStudentAbsences([]);
+        setStudentProfile(null);
         setStudentState('error');
       }
     })();
@@ -263,11 +291,17 @@ const Dashboard = () => {
     );
   }
 
-  // Élève : Accueil = Bonjour + À traiter (distinct du Suivi /my-suivi).
+  // Élève : Accueil = Bonjour + photo/présence + À traiter (distinct du Suivi).
   if (user?.role === 'student') {
     return (
       <StudentDashboardHome
         userName={user.name?.split(' ')[0] ?? ''}
+        firstName={studentProfile?.firstName}
+        lastName={studentProfile?.lastName}
+        className={studentProfile?.className}
+        profileImage={studentProfile?.profileImage}
+        absencesToday={studentAbsences}
+        absencesLoading={studentState === 'loading' || studentState === 'idle'}
         grades={studentKpis?.grades ?? null}
         absences={studentKpis?.absences ?? null}
         homework={studentKpis?.homework ?? null}

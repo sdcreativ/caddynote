@@ -13,15 +13,25 @@ import {
   MobileCompactStat,
   MobilePrimaryCta,
 } from '@/components/dashboard/MobileActionPrimitives';
+import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfile';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { roleLabel } from '@/lib/navConfig';
+import type { StrkAbsence } from '@/services/strkAbsenceService';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
 
 type StudentDashboardHomeProps = {
   userName: string;
+  firstName?: string;
+  lastName?: string;
+  className?: string | null;
+  profileImage?: string | null;
+  /** Absences brutes (carte présence du jour). */
+  absencesToday?: StrkAbsence[];
+  absencesLoading?: boolean;
   grades: number | null;
+  /** Compteur KPI absences 30 j. */
   absences: number | null;
   homework: number | null;
   unreadMessages?: number | null;
@@ -44,11 +54,16 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil élève :
- * Bonjour → À traiter (devoirs, absences, messages) → KPI → CTA.
+ * Accueil élève : Bonjour + photo/présence + À traiter + KPI.
  */
 const StudentDashboardHome = ({
   userName,
+  firstName,
+  lastName = '',
+  className,
+  profileImage,
+  absencesToday = [],
+  absencesLoading = false,
   grades,
   absences,
   homework,
@@ -57,6 +72,7 @@ const StudentDashboardHome = ({
 }: StudentDashboardHomeProps) => {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const displayFirst = firstName?.trim() || userName;
 
   const dateLabel = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long',
@@ -163,6 +179,15 @@ const StudentDashboardHome = ({
           {roleLabel('student')} • {dateLabel}
         </p>
       </header>
+
+      <StudentPresenceProfile
+        firstName={displayFirst}
+        lastName={lastName}
+        className={className}
+        profileImage={profileImage}
+        absences={absencesToday}
+        absencesLoading={absencesLoading || state === 'loading' || state === 'idle'}
+      />
 
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

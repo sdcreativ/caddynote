@@ -1,8 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   MessageSquare,
   ChevronRight,
   ChevronLeft,
@@ -15,10 +12,8 @@ import {
   AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useResolvedStoredUrl } from '@/hooks/useResolvedStoredUrl';
 import { useMobileShell } from '@/hooks/useMobileShell';
-import { presenceTodayFromAbsences, type PresenceToday } from '@/lib/presenceToday';
+import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfile';
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 import { cn } from '@/lib/utils';
 
@@ -55,52 +50,10 @@ type StudentSuiviMobileViewProps = {
   absencesLoading?: boolean;
   messageHref?: string;
   messageLabel?: string;
-  /**
-   * `student` : grille raccourcis (EDT, matières, notes…).
-   * `message` : CTA unique « Envoyer un message » (parent).
-   */
   actionsMode?: 'student' | 'message';
-  /** Mini « À traiter » sous la présence (élève). */
   toHandle?: SuiviToHandleItem[];
   backHref?: string;
   classNameOuter?: string;
-};
-
-const initials = (first: string, last: string) =>
-  `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || '?';
-
-const presenceCopy = (
-  firstName: string,
-  status: PresenceToday
-): { title: string; body: string; badge: string; tone: 'ok' | 'warn' | 'bad' } => {
-  if (status.kind === 'absent') {
-    return {
-      title: 'Absence enregistrée',
-      body: status.timeLabel
-        ? `${firstName} est absent(e) aujourd’hui depuis ${status.timeLabel}`
-        : `${firstName} est absent(e) aujourd’hui`,
-      badge: status.timeLabel ? `Aujourd’hui à ${status.timeLabel}` : 'Aujourd’hui',
-      tone: 'bad',
-    };
-  }
-  if (status.kind === 'late') {
-    return {
-      title: 'Retard enregistré',
-      body: status.timeLabel
-        ? `${firstName} est en retard aujourd’hui (${status.timeLabel})`
-        : `${firstName} est en retard aujourd’hui`,
-      badge: status.timeLabel ? `Aujourd’hui à ${status.timeLabel}` : 'Aujourd’hui',
-      tone: 'warn',
-    };
-  }
-  return {
-    title: 'Présence confirmée',
-    body: status.timeLabel
-      ? `${firstName} est présent(e) aujourd’hui à ${status.timeLabel}`
-      : `${firstName} est présent(e) aujourd’hui`,
-    badge: status.timeLabel ? `Aujourd’hui à ${status.timeLabel}` : 'Aujourd’hui',
-    tone: 'ok',
-  };
 };
 
 const ActionTile = ({ label, hint, href, icon: Icon }: SuiviAction) => (
@@ -119,7 +72,7 @@ const ActionTile = ({ label, hint, href, icon: Icon }: SuiviAction) => (
 );
 
 /**
- * Écran Suivi mobile : header bleu, avatar, présence, À traiter, raccourcis.
+ * Écran Suivi mobile : header bleu, photo, présence, À traiter, raccourcis.
  */
 export const StudentSuiviMobileView = ({
   headerTitle,
@@ -138,10 +91,6 @@ export const StudentSuiviMobileView = ({
 }: StudentSuiviMobileViewProps) => {
   const navigate = useNavigate();
   const { openMoreMenu } = useMobileShell();
-  const avatarUrl = useResolvedStoredUrl(profileImage);
-  const status = presenceTodayFromAbsences(absences);
-  const copy = presenceCopy(firstName || 'L’élève', status);
-  const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
   const goBack = () => {
     if (window.history.length > 1) {
@@ -178,60 +127,14 @@ export const StudentSuiviMobileView = ({
         </div>
       </header>
 
-      <div className="flex flex-col items-center pt-1 text-center">
-        <Avatar className="h-24 w-24 border-4 border-white shadow-md ring-1 ring-slate-200/80">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt={fullName} /> : null}
-          <AvatarFallback className="bg-blue-100 text-xl font-semibold text-blue-700">
-            {initials(firstName, lastName)}
-          </AvatarFallback>
-        </Avatar>
-        <p className="mt-3 text-xl font-bold text-slate-900">{fullName}</p>
-        <p className="mt-0.5 text-sm font-medium text-blue-600">
-          {className?.trim() || 'Classe non assignée'}
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-slate-200/80 bg-white px-5 py-6 text-center shadow-sm">
-        {absencesLoading ? (
-          <p className="text-sm text-slate-500">Chargement de la présence…</p>
-        ) : (
-          <>
-            <div
-              className={cn(
-                'mx-auto flex h-14 w-14 items-center justify-center rounded-full',
-                copy.tone === 'ok' && 'bg-emerald-500 text-white',
-                copy.tone === 'warn' && 'bg-amber-100 text-amber-600',
-                copy.tone === 'bad' && 'bg-rose-100 text-rose-600'
-              )}
-            >
-              {copy.tone === 'ok' && <CheckCircle2 className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
-              {copy.tone === 'warn' && <Clock className="h-8 w-8" aria-hidden />}
-              {copy.tone === 'bad' && <AlertTriangle className="h-8 w-8" aria-hidden />}
-            </div>
-            <p
-              className={cn(
-                'mt-3 text-lg font-bold',
-                copy.tone === 'ok' && 'text-emerald-600',
-                copy.tone === 'warn' && 'text-amber-700',
-                copy.tone === 'bad' && 'text-rose-700'
-              )}
-            >
-              {copy.title}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">{copy.body}</p>
-            <span
-              className={cn(
-                'mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                copy.tone === 'ok' && 'bg-emerald-50 text-emerald-700',
-                copy.tone === 'warn' && 'bg-amber-50 text-amber-800',
-                copy.tone === 'bad' && 'bg-rose-50 text-rose-700'
-              )}
-            >
-              {copy.badge}
-            </span>
-          </>
-        )}
-      </div>
+      <StudentPresenceProfile
+        firstName={firstName}
+        lastName={lastName}
+        className={className}
+        profileImage={profileImage}
+        absences={absences}
+        absencesLoading={absencesLoading}
+      />
 
       {actionsMode === 'student' && toHandle.length > 0 ? (
         <section
