@@ -22,9 +22,12 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
-/** Écrans Suivi : navbar classique masquée sur mobile (header dédié bleu). */
-const isSuiviImmersivePath = (pathname: string) =>
-  pathname === '/my-suivi' || pathname === '/my-children' || pathname.startsWith('/my-children/');
+/** Écrans immersifs mobile : navbar classique masquée (bottom nav / header dédié). */
+const isImmersiveMobilePath = (pathname: string, hasBottomNav: boolean) =>
+  pathname === '/my-suivi' ||
+  pathname === '/my-children' ||
+  pathname.startsWith('/my-children/') ||
+  (hasBottomNav && pathname === '/messages');
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const {
@@ -43,7 +46,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isSchoolShell = isSchoolShellRole(user?.role);
   const hasMobileBottomNav = Boolean(mobileBottomNavForRole(user?.role));
-  const hideNavbarOnMobile = isSuiviImmersivePath(location.pathname);
+  const hideNavbarOnMobile = isImmersiveMobilePath(location.pathname, hasMobileBottomNav);
 
   const mfaBlocking = mfaSetupRequired && !mustChangePassword;
   const mfaDialogVisible = mfaBlocking || mfaDialogOpen;
