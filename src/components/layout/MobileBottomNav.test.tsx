@@ -59,36 +59,39 @@ describe('MobileBottomNav (enseignant)', () => {
     expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
   });
 
-  it('Parent : Enfants actif hors onglet finance', () => {
+  it('Parent : Suivi actif sur /my-children', () => {
     render(
       <MemoryRouter initialEntries={['/my-children']}>
         <MobileBottomNav role="parent" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Enfants' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Finances' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Suivi' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });
 
-  it('Parent : Finances actif avec ?tab=finance', () => {
+  it('Parent : Notifications actif sur /notifications', () => {
     render(
-      <MemoryRouter initialEntries={['/my-children?tab=finance']}>
+      <MemoryRouter initialEntries={['/notifications']}>
         <MobileBottomNav role="parent" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Finances' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Enfants' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Notifications' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Suivi' })).not.toHaveAttribute('aria-current');
   });
 
-  it('Élève : Accueil · Notes · Devoirs · Msgs · Plus', () => {
+  it('Élève : Accueil · Suivi · Messages · Notifications · Menu', () => {
     render(
-      <MemoryRouter initialEntries={['/my-grades']}>
+      <MemoryRouter initialEntries={['/my-suivi']}>
         <MobileBottomNav role="student" onOpenMore={vi.fn()} />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Devoirs' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suivi' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Plus' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });
 
   it('Secrétariat : Accueil · Élèves · Appel · Msgs · Plus', () => {

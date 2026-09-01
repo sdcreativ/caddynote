@@ -87,12 +87,12 @@ describe('Shell métier mobile RWD (P0–P2)', () => {
   });
 
   it.each([
-    ['teacher', 'Appel'],
-    ['school_admin', 'Élèves'],
-    ['parent', 'Enfants'],
-    ['student', 'Notes'],
-    ['accountant', 'Finances'],
-  ] as const)('bottom nav %s expose Plus et un slot cœur', (role, heartLabel) => {
+    ['teacher', 'Appel', 'Plus'],
+    ['school_admin', 'Élèves', 'Plus'],
+    ['parent', 'Suivi', 'Menu'],
+    ['student', 'Suivi', 'Menu'],
+    ['accountant', 'Finances', 'Plus'],
+  ] as const)('bottom nav %s expose %s et un slot cœur', (role, heartLabel, moreLabel) => {
     const onOpenMore = vi.fn();
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
@@ -101,7 +101,7 @@ describe('Shell métier mobile RWD (P0–P2)', () => {
     );
     expect(screen.getByLabelText('Navigation principale')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: heartLabel })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Plus$/i }));
+    fireEvent.click(screen.getByRole('button', { name: moreLabel }));
     expect(onOpenMore).toHaveBeenCalled();
   });
 });
