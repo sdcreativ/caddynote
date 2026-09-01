@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { homePathForRole } from './homePath';
 
 describe('homePathForRole', () => {
-  it('envoie l’élève vers /my-suivi (maquette Suivi)', () => {
-    expect(homePathForRole('student')).toBe('/my-suivi');
+  it('envoie l’élève vers /dashboard (Accueil)', () => {
+    expect(homePathForRole('student')).toBe('/dashboard');
   });
 
   it('conserve /dashboard pour les autres rôles', () => {

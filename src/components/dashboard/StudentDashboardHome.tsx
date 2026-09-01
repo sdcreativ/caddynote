@@ -6,6 +6,7 @@ import {
   BookOpen,
   ClipboardCheck,
   ChevronRight,
+  MessageSquare,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import {
@@ -23,6 +24,7 @@ type StudentDashboardHomeProps = {
   grades: number | null;
   absences: number | null;
   homework: number | null;
+  unreadMessages?: number | null;
   state: LoadState;
 };
 
@@ -31,7 +33,7 @@ type ToHandleItem = {
   title: string;
   subtitle: string;
   href: string;
-  tone: 'amber' | 'rose';
+  tone: 'amber' | 'rose' | 'blue';
 };
 
 const kpiValue = (state: LoadState, value: string | number | null | undefined, emptyLabel = '0') => {
@@ -42,15 +44,15 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil élève (mobile = maquette Accueil) :
- * Bonjour → À traiter → Notes/Devoirs + Absences → Aller où (CTA).
- * Desktop : mêmes KPI + grille de raccourcis.
+ * Accueil élève :
+ * Bonjour → À traiter (devoirs, absences, messages) → KPI → CTA.
  */
 const StudentDashboardHome = ({
   userName,
   grades,
   absences,
   homework,
+  unreadMessages = null,
   state,
 }: StudentDashboardHomeProps) => {
   const { t } = useTranslation('dashboard');
@@ -66,8 +68,11 @@ const StudentDashboardHome = ({
   const homeworkCount = state === 'ready' || state === 'empty' ? Number(homework ?? 0) : 0;
   const absenceCount = state === 'ready' || state === 'empty' ? Number(absences ?? 0) : 0;
   const gradesCount = state === 'ready' || state === 'empty' ? Number(grades ?? 0) : 0;
+  const unreadCount =
+    state === 'ready' || state === 'empty' ? Number(unreadMessages ?? 0) : 0;
   const hasHomework = state === 'ready' && homeworkCount > 0;
   const hasAbsences = state === 'ready' && absenceCount > 0;
+  const hasUnread = state === 'ready' && unreadCount > 0;
 
   const toHandle: ToHandleItem[] = [];
   if (hasHomework) {
@@ -88,6 +93,15 @@ const StudentDashboardHome = ({
       tone: 'rose',
     });
   }
+  if (hasUnread) {
+    toHandle.push({
+      id: 'messages',
+      title: t('studentMobile.messagesToHandle', { count: unreadCount }),
+      subtitle: t('studentMobile.messagesToHandleHint'),
+      href: '/messages',
+      tone: 'blue',
+    });
+  }
 
   const primaryCta = hasHomework
     ? {
@@ -101,11 +115,17 @@ const StudentDashboardHome = ({
           href: '/my-absences',
           icon: <ClipboardCheck aria-hidden />,
         }
-      : {
-          label: t('studentMobile.primaryCta'),
-          href: '/my-grades',
-          icon: <GraduationCap aria-hidden />,
-        };
+      : hasUnread
+        ? {
+            label: t('studentMobile.messagesToHandleHint'),
+            href: '/messages',
+            icon: <MessageSquare aria-hidden />,
+          }
+        : {
+            label: t('studentMobile.primaryCta'),
+            href: '/my-grades',
+            icon: <GraduationCap aria-hidden />,
+          };
 
   const gradesHint =
     state === 'ready' || state === 'empty'
@@ -144,7 +164,6 @@ const StudentDashboardHome = ({
         </p>
       </header>
 
-      {/* À traiter */}
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -173,13 +192,19 @@ const StudentDashboardHome = ({
                 >
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                      item.tone === 'amber' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'
+                      item.tone === 'amber'
+                        ? 'bg-amber-100 text-amber-800'
+                        : item.tone === 'rose'
+                          ? 'bg-rose-100 text-rose-700'
+                          : 'bg-blue-100 text-blue-700'
                     }`}
                   >
                     {item.tone === 'amber' ? (
                       <BookOpen className="h-5 w-5" aria-hidden />
-                    ) : (
+                    ) : item.tone === 'rose' ? (
                       <AlertCircle className="h-5 w-5" aria-hidden />
+                    ) : (
+                      <MessageSquare className="h-5 w-5" aria-hidden />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -196,7 +221,6 @@ const StudentDashboardHome = ({
         )}
       </section>
 
-      {/* KPI mobile/tablette : Notes | Devoirs, Absences (maquette Accueil) */}
       <div className="grid grid-cols-2 gap-3 lg:hidden" data-testid="student-accueil-kpis">
         <MobileCompactStat
           title={t('stats.grades')}
@@ -244,7 +268,6 @@ const StudentDashboardHome = ({
         />
       </div>
 
-      {/* Aller où — CTA seul (pas de grille de tuiles : maquette Accueil) */}
       <div className="space-y-3" data-testid="student-accueil-aller-ou">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('studentMobile.shortcutsTitle')}

@@ -271,26 +271,44 @@ describe('navConfig (NFR-009)', () => {
     }
   });
 
-  it('Élève : menu jour 1 allégé (+ section Plus)', () => {
+  it('Élève : Accueil et Suivi distincts ; avancé + Support sous Menu', () => {
     const sections = navSectionsForRole('student');
     const day1 = sections.filter((s) => !s.collapsible);
+    const journey = sections.find((s) => s.labelKey === 'sections.journey');
+    const account = sections.find((s) => s.labelKey === 'sections.account');
     const advanced = sections.find((s) => s.collapsible);
+
     const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
-    expect(visibleCount).toBeLessThanOrEqual(10);
+    expect(visibleCount).toBeLessThanOrEqual(6);
     expect(advanced?.defaultCollapsed).toBe(true);
-    const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
-    expect(hrefs).toContain('/dashboard');
-    expect(hrefs).toContain('/my-suivi');
-    expect(hrefs).toContain('/calendar');
-    expect(hrefs).toContain('/my-courses');
-    expect(hrefs).toContain('/my-grades');
-    expect(hrefs).toContain('/my-absences');
-    expect(hrefs).toContain('/assignments');
-    expect(hrefs).toContain('/messages');
-    expect(hrefs).not.toContain('/exercises');
-    expect(hrefs).not.toContain('/signatures');
-    expect(advanced?.items.map((i) => i.href)).toEqual(
-      expect.arrayContaining(['/exercises', '/signatures', '/communications'])
+
+    const journeyHrefs = journey?.items.map((i) => i.href) ?? [];
+    expect(journeyHrefs).toEqual(['/dashboard', '/my-suivi', '/messages']);
+
+    const accountHrefs = account?.items.map((i) => i.href) ?? [];
+    expect(accountHrefs).toContain('/profile');
+    expect(accountHrefs).toContain('/settings');
+    expect(accountHrefs).toContain('/support');
+
+    const day1Hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
+    expect(day1Hrefs).not.toContain('/exercises');
+    expect(day1Hrefs).not.toContain('/signatures');
+    expect(day1Hrefs).not.toContain('/communications');
+    expect(day1Hrefs).not.toContain('/calendar');
+
+    const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
+    expect(advancedHrefs).toEqual(
+      expect.arrayContaining([
+        '/calendar',
+        '/my-courses',
+        '/my-grades',
+        '/my-absences',
+        '/assignments',
+        '/exercises',
+        '/signatures',
+        '/communications',
+      ])
     );
+    expect(advancedHrefs).not.toContain('/support');
   });
 });

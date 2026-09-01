@@ -66,6 +66,27 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     );
   });
 
+  it('ajoute les messages non lus dans À traiter', () => {
+    render(
+      <MemoryRouter>
+        <StudentDashboardHome
+          userName="Sam"
+          grades={2}
+          absences={0}
+          homework={0}
+          unreadMessages={4}
+          state="ready"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/4 message\(s\) non lu\(s\)/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Traiter maintenant/i })).toHaveAttribute(
+      'href',
+      '/messages'
+    );
+  });
+
   it('affiche un empty calme et CTA notes sans devoirs ni absences', () => {
     render(
       <MemoryRouter>

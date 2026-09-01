@@ -12,6 +12,7 @@ import {
   GraduationCap,
   ClipboardCheck,
   FileText,
+  AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,23 +22,30 @@ import { presenceTodayFromAbsences, type PresenceToday } from '@/lib/presenceTod
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 import { cn } from '@/lib/utils';
 
+export type SuiviToHandleItem = {
+  id: string;
+  title: string;
+  href: string;
+  tone: 'amber' | 'rose' | 'blue';
+};
+
 type SuiviAction = {
   label: string;
+  hint?: string;
   href: string;
   icon: LucideIcon;
 };
 
+/** Raccourcis élève (sans Message — déjà en bottom nav). */
 const STUDENT_ACTIONS: SuiviAction[] = [
-  { label: 'Emploi du temps', href: '/calendar', icon: Calendar },
-  { label: 'Cours', href: '/my-courses', icon: BookOpen },
+  { label: 'Emploi du temps', hint: 'Horaires & salles', href: '/calendar', icon: Calendar },
+  { label: 'Matières', hint: 'Cours & contenus', href: '/my-courses', icon: BookOpen },
   { label: 'Notes', href: '/my-grades', icon: GraduationCap },
   { label: 'Absences', href: '/my-absences', icon: ClipboardCheck },
   { label: 'Devoirs', href: '/assignments', icon: FileText },
-  { label: 'Message', href: '/messages', icon: MessageSquare },
 ];
 
 type StudentSuiviMobileViewProps = {
-  /** Titre bandeau (ex. « Suivi de Koffi »). */
   headerTitle: string;
   firstName: string;
   lastName: string;
@@ -48,11 +56,12 @@ type StudentSuiviMobileViewProps = {
   messageHref?: string;
   messageLabel?: string;
   /**
-   * `student` : raccourcis Emploi du temps / Cours / Notes / Absences / Devoirs / Message.
+   * `student` : grille raccourcis (EDT, matières, notes…).
    * `message` : CTA unique « Envoyer un message » (parent).
    */
   actionsMode?: 'student' | 'message';
-  /** Retour (défaut : /dashboard). */
+  /** Mini « À traiter » sous la présence (élève). */
+  toHandle?: SuiviToHandleItem[];
   backHref?: string;
   classNameOuter?: string;
 };
@@ -94,22 +103,23 @@ const presenceCopy = (
   };
 };
 
-const ActionRow = ({ label, href, icon: Icon }: SuiviAction) => (
+const ActionTile = ({ label, hint, href, icon: Icon }: SuiviAction) => (
   <Link
     to={href}
-    className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm transition-colors hover:bg-slate-50"
+    className="flex min-h-[5.5rem] flex-col items-start justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-colors hover:bg-slate-50"
   >
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
       <Icon className="h-5 w-5" aria-hidden />
     </span>
-    <span className="flex-1 text-left text-sm font-semibold text-slate-900">{label}</span>
-    <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+    <span className="text-left">
+      <span className="block text-sm font-semibold leading-tight text-slate-900">{label}</span>
+      {hint ? <span className="mt-0.5 block text-xs text-slate-500">{hint}</span> : null}
+    </span>
   </Link>
 );
 
 /**
- * Écran Suivi mobile (maquette) : header bleu ← / titre / ⋮,
- * avatar, carte présence, CTA(s).
+ * Écran Suivi mobile : header bleu, avatar, présence, À traiter, raccourcis.
  */
 export const StudentSuiviMobileView = ({
   headerTitle,
@@ -122,6 +132,7 @@ export const StudentSuiviMobileView = ({
   messageHref = '/messages',
   messageLabel = 'Envoyer un message',
   actionsMode = 'message',
+  toHandle = [],
   backHref = '/dashboard',
   classNameOuter,
 }: StudentSuiviMobileViewProps) => {
@@ -139,11 +150,6 @@ export const StudentSuiviMobileView = ({
     }
     navigate(backHref);
   };
-
-  const actions: SuiviAction[] =
-    actionsMode === 'student'
-      ? STUDENT_ACTIONS.map((a) => (a.href === '/messages' ? { ...a, href: messageHref } : a))
-      : [{ label: messageLabel, href: messageHref, icon: MessageSquare }];
 
   return (
     <div className={cn('space-y-4', classNameOuter)}>
@@ -168,7 +174,6 @@ export const StudentSuiviMobileView = ({
           >
             <MoreVertical className="h-5 w-5" aria-hidden />
           </button>
-          {/* Équilibre visuelle desktop (pas de ⋮) */}
           <span className="hidden h-11 w-11 shrink-0 md:block" aria-hidden />
         </div>
       </header>
@@ -228,11 +233,70 @@ export const StudentSuiviMobileView = ({
         )}
       </div>
 
-      <nav className="space-y-2" aria-label="Raccourcis">
-        {actions.map((action) => (
-          <ActionRow key={`${action.href}-${action.label}`} {...action} />
-        ))}
-      </nav>
+      {actionsMode === 'student' && toHandle.length > 0 ? (
+        <section
+          className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm"
+          aria-label="À traiter"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            À traiter
+          </p>
+          <ul className="mt-1 divide-y divide-slate-100">
+            {toHandle.map((item) => (
+              <li key={item.id}>
+                <Link
+                  to={item.href}
+                  className="flex items-center gap-3 py-2.5 transition-colors hover:bg-slate-50/80"
+                >
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                      item.tone === 'amber' && 'bg-amber-100 text-amber-800',
+                      item.tone === 'rose' && 'bg-rose-100 text-rose-700',
+                      item.tone === 'blue' && 'bg-blue-100 text-blue-700'
+                    )}
+                  >
+                    {item.tone === 'amber' ? (
+                      <FileText className="h-4 w-4" aria-hidden />
+                    ) : item.tone === 'rose' ? (
+                      <AlertCircle className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <MessageSquare className="h-4 w-4" aria-hidden />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+                    {item.title}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {actionsMode === 'student' ? (
+        <nav className="grid grid-cols-2 gap-2.5" aria-label="Raccourcis">
+          {STUDENT_ACTIONS.map((action) => (
+            <ActionTile key={action.href} {...action} />
+          ))}
+        </nav>
+      ) : (
+        <nav className="space-y-2" aria-label="Raccourcis">
+          <Link
+            to={messageHref}
+            className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+              <MessageSquare className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="flex-1 text-left text-sm font-semibold text-slate-900">
+              {messageLabel}
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+          </Link>
+        </nav>
+      )}
     </div>
   );
 };

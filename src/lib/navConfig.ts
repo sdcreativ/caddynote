@@ -458,18 +458,14 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'student':
-      // Jour 1 : parcours scolaire. Signatures / exercices sous « Plus ».
+      // Accueil ≠ Suivi (écrans distincts). Jour 1 allégé ; scolaire + avancé sous Plus.
+      // Support uniquement dans Compte (Menu / profil), pas dans le parcours jour 1.
       return [
         {
           labelKey: 'sections.journey',
           items: [
-            { titleKey: 'items.dashboard', href: '/dashboard', icon: Home },
+            { titleKey: 'items.home', href: '/dashboard', icon: Home },
             { titleKey: 'items.mySuivi', href: '/my-suivi', icon: BarChart3 },
-            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
-            { titleKey: 'items.myCourses', href: '/my-courses', icon: BookOpen },
-            { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
-            { titleKey: 'items.myAbsences', href: '/my-absences', icon: ClipboardCheck },
-            { titleKey: 'items.assignments', href: '/assignments', icon: FileText },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
           ],
         },
@@ -478,6 +474,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.profile', href: '/profile', icon: User },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
+            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
         {
@@ -485,10 +482,14 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           collapsible: true,
           defaultCollapsed: true,
           items: [
+            { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
+            { titleKey: 'items.myCourses', href: '/my-courses', icon: BookOpen },
+            { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
+            { titleKey: 'items.myAbsences', href: '/my-absences', icon: ClipboardCheck },
+            { titleKey: 'items.assignments', href: '/assignments', icon: FileText },
             { titleKey: 'items.exercises', href: '/exercises', icon: PenTool },
             { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
           ],
         },
       ];

@@ -12,7 +12,7 @@ vi.mock('@/hooks/useMobileShell', () => ({
 }));
 
 describe('StudentSuiviMobileView', () => {
-  it('affiche les raccourcis élève à la place du CTA message unique', () => {
+  it('affiche la grille de raccourcis élève sans Message', () => {
     render(
       <MemoryRouter>
         <StudentSuiviMobileView
@@ -22,17 +22,36 @@ describe('StudentSuiviMobileView', () => {
           className="6e"
           absences={[]}
           actionsMode="student"
+          toHandle={[
+            {
+              id: 'homework',
+              title: '2 devoir(s) en cours',
+              href: '/assignments',
+              tone: 'amber',
+            },
+          ]}
         />
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: /Emploi du temps/i })).toHaveAttribute('href', '/calendar');
-    expect(screen.getByRole('link', { name: /^Cours$/i })).toHaveAttribute('href', '/my-courses');
+    expect(screen.getByRole('link', { name: /Emploi du temps/i })).toHaveAttribute(
+      'href',
+      '/calendar'
+    );
+    expect(screen.getByText(/Horaires & salles/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Matières/i })).toHaveAttribute('href', '/my-courses');
+    expect(screen.getByText(/Cours & contenus/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Notes$/i })).toHaveAttribute('href', '/my-grades');
-    expect(screen.getByRole('link', { name: /^Absences$/i })).toHaveAttribute('href', '/my-absences');
-    expect(screen.getByRole('link', { name: /^Devoirs$/i })).toHaveAttribute('href', '/assignments');
-    expect(screen.getByRole('link', { name: /^Message$/i })).toHaveAttribute('href', '/messages');
-    expect(screen.queryByRole('link', { name: /Envoyer un message/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Absences$/i })).toHaveAttribute(
+      'href',
+      '/my-absences'
+    );
+    expect(screen.getByRole('link', { name: /^Devoirs$/i })).toHaveAttribute(
+      'href',
+      '/assignments'
+    );
+    expect(screen.queryByRole('link', { name: /^Message$/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/2 devoir\(s\) en cours/i)).toBeInTheDocument();
   });
 
   it('conserve le CTA message pour le mode parent', () => {

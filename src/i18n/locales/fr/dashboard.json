@@ -105,7 +105,10 @@
     "primaryCtaHint": "Deux clics pour devoirs, absences ou notes",
     "shortcutsTitle": "Aller où",
     "homeworkToHandle": "{{count}} devoir(s) en cours",
-    "absencesToHandle": "{{count}} absence(s) sur 30 jours"
+    "absencesToHandle": "{{count}} absence(s) sur 30 jours",
+    "messagesToHandle": "{{count}} message(s) non lu(s)",
+    "messagesToHandleHint": "Messagerie",
+    "toHandleTitle": "À traiter"
   },
   "secretaryMobile": {
     "primaryCta": "Gérer les élèves",
