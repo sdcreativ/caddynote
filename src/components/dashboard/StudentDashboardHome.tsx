@@ -4,17 +4,13 @@ import {
   GraduationCap,
   AlertCircle,
   BookOpen,
-  MessageSquare,
   ClipboardCheck,
   ChevronRight,
-  Calendar,
-  School,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import {
   MobileCompactStat,
   MobilePrimaryCta,
-  MobileQuickTile,
 } from '@/components/dashboard/MobileActionPrimitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -200,8 +196,8 @@ const StudentDashboardHome = ({
         )}
       </section>
 
-      {/* KPI mobile : Notes | Devoirs, Absences pleine largeur */}
-      <div className="grid grid-cols-2 gap-3 md:hidden">
+      {/* KPI mobile/tablette : Notes | Devoirs, Absences (maquette Accueil) */}
+      <div className="grid grid-cols-2 gap-3 lg:hidden" data-testid="student-accueil-kpis">
         <MobileCompactStat
           title={t('stats.grades')}
           value={String(kpiValue(state, grades))}
@@ -216,17 +212,15 @@ const StudentDashboardHome = ({
           hint={homeworkHint}
           onClick={() => navigate('/assignments')}
         />
-        <div className="col-span-2">
-          <MobileCompactStat
-            title={t('stats.absences30d')}
-            value={String(kpiValue(state, absences))}
-            tone="rose"
-            onClick={() => navigate('/my-absences')}
-          />
-        </div>
+        <MobileCompactStat
+          title={t('stats.absences30d')}
+          value={String(kpiValue(state, absences))}
+          tone="rose"
+          onClick={() => navigate('/my-absences')}
+        />
       </div>
 
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
+      <div className="hidden gap-4 lg:grid lg:grid-cols-3">
         <StatCard
           title={t('stats.grades')}
           value={kpiValue(state, grades)}
@@ -250,8 +244,8 @@ const StudentDashboardHome = ({
         />
       </div>
 
-      {/* Aller où — CTA principal (maquette mobile) + raccourcis desktop */}
-      <div className="space-y-3">
+      {/* Aller où — CTA seul (pas de grille de tuiles : maquette Accueil) */}
+      <div className="space-y-3" data-testid="student-accueil-aller-ou">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('studentMobile.shortcutsTitle')}
         </p>
@@ -261,44 +255,6 @@ const StudentDashboardHome = ({
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('studentMobile.primaryCtaHint')}</p>
-        <div className="hidden grid-cols-2 gap-3 md:grid md:grid-cols-3 lg:grid-cols-5">
-          <MobileQuickTile
-            label={t('quickActions.myGrades')}
-            icon={<GraduationCap aria-hidden />}
-            onClick={() => navigate('/my-grades')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.homework')}
-            icon={<BookOpen aria-hidden />}
-            onClick={() => navigate('/assignments')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.myCourses')}
-            icon={<School aria-hidden />}
-            onClick={() => navigate('/my-courses')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.absences')}
-            icon={<ClipboardCheck aria-hidden />}
-            onClick={() => navigate('/my-absences')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.messages')}
-            icon={<MessageSquare aria-hidden />}
-            onClick={() => navigate('/messages')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.calendar')}
-            icon={<Calendar aria-hidden />}
-            onClick={() => navigate('/calendar')}
-            className="md:min-h-[5.5rem] col-span-2 md:col-span-1"
-          />
-        </div>
       </div>
     </div>
   );
