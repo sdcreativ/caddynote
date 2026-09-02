@@ -12,12 +12,12 @@ vi.mock('@/services/strkAdmissionService', () => ({
   fetchMyAdmissionApplications: vi.fn().mockResolvedValue({ applications: [] }),
 }));
 
-describe('ParentDashboardHome (cockpit deux clics)', () => {
+describe('ParentDashboardHome (Accueil = triage)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('expose À traiter, KPI et CTA + raccourcis Absences / Notes', async () => {
+  it('expose À traiter et un CTA vers Mes enfants, sans grille KPI/raccourcis', async () => {
     render(
       <MemoryRouter>
         <ParentDashboardHome
@@ -39,14 +39,13 @@ describe('ParentDashboardHome (cockpit deux clics)', () => {
       expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /Voir mes enfants/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Mes enfants$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Absences$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Notes$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Finances$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /^Messages$/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: /Emploi du temps/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /^Mes enfants$/i })).toBeInTheDocument();
+    // Plus de grille Mes enfants / Absences / Notes / Finances / Messages / EDT
+    expect(screen.queryByRole('button', { name: /^Absences$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Notes$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Finances$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Messages$/i })).not.toBeInTheDocument();
   });
 
   it('oriente le CTA vers les finances s’il y a un reste à payer', async () => {

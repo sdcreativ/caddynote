@@ -15,8 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Link } from 'react-router-dom';
 import { QuotasAndFlagsPanel } from '@/components/admin/QuotasAndFlagsPanel';
-import LogsCenter from '@/components/admin/LogsCenter';
-import { SessionsPanel } from '@/components/settings/SessionsPanel';
 import { CommunicationPreferencesPanel } from '@/components/settings/CommunicationPreferencesPanel';
 import { WebPushOptIn } from '@/components/settings/WebPushOptIn';
 import {
@@ -30,6 +28,7 @@ import {
   Download,
   ScrollText,
   ExternalLink,
+  User,
 } from 'lucide-react';
 
 const SettingsPage = () => {
@@ -181,25 +180,24 @@ const SettingsPage = () => {
     }
   };
 
-  // Définir les onglets disponibles selon le rôle
+  // Sécurité compte (2FA / sessions) → Profil uniquement. Audit → carte Outils /audit-log.
   const getAvailableTabs = () => {
-    const baseTabs = ['notifications', 'security'];
     const hasInstitution = Boolean(user?.institutionId);
 
     if (user?.role === 'admin' && !hasInstitution) {
       // Super admin plateforme : pas de barèmes / assiduité (liés à un établissement).
-      return ['system', 'notifications', 'security', 'saas'];
+      return ['system', 'notifications', 'saas'];
     }
 
     if (user?.role === 'admin' || user?.role === 'school_admin') {
-      return ['system', 'notifications', 'attendance', 'grading', 'security', 'saas'];
+      return ['system', 'notifications', 'attendance', 'grading', 'saas'];
     }
 
     if (user?.role === 'teacher' || user?.role === 'head_teacher') {
-      return ['notifications', 'attendance', 'security'];
+      return ['notifications', 'attendance'];
     }
 
-    return baseTabs;
+    return ['notifications'];
   };
 
   const availableTabs = getAvailableTabs();
@@ -210,6 +208,25 @@ const SettingsPage = () => {
         <Settings className="h-6 w-6" />
         <h1 className="text-3xl font-bold">{t('title')}</h1>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="h-4 w-4" aria-hidden />
+            {t('accountSecurity.title')}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">{t('accountSecurity.hint')}</p>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/profile">
+              <User className="mr-2 h-4 w-4" aria-hidden />
+              {t('accountSecurity.openProfile')}
+              <ExternalLink className="ml-2 h-3.5 w-3.5 opacity-60" aria-hidden />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {(user?.role === 'school_admin' || user?.role === 'admin') && (
         <Card>
@@ -257,11 +274,6 @@ const SettingsPage = () => {
             {availableTabs.includes('grading') && (
               <TabsTrigger value="grading" className="shrink-0">
                 {t('tabs.grading')}
-              </TabsTrigger>
-            )}
-            {availableTabs.includes('security') && (
-              <TabsTrigger value="security" className="shrink-0">
-                {t('tabs.security')}
               </TabsTrigger>
             )}
             {availableTabs.includes('saas') && (
@@ -510,35 +522,6 @@ const SettingsPage = () => {
               <Button onClick={handleCreateGradingScale}>{t('grading.add')}</Button>
             </CardContent>
           </Card>
-        </TabsContent>
-        )}
-
-        {availableTabs.includes('security') && (
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <span>{t('security.sessionsTitle')}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SessionsPanel />
-            </CardContent>
-          </Card>
-          {(user?.role === 'admin' || user?.role === 'school_admin') && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Shield className="h-5 w-5" />
-                  <span>{t('security.auditTitle')}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <LogsCenter />
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
         )}
 

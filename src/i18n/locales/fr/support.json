@@ -47,5 +47,8 @@
     "escalatedTitle": "Ticket escaladé",
     "escalatedBody": "Le support plateforme a été alerté.",
     "escalateError": "Impossible d'escalader ce ticket."
-  }
+  },
+  "docsBannerTitle": "Documentation",
+  "docsBannerBody": "FAQ et guides sont regroupés sous Aide.",
+  "docsBannerCta": "Ouvrir l’aide (/aide)"
 }

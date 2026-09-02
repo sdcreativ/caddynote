@@ -274,42 +274,36 @@ const TeachingPage = () => {
         )}
       </div>
 
-      {/* Actions rapides */}
+      {/* Un seul fil pédagogique : Devoirs (+ Appel / Notes). Pas d’Exercices tant que le player n’existe pas. */}
       <Card>
         <CardHeader>
           <CardTitle>{t('quickActions')}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t('pedagogyHint')}</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button 
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-              onClick={() => navigate('/teacher-attendance')}
-            >
-              <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-              <span className="text-sm">{t('takeAttendance')}</span>
-            </button>
-            
-            <button 
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              className="rounded-lg border-2 border-green-200 bg-green-50/60 p-4 text-center hover:bg-green-50"
               onClick={() => navigate('/teacher-assignments')}
             >
-              <BookOpen className="h-6 w-6 mx-auto mb-2 text-green-600" />
-              <span className="text-sm">{t('manageAssignments')}</span>
+              <BookOpen className="mx-auto mb-2 h-6 w-6 text-green-700" />
+              <span className="text-sm font-semibold text-green-900">{t('manageAssignments')}</span>
             </button>
-            
-            <button 
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-              onClick={handlePlanningClick}
+            <button
+              type="button"
+              className="rounded-lg border p-4 text-center hover:bg-gray-50"
+              onClick={() => navigate('/teacher-attendance')}
             >
-              <Calendar className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-              <span className="text-sm">{t('viewPlanning')}</span>
+              <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
+              <span className="text-sm">{t('takeAttendance')}</span>
             </button>
-            
-            <button 
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
+            <button
+              type="button"
+              className="rounded-lg border p-4 text-center hover:bg-gray-50"
               onClick={() => navigate('/grades')}
             >
-              <Users className="h-6 w-6 mx-auto mb-2 text-orange-600" />
+              <Users className="mx-auto mb-2 h-6 w-6 text-orange-600" />
               <span className="text-sm">{t('manageGrades')}</span>
             </button>
           </div>

@@ -8,11 +8,7 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
   return { ...actual, roleLabel: () => 'Élève' };
 });
 
-vi.mock('@/hooks/useResolvedStoredUrl', () => ({
-  useResolvedStoredUrl: () => null,
-}));
-
-describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
+describe('StudentDashboardHome (Accueil = triage)', () => {
   it('affiche Bonsoir le soir', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-01T21:24:00'));
@@ -35,7 +31,7 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     vi.useRealTimers();
   });
 
-  it('conserve photo/présence et expose À traiter', () => {
+  it('expose À traiter sans photo/présence ni KPI', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-01T10:00:00'));
     render(
@@ -55,11 +51,17 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Bonjour, Sam/i })).toBeInTheDocument();
-    expect(screen.getByText('Sam Diallo')).toBeInTheDocument();
-    expect(screen.getByText('CM1 A')).toBeInTheDocument();
-    expect(screen.getByText('Présence confirmée')).toBeInTheDocument();
-    expect(screen.getByText('À traiter')).toBeInTheDocument();
+    expect(screen.getAllByText('À traiter').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/3 devoir\(s\) en cours/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ouvrir mon suivi/i })).toHaveAttribute(
+      'href',
+      '/my-suivi'
+    );
+    // Présence / identité → Suivi uniquement
+    expect(screen.queryByText('Sam Diallo')).not.toBeInTheDocument();
+    expect(screen.queryByText('CM1 A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Présence confirmée')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('student-accueil-kpis')).not.toBeInTheDocument();
     vi.useRealTimers();
   });
 
@@ -119,9 +121,8 @@ describe('StudentDashboardHome (cockpit Accueil maquette)', () => {
 
     expect(screen.getByText(/Rien à traiter aujourd/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Traiter maintenant/i })).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Aucune note pour l/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Aucun devoir en cours/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Aucune note pour l/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun devoir en cours/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Aller où/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mes notes$/i })).not.toBeInTheDocument();
   });
 });

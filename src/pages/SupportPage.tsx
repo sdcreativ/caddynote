@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,14 @@ const SupportPage = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <span className="font-medium">{t('docsBannerTitle', { defaultValue: 'Documentation' })} — </span>
+        {t('docsBannerBody', { defaultValue: 'FAQ et guides d’usage sont sur la page Aide (pas ici).' })}{' '}
+        <Link to="/aide" className="font-semibold text-blue-700 underline-offset-2 hover:underline">
+          {t('docsBannerCta', { defaultValue: 'Ouvrir l’aide' })}
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">

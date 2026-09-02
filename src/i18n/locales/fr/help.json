@@ -1,7 +1,7 @@
 {
-  "eyebrow": "Support",
-  "title": "Aide & Support CaddyNote",
-  "intro": "Bienvenue dans la section d'aide de CaddyNote. Trouvez ici des réponses aux questions courantes sur la gestion des absences, les signatures électroniques, les différents rôles et plus encore.",
+  "eyebrow": "Documentation",
+  "title": "Aide & guides",
+  "intro": "FAQ et guides d’utilisation. Pour ouvrir un ticket une fois connecté, utilisez Support (menu) — une seule porte tickets, distincte de cette doc publique.",
   "faqTitle": "Questions Fréquentes (FAQ)",
   "faq": [
     {
@@ -59,7 +59,9 @@
       "description": "Suivi multi-enfants, justificatifs, notes publiées, factures."
     }
   ],
-  "moreTitle": "Besoin d'aide supplémentaire ?",
-  "moreBody": "Si vous n'avez pas trouvé de réponse dans la FAQ ou les guides, notre équipe est prête à vous assister.",
-  "contactCta": "Contacter le Support"
+  "moreTitle": "Besoin d’un humain ?",
+  "moreBody": "Contact public pour les prospects, ou ticket Support si vous avez déjà un compte établissement.",
+  "contactCta": "Formulaire contact",
+  "supportCta": "Tickets Support (compte)",
+  "supportHint": "Après connexion : menu → Support"
 }

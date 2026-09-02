@@ -124,7 +124,7 @@
       "calendar": "6.2. Emploi du temps (<calendar>/calendar</calendar>)",
       "calendarBody": "Consultez votre emploi du temps personnel avec tous vos cours planifiés.",
       "grades": "6.3. Notes, devoirs et exercices",
-      "gradesBody": "Saisissez les notes en brouillon puis publiez-les (<grades>/grades</grades>) — une correction après publication conserve l'ancienne valeur. Créez des devoirs (<assignments>/teacher-assignments</assignments>) : les élèves sont notifiés à la publication, puis rappelés avant l'échéance et en cas de retard. Les exercices (y compris une proposition IA, à relire avant enregistrement) se gèrent dans <exercises>/teacher-exercises</exercises>.",
+      "gradesBody": "Saisissez les notes en brouillon puis publiez-les (<grades>/grades</grades>) — une correction après publication conserve l'ancienne valeur. Créez des devoirs (<assignments>/teacher-assignments</assignments>) : notification à la publication, rappels avant échéance et en cas de retard. Pas d'exercices interactifs tant que le player n'est pas disponible.",
       "unavailability": "6.4. Indisponibilités",
       "unavailabilityBody": "Déclarez une indisponibilité ; la direction la valide. Les créneaux déjà planifiés sont signalés, mais un remplacement n'est jamais créé automatiquement."
     },

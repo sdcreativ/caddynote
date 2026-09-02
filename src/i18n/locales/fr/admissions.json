@@ -1,8 +1,8 @@
 {
   "admin": {
     "title": "Préinscriptions",
-    "tabQueue": "File d’instruction",
-    "tabConfig": "Modèles de pièces",
+    "tabQueue": "File d’attente",
+    "tabConfig": "Configuration campagnes",
     "empty": "Aucun dossier.",
     "noInstitutionTitle": "Établissement manquant",
     "noInstitutionBody": "Votre compte n’est rattaché à aucun établissement : la file d’admissions ne peut pas s’afficher. Connectez-vous avec le compte direction de l’école, ou sélectionnez un établissement ci-dessous (admin plateforme).",
@@ -67,7 +67,9 @@
       "cancelled": "Annulé",
       "draft": "Brouillon",
       "all": "Tous"
-    }
+    },
+    "tabQueueHint": "Dossiers à instruire aujourd’hui — statut, frais, décision.",
+    "tabConfigHint": "Modèles de pièces et paramètres de campagne (pas le quotidien)."
   },
   "config": {
     "templatesTitle": "Modèles",

@@ -164,7 +164,6 @@ export function TeacherGuideContent() {
                         components={{
                             grades: <NavBadge to="/grades" />,
                             assignments: <NavBadge to="/teacher-assignments" />,
-                            exercises: <NavBadge to="/teacher-exercises" />,
                         }}
                     />
                 </p>

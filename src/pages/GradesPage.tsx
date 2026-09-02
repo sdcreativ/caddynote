@@ -386,241 +386,9 @@ const GradesPage = () => {
             {isStudent ? t('subtitleStudent') : t('subtitleTeacher')}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setIsExportOpen(true)}>
-            <FileDown className="mr-2 h-4 w-4" />
-            {tc('actions.export')}
-          </Button>
-          {canPublish && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Send className="mr-2 h-4 w-4" />
-                  {t('publish')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('publishDialog.title')}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>{t('course')}</Label>
-                    <Select value={publishCourseId} onValueChange={setPublishCourseId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('chooseCourse')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('period')}</Label>
-                    <Select value={publishPeriodId} onValueChange={setPublishPeriodId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('period')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {periods.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handlePublish} disabled={workflowBusy} className="w-full">
-                    {t('publishDialog.action')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-          {canCompute && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Calculator className="mr-2 h-4 w-4" />
-                  {t('computeAverages')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('computeDialog.title')}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>{t('computeDialog.classId')}</Label>
-                    <Input
-                      value={computeClassId}
-                      onChange={(e) => setComputeClassId(e.target.value)}
-                      placeholder={t('computeDialog.classUuidPlaceholder')}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t('computeDialog.classHint')}
-                    </p>
-                    <Select
-                      onValueChange={(courseId) => {
-                        const c = courses.find((x) => x.id === courseId);
-                        if (c?.class_id) setComputeClassId(c.class_id);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('computeDialog.fillFromCourse')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('period')}</Label>
-                    <Select value={computePeriodId} onValueChange={setComputePeriodId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('period')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {periods.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handleCompute} disabled={workflowBusy} className="w-full">
-                    {t('computeDialog.action')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+        <div className="flex flex-col items-stretch gap-3 sm:items-end">
           {canCreateGrades && (
-            <>
-            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">{t('importCsv')}</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[640px]">
-                <DialogHeader>
-                  <DialogTitle>{t('import.title')}</DialogTitle>
-                  <DialogDescription>
-                    {t('import.description')}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={downloadGradeTemplate}>
-                      <Download className="mr-2 h-4 w-4" />
-                      {t('import.template')}
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" asChild>
-                      <label className="cursor-pointer">
-                        <Upload className="mr-2 h-4 w-4" />
-                        {t('import.chooseFile')}
-                        <input
-                          type="file"
-                          accept=".csv,text/csv"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) void handleImportFile(file);
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label>{t('course')}</Label>
-                      <Select value={importCourseId} onValueChange={setImportCourseId}>
-                        <SelectTrigger><SelectValue placeholder={t('course')} /></SelectTrigger>
-                        <SelectContent>
-                          {courses.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label>{t('period')}</Label>
-                      <Select value={importPeriodId} onValueChange={setImportPeriodId}>
-                        <SelectTrigger><SelectValue placeholder={t('period')} /></SelectTrigger>
-                        <SelectContent>
-                          {periods.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>{t('import.evalTitle')}</Label>
-                    <Input value={importTitle} onChange={(e) => setImportTitle(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>{t('import.csvPaste')}</Label>
-                    <Textarea
-                      rows={6}
-                      value={importCsv}
-                      onChange={(e) => {
-                        setImportCsv(e.target.value);
-                        setImportPreviewRows(previewCsvRows(e.target.value));
-                        setImportReport(null);
-                      }}
-                      placeholder="studentNumber,gradeValue"
-                    />
-                  </div>
-                  {importPreviewRows.length > 0 && (
-                    <div className="max-h-40 overflow-auto rounded border text-xs">
-                      <table className="w-full">
-                        <tbody>
-                          {importPreviewRows.map((row, i) => (
-                            <tr key={i} className={i === 0 ? 'bg-muted font-medium' : ''}>
-                              {row.map((cell, j) => (
-                                <td key={j} className="border-b px-2 py-1">{cell}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {importReport && (
-                    <div className="rounded border bg-muted/40 p-3 text-sm">
-                      <p>
-                        {t('import.report', { created: importReport.created, skipped: importReport.skipped, errors: importReport.errors })}
-                      </p>
-                      {importReport.errors > 0 && (
-                        <ul className="mt-2 max-h-24 overflow-auto text-xs text-destructive">
-                          {importReport.results
-                            .filter((r) => r.status === 'error')
-                            .slice(0, 8)
-                            .map((r) => (
-                              <li key={`${r.row}-${r.key}`}>
-                                {t('import.rowError', { row: r.row, key: r.key, error: r.error || t('import.errorFallback') })}
-                              </li>
-                            ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                  <Button onClick={() => void handleImportCsv()} disabled={importing}>
-                    {importing ? t('import.importing') : tc('actions.import')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <div className="flex flex-wrap justify-end gap-2">
             <Dialog open={isBulkOpen} onOpenChange={setIsBulkOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary">{t('gridEntry')}</Button>
@@ -868,8 +636,249 @@ const GradesPage = () => {
                 </div>
               </DialogContent>
             </Dialog>
-            </>
+            </div>
           )}
+          <details className="w-full max-w-xl rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+            <summary className="cursor-pointer select-none font-medium text-muted-foreground">
+              {t('advancedTools')}
+            </summary>
+            <div className="mt-3 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsExportOpen(true)}>
+            <FileDown className="mr-2 h-4 w-4" />
+            {tc('actions.export')}
+          </Button>
+          {canPublish && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Send className="mr-2 h-4 w-4" />
+                  {t('publish')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('publishDialog.title')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>{t('course')}</Label>
+                    <Select value={publishCourseId} onValueChange={setPublishCourseId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('chooseCourse')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('period')}</Label>
+                    <Select value={publishPeriodId} onValueChange={setPublishPeriodId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('period')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {periods.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handlePublish} disabled={workflowBusy} className="w-full">
+                    {t('publishDialog.action')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+          {canCompute && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Calculator className="mr-2 h-4 w-4" />
+                  {t('computeAverages')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('computeDialog.title')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>{t('computeDialog.classId')}</Label>
+                    <Input
+                      value={computeClassId}
+                      onChange={(e) => setComputeClassId(e.target.value)}
+                      placeholder={t('computeDialog.classUuidPlaceholder')}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('computeDialog.classHint')}
+                    </p>
+                    <Select
+                      onValueChange={(courseId) => {
+                        const c = courses.find((x) => x.id === courseId);
+                        if (c?.class_id) setComputeClassId(c.class_id);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('computeDialog.fillFromCourse')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('period')}</Label>
+                    <Select value={computePeriodId} onValueChange={setComputePeriodId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('period')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {periods.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleCompute} disabled={workflowBusy} className="w-full">
+                    {t('computeDialog.action')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+              {canCreateGrades && (
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">{t('importCsv')}</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[640px]">
+                <DialogHeader>
+                  <DialogTitle>{t('import.title')}</DialogTitle>
+                  <DialogDescription>
+                    {t('import.description')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={downloadGradeTemplate}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('import.template')}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <label className="cursor-pointer">
+                        <Upload className="mr-2 h-4 w-4" />
+                        {t('import.chooseFile')}
+                        <input
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleImportFile(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>{t('course')}</Label>
+                      <Select value={importCourseId} onValueChange={setImportCourseId}>
+                        <SelectTrigger><SelectValue placeholder={t('course')} /></SelectTrigger>
+                        <SelectContent>
+                          {courses.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>{t('period')}</Label>
+                      <Select value={importPeriodId} onValueChange={setImportPeriodId}>
+                        <SelectTrigger><SelectValue placeholder={t('period')} /></SelectTrigger>
+                        <SelectContent>
+                          {periods.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('import.evalTitle')}</Label>
+                    <Input value={importTitle} onChange={(e) => setImportTitle(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('import.csvPaste')}</Label>
+                    <Textarea
+                      rows={6}
+                      value={importCsv}
+                      onChange={(e) => {
+                        setImportCsv(e.target.value);
+                        setImportPreviewRows(previewCsvRows(e.target.value));
+                        setImportReport(null);
+                      }}
+                      placeholder="studentNumber,gradeValue"
+                    />
+                  </div>
+                  {importPreviewRows.length > 0 && (
+                    <div className="max-h-40 overflow-auto rounded border text-xs">
+                      <table className="w-full">
+                        <tbody>
+                          {importPreviewRows.map((row, i) => (
+                            <tr key={i} className={i === 0 ? 'bg-muted font-medium' : ''}>
+                              {row.map((cell, j) => (
+                                <td key={j} className="border-b px-2 py-1">{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {importReport && (
+                    <div className="rounded border bg-muted/40 p-3 text-sm">
+                      <p>
+                        {t('import.report', { created: importReport.created, skipped: importReport.skipped, errors: importReport.errors })}
+                      </p>
+                      {importReport.errors > 0 && (
+                        <ul className="mt-2 max-h-24 overflow-auto text-xs text-destructive">
+                          {importReport.results
+                            .filter((r) => r.status === 'error')
+                            .slice(0, 8)
+                            .map((r) => (
+                              <li key={`${r.row}-${r.key}`}>
+                                {t('import.rowError', { row: r.row, key: r.key, error: r.error || t('import.errorFallback') })}
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                  <Button onClick={() => void handleImportCsv()} disabled={importing}>
+                    {importing ? t('import.importing') : tc('actions.import')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+              )}
+            </div>
+          </details>
         </div>
       </div>
 

@@ -1,34 +1,24 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  GraduationCap,
-  AlertCircle,
-  BookOpen,
-  ChevronRight,
-  MessageSquare,
-} from 'lucide-react';
-import StatCard from '@/components/dashboard/StatCard';
-import { MobileCompactStat } from '@/components/dashboard/MobileActionPrimitives';
-import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfile';
+import { AlertCircle, BookOpen, ChevronRight, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { roleLabel } from '@/lib/navConfig';
 import { dayGreetingKey } from '@/lib/dayGreeting';
-import type { StrkAbsence } from '@/services/strkAbsenceService';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'empty';
 
 type StudentDashboardHomeProps = {
   userName: string;
+  /** Conservé pour compat Dashboard ; l’identité visuelle vit sur Suivi. */
   firstName?: string;
   lastName?: string;
   className?: string | null;
   profileImage?: string | null;
-  /** Absences brutes (carte présence du jour). */
-  absencesToday?: StrkAbsence[];
+  absencesToday?: unknown[];
   absencesLoading?: boolean;
-  grades: number | null;
-  /** Compteur KPI absences 30 j. */
+  /** Conservé pour compat ; les compteurs notes ne s’affichent plus ici. */
+  grades?: number | null;
   absences: number | null;
   homework: number | null;
   unreadMessages?: number | null;
@@ -43,33 +33,18 @@ type ToHandleItem = {
   tone: 'amber' | 'rose' | 'blue';
 };
 
-const kpiValue = (state: LoadState, value: string | number | null | undefined, emptyLabel = '0') => {
-  if (state === 'loading' || state === 'idle') return '…';
-  if (state === 'error') return '—';
-  if (value == null) return emptyLabel;
-  return value;
-};
-
 /**
- * Accueil élève : Bonjour + photo/présence + À traiter + KPI.
+ * Accueil élève : salut + priorités du jour (À traiter).
+ * La présence et les raccourcis scolaires sont sur /my-suivi.
  */
 const StudentDashboardHome = ({
   userName,
-  firstName,
-  lastName = '',
-  className,
-  profileImage,
-  absencesToday = [],
-  absencesLoading = false,
-  grades,
   absences,
   homework,
   unreadMessages = null,
   state,
 }: StudentDashboardHomeProps) => {
   const { t } = useTranslation('dashboard');
-  const navigate = useNavigate();
-  const displayFirst = firstName?.trim() || userName;
 
   const dateLabel = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long',
@@ -80,7 +55,6 @@ const StudentDashboardHome = ({
 
   const homeworkCount = state === 'ready' || state === 'empty' ? Number(homework ?? 0) : 0;
   const absenceCount = state === 'ready' || state === 'empty' ? Number(absences ?? 0) : 0;
-  const gradesCount = state === 'ready' || state === 'empty' ? Number(grades ?? 0) : 0;
   const unreadCount =
     state === 'ready' || state === 'empty' ? Number(unreadMessages ?? 0) : 0;
   const hasHomework = state === 'ready' && homeworkCount > 0;
@@ -116,19 +90,6 @@ const StudentDashboardHome = ({
     });
   }
 
-  const gradesHint =
-    state === 'ready' || state === 'empty'
-      ? gradesCount === 0
-        ? t('empty.studentNoGrades')
-        : undefined
-      : undefined;
-  const homeworkHint =
-    state === 'ready' || state === 'empty'
-      ? homeworkCount === 0
-        ? t('empty.studentNoHomework')
-        : undefined
-      : undefined;
-
   if (state === 'error') {
     return (
       <div className="space-y-6 py-4 animate-fade-in md:py-6">
@@ -151,25 +112,25 @@ const StudentDashboardHome = ({
         <p className="text-sm text-slate-500 md:text-base">
           {roleLabel('student')} • {dateLabel}
         </p>
+        <p className="text-sm text-slate-500">
+          <Link to="/my-suivi" className="font-medium text-blue-700 underline-offset-2 hover:underline">
+            {t('studentMobile.openSuivi', { defaultValue: 'Ouvrir mon suivi' })}
+          </Link>
+          <span className="text-slate-400"> — </span>
+          {t('studentMobile.openSuiviHint', {
+            defaultValue: 'présence, emploi du temps, notes et devoirs',
+          })}
+        </p>
       </header>
-
-      <StudentPresenceProfile
-        firstName={displayFirst}
-        lastName={lastName}
-        className={className}
-        profileImage={profileImage}
-        absences={absencesToday}
-        absencesLoading={absencesLoading || state === 'loading' || state === 'idle'}
-      />
 
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              {t('alerts.section')}
+              {t('alerts.recent')}
             </p>
             <h2 className="mt-1 font-display text-lg font-semibold text-slate-900">
-              {t('alerts.recent')}{' '}
+              {t('studentMobile.toHandleTitle')}{' '}
               <span className="text-slate-400">({toHandle.length})</span>
             </h2>
           </div>
@@ -218,53 +179,6 @@ const StudentDashboardHome = ({
           <p className="mt-4 text-sm text-slate-500">{t('alerts.emptyTitle')}</p>
         )}
       </section>
-
-      <div className="grid grid-cols-2 gap-3 lg:hidden" data-testid="student-accueil-kpis">
-        <MobileCompactStat
-          title={t('stats.grades')}
-          value={String(kpiValue(state, grades))}
-          tone="blue"
-          hint={gradesHint}
-          onClick={() => navigate('/my-grades')}
-        />
-        <MobileCompactStat
-          title={t('stats.homework')}
-          value={String(kpiValue(state, homework))}
-          tone="amber"
-          hint={homeworkHint}
-          onClick={() => navigate('/assignments')}
-        />
-        <MobileCompactStat
-          title={t('stats.absences30d')}
-          value={String(kpiValue(state, absences))}
-          tone="rose"
-          onClick={() => navigate('/my-absences')}
-        />
-      </div>
-
-      <div className="hidden gap-4 lg:grid lg:grid-cols-3">
-        <StatCard
-          title={t('stats.grades')}
-          value={kpiValue(state, grades)}
-          description={gradesHint}
-          icon={<GraduationCap className="h-5 w-5" />}
-          onClick={() => navigate('/my-grades')}
-        />
-        <StatCard
-          title={t('stats.homework')}
-          value={kpiValue(state, homework)}
-          description={homeworkHint}
-          icon={<BookOpen className="h-5 w-5" />}
-          onClick={() => navigate('/assignments')}
-        />
-        <StatCard
-          title={t('stats.absences30d')}
-          value={kpiValue(state, absences)}
-          icon={<AlertCircle className="h-5 w-5" />}
-          color="red"
-          onClick={() => navigate('/my-absences')}
-        />
-      </div>
     </div>
   );
 };

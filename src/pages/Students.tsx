@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useStrkUsers } from '@/hooks/useStrkUsers';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkClasses } from '@/hooks/useStrkClasses';
@@ -49,6 +49,7 @@ const Students = () => {
   const [importPreview, setImportPreview] = useState<{ csv: string; rows: string[][] } | null>(null);
   const [importing, setImporting] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { t } = useTranslation('students');
   const { t: tc } = useTranslation('common');
   const confirm = useConfirmDialog();
@@ -217,11 +218,9 @@ const Students = () => {
     }
   };
 
-  const handleContact = (studentId: string) => {
-    toast({
-      title: t('contactTitle'),
-      description: t('contactBody', { id: studentId }),
-    });
+  const handleContact = (_studentId: string) => {
+    // Messagerie réelle (pas de toast factice).
+    navigate('/messages');
   };
 
   const handleSelectStudent = (studentId: string, selected: boolean) => {
@@ -240,17 +239,10 @@ const Students = () => {
     }
   };
 
-  const handleBatchAction = (action: string) => {
-    toast({
-      title: t('batchTitle', { action }),
-      description: t('batchBody', { count: selectedStudents.length }),
-    });
-  };
-
-  const exportStudents = () => {
+  const downloadStudentsCsv = (rows: typeof filteredStudents, filename: string) => {
     const csvContent = [
       ['Nom', 'Email', 'Classe', 'Statut', 'Téléphone'].join(','),
-      ...filteredStudents.map(student => [
+      ...rows.map(student => [
         student.name || '',
         student.email || '',
         student.class || t('unassigned'),
@@ -263,9 +255,62 @@ const Students = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `etudiants-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleBatchAction = async (action: string) => {
+    const selected = filteredStudents.filter((s) => selectedStudents.includes(s.id));
+    if (selected.length === 0) return;
+
+    if (action === 'export') {
+      downloadStudentsCsv(
+        selected,
+        `etudiants-selection-${new Date().toISOString().split('T')[0]}.csv`
+      );
+      toast({
+        title: t('batchExportTitle'),
+        description: t('batchExportBody', { count: selected.length }),
+      });
+      return;
+    }
+
+    if (action === 'suspend') {
+      const ok = await confirm({
+        title: t('batchSuspendTitle'),
+        description: t('batchSuspendBody', { count: selected.length }),
+        variant: 'destructive',
+        confirmLabel: t('suspend'),
+      });
+      if (!ok) return;
+
+      let done = 0;
+      for (const student of selected) {
+        try {
+          await deleteUser(student.id);
+          done += 1;
+        } catch {
+          // continue with remaining students
+        }
+      }
+      if (user?.institutionId) {
+        loadUsersByInstitution(user.institutionId);
+      }
+      setSelectedStudents([]);
+      toast({
+        title: done === selected.length ? t('batchSuspendDoneTitle') : t('batchSuspendPartialTitle'),
+        description: t('batchSuspendDoneBody', { done, total: selected.length }),
+        variant: done === selected.length ? undefined : 'destructive',
+      });
+    }
+  };
+
+  const exportStudents = () => {
+    downloadStudentsCsv(
+      filteredStudents,
+      `etudiants-${new Date().toISOString().split('T')[0]}.csv`
+    );
   };
 
   // ELV-005 : import en masse (colonnes attendues :
@@ -446,10 +491,10 @@ const Students = () => {
               </span>
             </div>
             <div className="flex space-x-2">
-              <Button size="sm" variant="outline" onClick={() => handleBatchAction('export')}>
+              <Button size="sm" variant="outline" onClick={() => void handleBatchAction('export')}>
                 {tc('actions.export')}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => handleBatchAction('suspend')}>
+              <Button size="sm" variant="outline" onClick={() => void handleBatchAction('suspend')}>
                 {t('suspend')}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setSelectedStudents([])}>

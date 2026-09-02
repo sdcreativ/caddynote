@@ -86,7 +86,7 @@
     "classes": "Classes",
     "subjects": "Matières",
     "teachers": "Enseignants",
-    "users": "Utilisateurs",
+    "users": "Comptes & accès",
     "exports": "Exports",
     "services": "Services",
     "support": "Support",
@@ -107,7 +107,8 @@
     "parentSpace": "Espace parent",
     "institutions": "Établissements",
     "subscription": "Abonnement",
-    "plansCatalog": "Plans tarifaires"
+    "plansCatalog": "Plans tarifaires",
+    "usersHint": "Identifiants et rôles (connexion) — distinct des fiches Élèves / Enseignants"
   },
   "roles": {
     "schoolAdmin": "Direction",

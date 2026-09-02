@@ -15,10 +15,7 @@ import {
   Lock, 
   Unlock, 
   MessageSquare,
-  Download,
-  UserMinus
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import SubscriptionGuard from '@/components/subscription/SubscriptionGuard';
 
 interface StudentActionsProps {
@@ -46,16 +43,6 @@ export const StudentActions: React.FC<StudentActionsProps> = ({
   onContact,
   compact = false
 }) => {
-  const { toast } = useToast();
-
-  const handleExportProfile = () => {
-    // Simuler l'export du profil étudiant
-    toast({
-      title: "Export en cours",
-      description: `Export du profil de ${student.name} en cours...`,
-    });
-  };
-
   if (compact) {
     return (
       <div className="flex space-x-1">
@@ -91,11 +78,6 @@ export const StudentActions: React.FC<StudentActionsProps> = ({
                 Contacter
               </DropdownMenuItem>
             </SubscriptionGuard>
-            
-            <DropdownMenuItem onClick={handleExportProfile}>
-              <Download className="mr-2 h-4 w-4" />
-              Exporter profil
-            </DropdownMenuItem>
             
             <DropdownMenuSeparator />
             
@@ -187,13 +169,6 @@ export const StudentActions: React.FC<StudentActionsProps> = ({
               Réactiver
             </DropdownMenuItem>
           )}
-          
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem onClick={handleExportProfile}>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter profil
-          </DropdownMenuItem>
           
           <DropdownMenuSeparator />
           

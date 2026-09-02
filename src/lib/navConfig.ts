@@ -187,7 +187,7 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'parent':
-      // Accueil · Suivi · Messages · Notifications · Menu
+      // Accueil · Suivi · Messages · Menu (notifications = cloche header)
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
         {
@@ -197,26 +197,14 @@ export function mobileBottomNavForRole(
           icon: BarChart3,
         },
         { kind: 'link', titleKey: 'bottomNav.messagesLong', href: '/messages', icon: MessageSquare },
-        {
-          kind: 'link',
-          titleKey: 'bottomNav.notifications',
-          href: '/notifications',
-          icon: Bell,
-        },
         { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'student':
-      // Accueil · Suivi · Messages · Notifications · Menu
+      // Accueil · Suivi · Messages · Menu (notifications = cloche header)
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
         { kind: 'link', titleKey: 'bottomNav.suivi', href: '/my-suivi', icon: BarChart3 },
         { kind: 'link', titleKey: 'bottomNav.messagesLong', href: '/messages', icon: MessageSquare },
-        {
-          kind: 'link',
-          titleKey: 'bottomNav.notifications',
-          href: '/notifications',
-          icon: Bell,
-        },
         { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'secretary':
@@ -287,12 +275,9 @@ export function isNavHrefActive(pathname: string, href: string, search = ''): bo
 
   if (base === '/dashboard') return pathname === '/dashboard' || pathname === '/';
 
-  // Espace parent : actif hors onglets finance / services (gérés par href avec ?tab=)
+  // Espace parent : un seul hub — actif sur toute la page (y compris ?tab=finance|services).
   if (base === '/my-children') {
-    if (pathname !== '/my-children' && !pathname.startsWith('/my-children/')) return false;
-    const tab = current.get('tab');
-    if (tab === 'finance' || tab === 'services') return false;
-    return true;
+    return pathname === '/my-children' || pathname.startsWith('/my-children/');
   }
 
   // Hub Présences (appel) — distinct de /absences (justificatifs / suivi)
@@ -305,7 +290,7 @@ export function isNavHrefActive(pathname: string, href: string, search = ''): bo
 export function navSectionsForRole(role: string | null | undefined): NavSection[] {
   switch (role) {
     case 'school_admin':
-      // Jour 1 : ≤ ~10 entrées. Admissions / Finance remontées ; Notes & Utilisateurs sous Plus.
+      // Jour 1 : ≤ ~7–8. Classes / enseignants / notes / campagnes sous Plus.
       return [
         {
           labelKey: 'sections.workspace',
@@ -316,13 +301,6 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.attendance', href: '/attendance', icon: ClipboardCheck, badgeKey: 'alerts' },
             { titleKey: 'items.admissions', href: '/admissions/admin', icon: School },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
-          ],
-        },
-        {
-          labelKey: 'sections.management',
-          items: [
-            { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
-            { titleKey: 'items.teachers', href: '/teachers', icon: Users },
             { titleKey: 'items.finance', href: '/finance', icon: Receipt },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],
@@ -332,8 +310,10 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           collapsible: true,
           defaultCollapsed: true,
           items: [
+            { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
+            { titleKey: 'items.teachers', href: '/teachers', icon: Users },
             { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
-            { titleKey: 'items.users', href: '/users', icon: UserCog },
+            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
             // Emploi du temps : accès via Vue d’ensemble (résumé + tuile), pas une 2ᵉ entrée nav.
             { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
@@ -374,7 +354,6 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           defaultCollapsed: true,
           items: [
             { titleKey: 'items.assignments', href: '/teacher-assignments', icon: BookOpen },
-            { titleKey: 'items.exercises', href: '/teacher-exercises', icon: PenTool },
             { titleKey: 'items.studentFollowUp', href: '/follow-up', icon: HeartHandshake },
           ],
         },
@@ -401,7 +380,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
-            { titleKey: 'items.users', href: '/users', icon: UserCog },
+            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
           ],
@@ -487,22 +466,19 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
             { titleKey: 'items.myAbsences', href: '/my-absences', icon: ClipboardCheck },
             { titleKey: 'items.assignments', href: '/assignments', icon: FileText },
-            { titleKey: 'items.exercises', href: '/exercises', icon: PenTool },
             { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
-            { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
           ],
         },
       ];
 
     case 'parent':
+      // Un seul hub « Mes enfants » (onglets finance/services dedans) — pas 3 entrées vers la même page.
       return [
         {
           labelKey: 'sections.family',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
             { titleKey: 'items.parentSpace', href: '/my-children', icon: Home },
-            { titleKey: 'items.finance', href: '/my-children?tab=finance', icon: CreditCard },
-            { titleKey: 'items.services', href: '/my-children?tab=services', icon: Bus },
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
           ],
@@ -529,7 +505,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           labelKey: 'sections.steering',
           items: [
             { titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
-            { titleKey: 'items.users', href: '/users', icon: UserCog },
+            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
             { titleKey: 'items.students', href: '/students', icon: Users, requiresInstitution: true },
             { titleKey: 'items.finance', href: '/finance', icon: Receipt, requiresInstitution: true },
             { titleKey: 'items.documents', href: '/documents', icon: FileText, requiresInstitution: true },

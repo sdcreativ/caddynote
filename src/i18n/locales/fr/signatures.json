@@ -34,10 +34,10 @@
   "savedTitle": "Signature enregistrée",
   "savedBody": "Votre signature a été enregistrée avec succès.",
   "saveError": "Impossible d'enregistrer la signature. Veuillez réessayer.",
-  "studentTitle": "Mes Signatures",
-  "staffTitle": "Gestion des Signatures",
-  "studentSubtitle": "Consultez vos signatures électroniques et feuilles d'émargement",
-  "staffSubtitle": "Créez et gérez les signatures électroniques et feuilles d'émargement",
+  "studentTitle": "Mes signatures à faire",
+  "staffTitle": "Signatures (école)",
+  "studentSubtitle": "Documents à signer pour votre scolarité.",
+  "staffSubtitle": "Gestion staff — créer, relancer, exporter. La signature elle-même se fait via le lien /signatures/:id/sign (pas /sign, qui est la connexion).",
   "remindPending": "Relancer les en attente",
   "newSignature": "Nouvelle signature",
   "sent": "Envoyées",
@@ -94,7 +94,9 @@
     "expiresOn": " — expire le {{date}}",
     "captured": "Signature capturée",
     "saving": "Enregistrement…",
-    "saveMine": "Enregistrer ma signature"
+    "saveMine": "Enregistrer ma signature",
+    "title": "Signer le document",
+    "subtitle": "Action de signature — distincte de la liste de gestion (/signatures)."
   },
   "filters": {
     "searchPlaceholder": "Rechercher un étudiant...",

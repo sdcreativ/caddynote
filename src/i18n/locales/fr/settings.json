@@ -10,6 +10,11 @@
     "exports": "Exports",
     "audit": "Journal d’audit"
   },
+  "accountSecurity": {
+    "title": "Compte & sécurité",
+    "hint": "Mot de passe, double authentification et sessions se gèrent dans Profil — un seul endroit.",
+    "openProfile": "Ouvrir mon profil"
+  },
   "tabs": {
     "system": "Système",
     "notifications": "Notifications",

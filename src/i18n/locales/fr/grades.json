@@ -1,7 +1,7 @@
 {
   "title": "Notes",
   "subtitleStudent": "Consultez vos notes et évaluations",
-  "subtitleTeacher": "Gérez les notes de vos élèves",
+  "subtitleTeacher": "Saisie du jour d’abord — publication, calcul et import en secondaire.",
   "publish": "Publier",
   "computeAverages": "Calculer moyennes",
   "importCsv": "Import CSV",
@@ -120,5 +120,6 @@
     "comments": "Commentaires (optionnel)",
     "commentsPlaceholder": "Commentaires sur l'évaluation...",
     "save": "Enregistrer la note"
-  }
+  },
+  "advancedTools": "Outils avancés (publier, calculer, importer, exporter)"
 }

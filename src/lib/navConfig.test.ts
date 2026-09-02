@@ -44,8 +44,8 @@ describe('navConfig (NFR-009)', () => {
     const day1 = sections.filter((s) => !s.collapsible);
     const advanced = sections.find((s) => s.collapsible);
     const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
-    expect(visibleCount).toBeLessThanOrEqual(10);
-    expect(visibleCount).toBeGreaterThanOrEqual(8);
+    expect(visibleCount).toBeGreaterThanOrEqual(6);
+    expect(visibleCount).toBeLessThanOrEqual(8);
     expect(advanced?.defaultCollapsed).toBe(true);
     expect(advanced?.items.length).toBeGreaterThan(0);
     // Hub Présences unique (pas Appel + Absences séparés)
@@ -54,10 +54,12 @@ describe('navConfig (NFR-009)', () => {
     expect(hrefs).not.toContain('/absences');
     expect(hrefs).toContain('/admissions/admin');
     expect(hrefs).toContain('/finance');
-    expect(hrefs).toContain('/classes');
-    expect(hrefs).toContain('/teachers');
+    expect(hrefs).not.toContain('/classes');
+    expect(hrefs).not.toContain('/teachers');
     expect(hrefs).not.toContain('/grades');
     const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
+    expect(advancedHrefs).toContain('/classes');
+    expect(advancedHrefs).toContain('/teachers');
     expect(advancedHrefs).toContain('/grades');
     expect(advancedHrefs).toContain('/users');
     expect(advancedHrefs).toContain('/communications');
@@ -91,10 +93,10 @@ describe('navConfig (NFR-009)', () => {
       expect(advancedHrefs).toEqual(
         expect.arrayContaining([
           '/teacher-assignments',
-          '/teacher-exercises',
           '/follow-up',
         ])
       );
+      expect(advancedHrefs).not.toContain('/teacher-exercises');
       expect(advancedHrefs).not.toContain('/teacher-availability');
       expect(advancedHrefs).not.toContain('/communications');
       expect(advancedHrefs).not.toContain('/documents');
@@ -155,6 +157,13 @@ describe('navConfig (NFR-009)', () => {
     expect(items![4]).toMatchObject({ kind: 'more' });
   });
 
+  it('isNavHrefActive reste vrai sur /finance/* et /services/*', () => {
+    expect(isNavHrefActive('/finance/collect', '/finance')).toBe(true);
+    expect(isNavHrefActive('/finance/configure', '/finance')).toBe(true);
+    expect(isNavHrefActive('/services/transport', '/services')).toBe(true);
+    expect(isNavHrefActive('/services', '/services')).toBe(true);
+  });
+
   it('isNavHrefActive gère dashboard et préfixes', () => {
     expect(isNavHrefActive('/dashboard', '/dashboard')).toBe(true);
     expect(isNavHrefActive('/grades/edit', '/grades')).toBe(true);
@@ -163,7 +172,10 @@ describe('navConfig (NFR-009)', () => {
     expect(isNavHrefActive('/attendance', '/attendance')).toBe(true);
     expect(isNavHrefActive('/absences', '/absences')).toBe(true);
     expect(isNavHrefActive('/my-children', '/my-children')).toBe(true);
-    expect(isNavHrefActive('/my-children', '/my-children', '?tab=finance')).toBe(false);
+    // Hub unique : reste actif même sur les onglets finance / services
+    expect(isNavHrefActive('/my-children', '/my-children', '?tab=finance')).toBe(true);
+    expect(isNavHrefActive('/my-children', '/my-children', '?tab=services')).toBe(true);
+    // Anciens deep-links ?tab= : encore matchables si présents ailleurs
     expect(isNavHrefActive('/my-children', '/my-children?tab=finance', '?tab=finance')).toBe(true);
     expect(isNavHrefActive('/my-children', '/my-children?tab=finance', '')).toBe(false);
   });
@@ -245,27 +257,35 @@ describe('navConfig (NFR-009)', () => {
     expect(sections.find((s) => s.collapsible)).toBeUndefined();
   });
 
-  it('Parent : barre du bas mobile = Accueil · Suivi · Messages · Notifications · Menu', () => {
+  it('Parent : barre du bas mobile = Accueil · Suivi · Messages · Menu', () => {
     const items = mobileBottomNavForRole('parent');
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(4);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/my-children' });
     expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/notifications' });
-    expect(items![4]).toMatchObject({ kind: 'more' });
+    expect(items![3]).toMatchObject({ kind: 'more' });
+    expect(items!.some((i) => i.kind === 'link' && i.href === '/notifications')).toBe(false);
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
     }
   });
 
-  it('Élève : barre du bas mobile = Accueil · Suivi · Messages · Notifications · Menu', () => {
+  it('Parent : sidebar = un seul hub Mes enfants (pas de raccourcis finance/services)', () => {
+    const hrefs = navSectionsForRole('parent').flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toContain('/my-children');
+    expect(hrefs).not.toContain('/my-children?tab=finance');
+    expect(hrefs).not.toContain('/my-children?tab=services');
+    expect(hrefs.filter((h) => h.startsWith('/my-children'))).toHaveLength(1);
+  });
+
+  it('Élève : barre du bas mobile = Accueil · Suivi · Messages · Menu', () => {
     const items = mobileBottomNavForRole('student');
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(4);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/my-suivi' });
     expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/notifications' });
-    expect(items![4]).toMatchObject({ kind: 'more' });
+    expect(items![3]).toMatchObject({ kind: 'more' });
+    expect(items!.some((i) => i.kind === 'link' && i.href === '/notifications')).toBe(false);
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
     }
@@ -304,11 +324,11 @@ describe('navConfig (NFR-009)', () => {
         '/my-grades',
         '/my-absences',
         '/assignments',
-        '/exercises',
         '/signatures',
-        '/communications',
       ])
     );
+    expect(advancedHrefs).not.toContain('/exercises');
+    expect(advancedHrefs).not.toContain('/communications');
     expect(advancedHrefs).not.toContain('/support');
   });
 });

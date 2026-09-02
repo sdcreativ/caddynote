@@ -9,20 +9,12 @@ import {
   GraduationCap,
   ClipboardCheck,
   FileText,
-  AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { useMobileShell } from '@/hooks/useMobileShell';
 import { StudentPresenceProfile } from '@/components/suivi/StudentPresenceProfile';
 import type { StrkAbsence } from '@/services/strkAbsenceService';
 import { cn } from '@/lib/utils';
-
-export type SuiviToHandleItem = {
-  id: string;
-  title: string;
-  href: string;
-  tone: 'amber' | 'rose' | 'blue';
-};
 
 type SuiviAction = {
   label: string;
@@ -50,8 +42,8 @@ type StudentSuiviMobileViewProps = {
   absencesLoading?: boolean;
   messageHref?: string;
   messageLabel?: string;
+  /** `student` = grille scolaire ; `message` = CTA message (vue parent). */
   actionsMode?: 'student' | 'message';
-  toHandle?: SuiviToHandleItem[];
   backHref?: string;
   classNameOuter?: string;
 };
@@ -72,7 +64,8 @@ const ActionTile = ({ label, hint, href, icon: Icon }: SuiviAction) => (
 );
 
 /**
- * Écran Suivi mobile : header bleu, photo, présence, À traiter, raccourcis.
+ * Écran Suivi : identité + présence du jour + raccourcis scolaires.
+ * Les priorités « À traiter » restent sur l’Accueil (`/dashboard`).
  */
 export const StudentSuiviMobileView = ({
   headerTitle,
@@ -85,7 +78,6 @@ export const StudentSuiviMobileView = ({
   messageHref = '/messages',
   messageLabel = 'Envoyer un message',
   actionsMode = 'message',
-  toHandle = [],
   backHref = '/dashboard',
   classNameOuter,
 }: StudentSuiviMobileViewProps) => {
@@ -135,48 +127,6 @@ export const StudentSuiviMobileView = ({
         absences={absences}
         absencesLoading={absencesLoading}
       />
-
-      {actionsMode === 'student' && toHandle.length > 0 ? (
-        <section
-          className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm"
-          aria-label="À traiter"
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            À traiter
-          </p>
-          <ul className="mt-1 divide-y divide-slate-100">
-            {toHandle.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={item.href}
-                  className="flex items-center gap-3 py-2.5 transition-colors hover:bg-slate-50/80"
-                >
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                      item.tone === 'amber' && 'bg-amber-100 text-amber-800',
-                      item.tone === 'rose' && 'bg-rose-100 text-rose-700',
-                      item.tone === 'blue' && 'bg-blue-100 text-blue-700'
-                    )}
-                  >
-                    {item.tone === 'amber' ? (
-                      <FileText className="h-4 w-4" aria-hidden />
-                    ) : item.tone === 'rose' ? (
-                      <AlertCircle className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <MessageSquare className="h-4 w-4" aria-hidden />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
-                    {item.title}
-                  </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" aria-hidden />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       {actionsMode === 'student' ? (
         <nav className="grid grid-cols-2 gap-2.5" aria-label="Raccourcis">

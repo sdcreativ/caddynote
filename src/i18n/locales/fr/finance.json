@@ -287,5 +287,11 @@
     "applySponsorship": "Imputer un parrainage",
     "pickSponsorship": "Choisir un parrainage",
     "sponsorNamePlaceholder": "Nom du sponsor"
+  },
+  "workspace": {
+    "collect": "Encaisser",
+    "configure": "Paramétrer",
+    "collectHint": "Factures, échéanciers, soldes et encaissements du quotidien.",
+    "configureHint": "Catalogue de frais, grilles tarifaires et rapprochement bancaire."
   }
 }

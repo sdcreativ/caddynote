@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { hasAnyRole, ATTENDANCE_HUB_ROLES, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
 import { openAbsenceJustificationFile, type StrkAbsence } from '@/services/strkAbsenceService';
 
@@ -35,7 +35,6 @@ const AbsencesPage = () => {
   const {
     absences,
     isLoading,
-    loadAbsencesByStudent,
     loadAbsencesByInstitution,
     reviewJustification,
   } = useStrkAbsences();
@@ -47,14 +46,11 @@ const AbsencesPage = () => {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role === 'student' && user.id) {
-      void loadAbsencesByStudent(user.id);
-      return;
-    }
+    if (user.role === 'student') return;
     if (user.institutionId && hasAnyRole(user.role, INSTITUTION_STAFF_ROLES)) {
       void loadAbsencesByInstitution(user.institutionId);
     }
-  }, [user, loadAbsencesByStudent, loadAbsencesByInstitution]);
+  }, [user, loadAbsencesByInstitution]);
 
   const getInitials = (name: string): string => {
     return name
@@ -155,6 +151,10 @@ const AbsencesPage = () => {
   const pageSubtitle =
     user?.role === 'student' ? t('page.subtitleStudent') : t('page.subtitleStaff');
 
+
+  if (user?.role === 'student') {
+    return <Navigate to="/my-absences" replace />;
+  }
   return (
     <div className="space-y-6 py-6 animate-fade-in">
       <PresenceHubTabs />

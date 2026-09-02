@@ -189,7 +189,13 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
               onOpenSupportOps={() => navigate('/super-admin/support-ops')}
             />
           ) : (
-            <Button variant="ghost" size="icon" className="rounded-full text-slate-600" aria-label={t('notifications')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-slate-600"
+              aria-label={t('notifications')}
+              onClick={() => navigate('/notifications')}
+            >
               <Bell className="h-5 w-5" />
             </Button>
           )}

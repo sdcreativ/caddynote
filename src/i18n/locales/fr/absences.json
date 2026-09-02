@@ -62,6 +62,8 @@
     "acceptedBody": "L'absence a été marquée comme justifiée.",
     "rejectedBody": "Le justificatif a été rejeté ; l'absence reste non justifiée.",
     "reviewError": "La validation du justificatif a échoué.",
+    "exportErrorTitle": "Erreur d'export",
+    "exportErrorBody": "Impossible d'exporter les absences.",
     "durationHours": "{{hours}}h",
     "durationHoursMinutes": "{{hours}}h {{minutes}}min",
     "durationMinutes": "{{duration}}min"

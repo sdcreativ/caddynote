@@ -7,9 +7,6 @@ import SuperAdminSidebar from "@/components/admin/SuperAdminSidebar";
 import SuperAdminMobileBottomNav from "@/components/admin/SuperAdminMobileBottomNav";
 import SuperAdminOverview from "@/components/admin/SuperAdminOverview";
 import SuperAdminUsers from "@/components/admin/SuperAdminUsers";
-import SuperAdminTeachers from "@/components/admin/SuperAdminTeachers";
-import SuperAdminStudents from "@/components/admin/SuperAdminStudents";
-import SuperAdminClasses from "@/components/admin/SuperAdminClasses";
 import InstitutionManager from "@/components/admin/InstitutionManager";
 import SystemManagement from "@/components/admin/SystemManagement";
 import SubscriptionManager from "@/components/admin/SubscriptionManager";
@@ -113,6 +110,11 @@ const SuperAdminDashboard = () => {
       navigate('/super-admin/logs', { replace: true });
       return;
     }
+    // Clones métier école → utilisateurs plateforme
+    if (sectionParam === 'teachers' || sectionParam === 'students' || sectionParam === 'classes') {
+      navigate('/super-admin/users', { replace: true });
+      return;
+    }
     if (sectionParam === 'critical-alerts' || sectionParam === 'performance') {
       navigate('/super-admin/observability', { replace: true });
       return;
@@ -164,13 +166,11 @@ const SuperAdminDashboard = () => {
       case 'overview':
         return <SuperAdminOverview />;
       case 'users':
-        return <SuperAdminUsers />;
       case 'teachers':
-        return <SuperAdminTeachers />;
       case 'students':
-        return <SuperAdminStudents />;
       case 'classes':
-        return <SuperAdminClasses />;
+        // Clones métier école retirés du SA : même surface que Users.
+        return <SuperAdminUsers />;
       case 'institutions':
         return <InstitutionManager />;
       case 'subscriptions':

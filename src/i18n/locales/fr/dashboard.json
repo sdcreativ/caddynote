@@ -97,7 +97,8 @@
     "unpaidToHandle": "{{count}} facture(s) — {{amount}} à régler",
     "absencesToHandle": "{{count}} absence(s) à justifier",
     "absencesToHandleHint": "Déposez un justificatif depuis l’espace enfants",
-    "admissionStatus": "Préinscription · {{status}}"
+    "admissionStatus": "Préinscription · {{status}}",
+    "openChildrenHint": "notes, absences, finances et services par enfant"
   },
   "studentMobile": {
     "primaryCta": "Mes notes",
@@ -109,7 +110,9 @@
     "absencesToHandle": "{{count}} absence(s) sur 30 jours",
     "messagesToHandle": "{{count}} message(s) non lu(s)",
     "messagesToHandleHint": "Messagerie",
-    "toHandleTitle": "À traiter"
+    "toHandleTitle": "À traiter",
+    "openSuivi": "Ouvrir mon suivi",
+    "openSuiviHint": "présence, emploi du temps, notes et devoirs"
   },
   "secretaryMobile": {
     "primaryCta": "Gérer les élèves",

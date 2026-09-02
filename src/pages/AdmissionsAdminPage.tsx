@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal } from 'lucide-react';
 import AdmissionPacketsConfigPanel from '@/components/admissions/AdmissionPacketsConfigPanel';
@@ -62,6 +63,15 @@ const statusBadgeVariant = (
 
 const AdmissionsAdminPage = () => {
   const { t } = useTranslation('admissions');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const admissionsTab = searchParams.get('tab') === 'config' ? 'config' : 'queue';
+  const setAdmissionsTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'queue') next.delete('tab');
+    else next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
+
   const { t: tc } = useTranslation('common');
   const { user } = useStrkAuth();
   const { institutions, loadInstitutions } = useStrkInstitutions();
@@ -334,16 +344,21 @@ const AdmissionsAdminPage = () => {
           </CardContent>
         </Card>
       ) : (
-      <Tabs defaultValue="queue" className="min-w-0">
-        <div className="w-full min-w-0 overflow-x-auto pb-1">
-          <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
-            <TabsTrigger value="queue" className="shrink-0">
-              {t('admin.tabQueue')}
-            </TabsTrigger>
-            <TabsTrigger value="config" className="shrink-0">
-              {t('admin.tabConfig')}
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={admissionsTab} onValueChange={setAdmissionsTab} className="min-w-0">
+        <div className="space-y-2">
+          <div className="w-full min-w-0 overflow-x-auto pb-1">
+            <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
+              <TabsTrigger value="queue" className="shrink-0">
+                {t('admin.tabQueue')}
+              </TabsTrigger>
+              <TabsTrigger value="config" className="shrink-0">
+                {t('admin.tabConfig')}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {admissionsTab === 'queue' ? t('admin.tabQueueHint') : t('admin.tabConfigHint')}
+          </p>
         </div>
 
         <TabsContent value="queue" className="min-w-0 space-y-4">

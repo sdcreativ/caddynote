@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +21,7 @@ import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 const AttendanceManagement = () => {
   const { t } = useTranslation('attendance');
   const { t: tc } = useTranslation('common');
+  const navigate = useNavigate();
   const { user } = useStrkAuth();
   const { classes, isLoading, loadClassesByInstitution } = useStrkClasses();
   const [selectedClass, setSelectedClass] = useState<any>(null);
@@ -121,7 +122,7 @@ const AttendanceManagement = () => {
             <Download className="h-4 w-4 mr-2" />
             {tc('actions.export')}
           </Button>
-          <Button>
+          <Button variant="outline" onClick={() => navigate('/exports')}>
             <BarChart3 className="h-4 w-4 mr-2" />
             {t('page.reports')}
           </Button>

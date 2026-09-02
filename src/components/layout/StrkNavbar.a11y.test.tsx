@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { checkA11y } from '@/test/a11y';
 
 vi.mock('@/hooks/useStrkAuth', () => ({
@@ -15,10 +15,21 @@ vi.mock('@/hooks/useStrkAuth', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useStrkInstitutions', () => ({
-  useStrkInstitutions: () => ({
-    institutions: [],
-    getInstitutionById: vi.fn(async () => null),
+vi.mock('@/hooks/useInstitutionBrand', () => ({
+  useInstitutionBrand: () => ({
+    institutionName: null,
+    institutionLogo: null,
+    showInstitutionBrand: false,
+  }),
+}));
+
+vi.mock('@/hooks/useResolvedStoredUrl', () => ({
+  useResolvedStoredUrl: () => null,
+}));
+
+vi.mock('@/hooks/useEstablishmentDashboardContext', () => ({
+  useEstablishmentDashboardContext: () => ({
+    alerts: [],
   }),
 }));
 
@@ -42,5 +53,19 @@ describe('StrkNavbar (UX-004)', () => {
     expect(screen.getByRole('button', { name: 'Notifications' }).className).toMatch(/\bh-11\b/);
 
     expect(await checkA11y(container)).toHaveNoViolations();
+  });
+
+  it('ouvre /notifications depuis la cloche (parent / élève / hors shell école)', () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route path="/dashboard" element={<StrkNavbar onToggleSidebar={() => {}} />} />
+          <Route path="/notifications" element={<div>Boîte notifications</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(screen.getByText('Boîte notifications')).toBeInTheDocument();
   });
 });

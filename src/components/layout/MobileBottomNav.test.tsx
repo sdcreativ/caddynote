@@ -67,21 +67,11 @@ describe('MobileBottomNav (enseignant)', () => {
     );
     expect(screen.getByRole('button', { name: 'Suivi' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Notifications' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });
 
-  it('Parent : Notifications actif sur /notifications', () => {
-    render(
-      <MemoryRouter initialEntries={['/notifications']}>
-        <MobileBottomNav role="parent" onOpenMore={vi.fn()} />
-      </MemoryRouter>
-    );
-    expect(screen.getByRole('button', { name: 'Notifications' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Suivi' })).not.toHaveAttribute('aria-current');
-  });
-
-  it('Élève : Accueil · Suivi · Messages · Notifications · Menu', () => {
+  it('Élève : Accueil · Suivi · Messages · Menu (pas de Notifications en barre)', () => {
     render(
       <MemoryRouter initialEntries={['/my-suivi']}>
         <MobileBottomNav role="student" onOpenMore={vi.fn()} />
@@ -89,7 +79,7 @@ describe('MobileBottomNav (enseignant)', () => {
     );
     expect(screen.getByRole('button', { name: 'Suivi' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Notifications' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accueil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });

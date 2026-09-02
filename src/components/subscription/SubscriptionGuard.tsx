@@ -56,7 +56,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         <CardContent>
           <div className="flex gap-2">
             <Button asChild>
-              <Link to="/dashboard/subscription">
+              <Link to="/subscription">
                 {t('guard.renew')}
               </Link>
             </Button>
@@ -77,7 +77,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
             <p className="text-xs font-medium text-amber-700 mb-1">{t('guard.premiumTitle')}</p>
             {showUpgrade && (
               <Button asChild size="sm" variant="outline" className="text-xs h-6 border-amber-300 text-amber-700 hover:bg-amber-100">
-                <Link to="/dashboard/subscription">
+                <Link to="/subscription">
                   {t('guard.unlock')}
                 </Link>
               </Button>
@@ -113,7 +113,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
             {showUpgrade && (
               <div className="flex gap-2">
                 <Button asChild size="sm">
-                  <Link to="/dashboard/subscription">
+                  <Link to="/subscription">
                     <Zap className="h-4 w-4 mr-2" />
                     {t('guard.upgrade')}
                   </Link>
@@ -158,7 +158,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
             {showUpgrade && (
               <div className="flex gap-2">
                 <Button asChild size="sm">
-                  <Link to="/dashboard/subscription">
+                  <Link to="/subscription">
                     {t('guard.increaseLimit')}
                   </Link>
                 </Button>
@@ -182,7 +182,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
       <AlertDescription className="text-yellow-700">
         {t('guard.expiresIn', { count: daysUntilExpiration })}
         <Button asChild variant="link" className="p-0 h-auto ml-2 text-yellow-800">
-          <Link to="/dashboard/subscription">
+          <Link to="/subscription">
             {t('guard.renewNow')}
           </Link>
         </Button>

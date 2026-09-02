@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StrkSignature } from '@/types/strk';
 import { useTranslation } from 'react-i18next';
 import { tCommon } from '@/i18n/config';
+import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 
 const SignaturesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -226,6 +227,7 @@ const SignaturesPage = () => {
 
   return (
     <div className="space-y-6 py-6 animate-fade-in">
+      {user?.role !== 'student' ? <PresenceHubTabs /> : null}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold">

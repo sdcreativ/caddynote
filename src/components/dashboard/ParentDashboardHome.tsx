@@ -4,23 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { dayGreetingKey } from '@/lib/dayGreeting';
 import {
   Users,
-  FileText,
-  Award,
-  MessageSquare,
-  Calendar,
   CreditCard,
   School,
   ChevronRight,
   AlertCircle,
-  GraduationCap,
   ClipboardCheck,
 } from 'lucide-react';
-import StatCard from '@/components/dashboard/StatCard';
-import {
-  MobileCompactStat,
-  MobilePrimaryCta,
-  MobileQuickTile,
-} from '@/components/dashboard/MobileActionPrimitives';
+import { MobilePrimaryCta } from '@/components/dashboard/MobileActionPrimitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { roleLabel } from '@/lib/navConfig';
@@ -53,16 +43,10 @@ type ToHandleItem = {
   tone: 'rose' | 'sky' | 'amber';
 };
 
-const kpiValue = (state: LoadState, value: string | number | null | undefined, emptyLabel = '0') => {
-  if (state === 'loading' || state === 'idle') return '…';
-  if (state === 'error') return '—';
-  if (value == null) return emptyLabel;
-  return value;
-};
 
 /**
- * Accueil parent — cockpit deux clics :
- * À traiter → Pulsation (KPI) → CTA + raccourcis.
+ * Accueil parent — triage seulement :
+ * salut + À traiter + CTA vers Mes enfants (détail opérationnel).
  */
 const ParentDashboardHome = ({
   userName,
@@ -303,120 +287,26 @@ const ParentDashboardHome = ({
         )}
       </section>
 
-      {/* Q2 — Pulsation */}
-      <div className="grid grid-cols-2 gap-3 md:hidden">
-        <MobileCompactStat
-          title={t('stats.children')}
-          value={String(kpiValue(state, childrenCount))}
-          tone="blue"
-          onClick={() => navigate('/my-children')}
-        />
-        <MobileCompactStat
-          title={t('stats.remainingToPay')}
-          value={unpaidDisplay}
-          tone="violet"
-          onClick={() => navigate('/my-children?tab=finance')}
-        />
-        <MobileCompactStat
-          title={t('stats.openInvoices')}
-          value={String(kpiValue(state, invoicesOpen))}
-          tone="amber"
-          onClick={() => navigate('/my-children?tab=finance')}
-        />
-        {canViewAttendance ? (
-          <MobileCompactStat
-            title={t('stats.absences')}
-            value={String(kpiValue(state, unjustifiedAbsences))}
-            tone="rose"
-            onClick={() => navigate('/my-children?tab=attendance')}
-          />
-        ) : null}
-      </div>
-
-      <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title={t('stats.children')}
-          value={kpiValue(state, childrenCount)}
-          icon={<Users className="h-5 w-5" />}
-          onClick={() => navigate('/my-children')}
-        />
-        <StatCard
-          title={t('stats.openInvoices')}
-          value={kpiValue(state, invoicesOpen)}
-          icon={<FileText className="h-5 w-5" />}
-          onClick={() => navigate('/my-children?tab=finance')}
-        />
-        <StatCard
-          title={t('stats.remainingToPay')}
-          value={unpaidDisplay}
-          icon={<Award className="h-5 w-5" />}
-          color="purple"
-          onClick={() => navigate('/my-children?tab=finance')}
-        />
-        {canViewAttendance ? (
-          <StatCard
-            title={t('stats.absences')}
-            value={kpiValue(state, unjustifiedAbsences)}
-            icon={<AlertCircle className="h-5 w-5" />}
-            color="red"
-            onClick={() => navigate('/my-children?tab=attendance')}
-          />
-        ) : null}
-      </div>
-
-      {/* Q3 — Deux clics */}
-      <div className="space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          {t('parentMobile.shortcutsTitle')}
-        </p>
+      {/* Détail enfant → Mes enfants (Accueil = triage seulement). */}
+      <div className="space-y-2">
         <MobilePrimaryCta
           label={primaryCta.label}
           icon={primaryCta.icon}
           onClick={() => navigate(primaryCta.href)}
         />
-        <p className="sr-only">{t('parentMobile.primaryCtaHint')}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <MobileQuickTile
-            label={t('quickActions.myChildren')}
-            icon={<Users aria-hidden />}
+        <p className="text-center text-sm text-slate-500 md:text-left">
+          <button
+            type="button"
+            className="font-medium text-blue-700 underline-offset-2 hover:underline"
             onClick={() => navigate('/my-children')}
-            className="md:min-h-[5.5rem]"
-          />
-          {canViewAttendance ? (
-            <MobileQuickTile
-              label={t('quickActions.absences')}
-              icon={<ClipboardCheck aria-hidden />}
-              onClick={() => navigate('/my-children?tab=attendance')}
-              className="md:min-h-[5.5rem]"
-            />
-          ) : null}
-          {canViewGrades ? (
-            <MobileQuickTile
-              label={t('quickActions.grades')}
-              icon={<GraduationCap aria-hidden />}
-              onClick={() => navigate('/my-children?tab=grades')}
-              className="md:min-h-[5.5rem]"
-            />
-          ) : null}
-          <MobileQuickTile
-            label={t('quickActions.finance')}
-            icon={<CreditCard aria-hidden />}
-            onClick={() => navigate('/my-children?tab=finance')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.messages')}
-            icon={<MessageSquare aria-hidden />}
-            onClick={() => navigate('/messages')}
-            className="md:min-h-[5.5rem]"
-          />
-          <MobileQuickTile
-            label={t('quickActions.calendar')}
-            icon={<Calendar aria-hidden />}
-            onClick={() => navigate('/calendar')}
-            className="md:min-h-[5.5rem] col-span-2 md:col-span-1"
-          />
-        </div>
+          >
+            {t('quickActions.myChildren')}
+          </button>
+          <span className="text-slate-400"> — </span>
+          {t('parentMobile.openChildrenHint', {
+            defaultValue: 'notes, absences, finances et services par enfant',
+          })}
+        </p>
       </div>
     </div>
   );

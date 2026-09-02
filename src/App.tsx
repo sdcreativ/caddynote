@@ -28,7 +28,7 @@ import SignPage from "./pages/SignPage";
 import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import InstitutionsPage from "./pages/InstitutionsPage";
-import StudentsPage from "./pages/StudentsPage";
+import Students from "./pages/Students";
 import AbsencesPage from "./pages/AbsencesPage";
 import SignaturesPage from "./pages/SignaturesPage";
 import SignaturePage from "./pages/SignaturePage";
@@ -53,7 +53,7 @@ import ParentGuidePage from "@/pages/ParentGuidePage.tsx";
 import ParentSpacePage from "@/pages/ParentSpacePage";
 import AttendanceManagement from "@/pages/AttendanceManagement";
 import NotFound from "./pages/NotFound";
-import ClassesPage from "./pages/ClassesPage";
+import Classes from "./pages/Classes";
 import TeachersPage from "./pages/TeachersPage";
 import MyCoursesPage from "./pages/MyCoursesPage";
 import AssignmentsPage from "./pages/AssignmentsPage";
@@ -71,14 +71,12 @@ import SupportPage from "./pages/SupportPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import AssignmentWorkPage from "./pages/AssignmentWorkPage";
 import TeacherAssignmentsPage from "./pages/TeacherAssignmentsPage";
-import TeacherExercisesPage from "./pages/TeacherExercisesPage";
 import SubjectsManagement from "./pages/SubjectsManagement";
 import CommunicationsPage from "./pages/CommunicationsPage";
 import FollowUpPage from "./pages/FollowUpPage";
 import TeacherAvailabilityPage from "./pages/TeacherAvailabilityPage";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminLoginPage from "./pages/AdminLoginPage";
-import ExercisesPage from "./pages/ExercisesPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -119,6 +117,8 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/aide" element={<HelpPage />} />
+                <Route path="/help" element={<Navigate to="/aide" replace />} />
+                <Route path="/guides" element={<Navigate to="/aide" replace />} />
                 <Route path="/aide/guide-enseignants" element={<TeacherGuidePage />} />
                 <Route path="/aide/guide-etudiants" element={<StudentGuidePage />} />
                 <Route path="/aide/guide-ecoles" element={<SchoolGuidePage />} />
@@ -128,7 +128,10 @@ function App() {
                 <Route path="/guides/enseignant" element={<Navigate to="/aide/guide-enseignants" replace />} />
                 <Route path="/guides/etudiant" element={<Navigate to="/aide/guide-etudiants" replace />} />
                 <Route path="/guides/admin" element={<Navigate to="/aide/guide-admin" replace />} />
+                <Route path="/guides/ecole" element={<Navigate to="/aide/guide-ecoles" replace />} />
+                <Route path="/guides/parent" element={<Navigate to="/aide/guide-parents" replace />} />
                 <Route path="/admin-login" element={<AdminLoginPage />} />
+                                {/* /sign = connexion compte — PAS les signatures électroniques (/signatures). */}
                 <Route path="/sign" element={<SignPage />} />
                 <Route path="/admissions" element={<AdmissionApplyPage />} />
                 <Route path="/admissions/retrouver" element={<AdmissionRecoverPage />} />
@@ -153,7 +156,7 @@ function App() {
                 <Route path="/students" element={
                   <ProtectedRoute requiredRoles={INSTITUTION_STAFF_ROLES}>
                     <MainLayout>
-                      <StudentsPage />
+                      <Students />
                     </MainLayout>
                   </ProtectedRoute>
                 } />
@@ -213,6 +216,11 @@ function App() {
                 } />
                 <Route path="/finance" element={
                   <ProtectedRoute requiredRoles={FINANCE_ROLES}>
+                    <Navigate to="/finance/collect" replace />
+                  </ProtectedRoute>
+                } />
+                <Route path="/finance/:workspace" element={
+                  <ProtectedRoute requiredRoles={FINANCE_ROLES}>
                     <MainLayout>
                       <FinancePage />
                     </MainLayout>
@@ -226,6 +234,13 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/services" element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <ServicesPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/services/:module" element={
                   <ProtectedRoute>
                     <MainLayout>
                       <ServicesPage />
@@ -249,7 +264,7 @@ function App() {
                 <Route path="/classes" element={
                   <ProtectedRoute requiredRoles={SECRETARIAT_ROLES}>
                     <MainLayout>
-                      <ClassesPage />
+                      <Classes />
                     </MainLayout>
                   </ProtectedRoute>
                 } />
@@ -365,13 +380,7 @@ function App() {
                     </MainLayout>
                   </ProtectedRoute>
                 } />
-                <Route path="/teacher-exercises" element={
-                  <ProtectedRoute requiredRoles={TEACHING_ROLES}>
-                    <MainLayout>
-                      <TeacherExercisesPage />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } />
+                <Route path="/teacher-exercises" element={<Navigate to="/teacher-assignments" replace />} />
                 <Route path="/subjects" element={
                   <ProtectedRoute requiredRoles={SECRETARIAT_ROLES}>
                     <MainLayout>
@@ -389,13 +398,7 @@ function App() {
                     <SuperAdminDashboard />
                   </ProtectedRoute>
                 } />
-                <Route path="/exercises" element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <ExercisesPage />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } />
+                <Route path="/exercises" element={<Navigate to="/assignments" replace />} />
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <MainLayout>

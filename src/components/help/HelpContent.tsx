@@ -111,14 +111,21 @@ export function HelpContent() {
           </h3>
         </div>
         <p className="text-slate-600">{t('moreBody')}</p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Link
             to="/contact"
             className="inline-flex items-center rounded-md bg-[#05335C] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#031d33] focus:outline-none focus:ring-2 focus:ring-[#05335C] focus:ring-offset-2"
           >
             {t('contactCta')}
           </Link>
+          <Link
+            to="/support"
+            className="inline-flex items-center rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05335C] focus:ring-offset-2"
+          >
+            {t('supportCta')}
+          </Link>
         </div>
+        <p className="mt-2 text-sm text-slate-500">{t('supportHint')}</p>
       </section>
       </FadeIn>
     </div>

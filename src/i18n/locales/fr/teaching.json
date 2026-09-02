@@ -339,5 +339,6 @@
     "video": "Vidéo",
     "link": "Lien externe",
     "other": "Autre"
-  }
+  },
+  "pedagogyHint": "Devoirs = chemin unique pour le travail à faire. L’appel et les notes restent à part."
 }

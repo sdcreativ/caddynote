@@ -47,7 +47,9 @@
     "supervision": "Supervision",
     "analyse": "Analyse",
     "conformite": "Conformité",
-    "exploitation": "Exploitation"
+    "exploitation": "Exploitation",
+    "core": "Essentiel",
+    "plus": "Plus plateforme"
   },
   "items": {
     "overview": "Vue d'ensemble",

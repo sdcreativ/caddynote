@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,12 +61,19 @@ const statusVariant = (status: string): 'default' | 'secondary' | 'destructive' 
   return 'outline';
 };
 
+const FINANCE_WORKSPACES = ['collect', 'configure'] as const;
+type FinanceWorkspace = (typeof FINANCE_WORKSPACES)[number];
+
+const isFinanceWorkspace = (value: string | undefined): value is FinanceWorkspace =>
+  Boolean(value && (FINANCE_WORKSPACES as readonly string[]).includes(value));
+
 const FinancePage = () => {
   const { t } = useTranslation('finance');
   const { t: tc } = useTranslation('common');
   const { user } = useStrkAuth();
   const { toast } = useToast();
   const confirm = useConfirmDialog();
+  const { workspace: workspaceParam } = useParams<{ workspace?: string }>();
 
   const statusLabel = (code: string) => t(`status.${code}`, { defaultValue: code });
 
@@ -81,6 +88,18 @@ const FinancePage = () => {
   const [newFee, setNewFee] = useState({ name: '', amount: '' });
 
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  /** Encaisser (quotidien) vs Paramétrer — porté par `/finance/:workspace`. */
+  const financeWorkspace: FinanceWorkspace = isFinanceWorkspace(workspaceParam)
+    ? workspaceParam
+    : 'collect';
+  const [financeTab, setFinanceTab] = useState(
+    financeWorkspace === 'configure' ? 'fees' : 'invoices'
+  );
+
+  useEffect(() => {
+    setFinanceTab(financeWorkspace === 'configure' ? 'fees' : 'invoices');
+  }, [financeWorkspace]);
+
   const [invoiceStudentId, setInvoiceStudentId] = useState('');
   const [invoiceDueDate, setInvoiceDueDate] = useState('');
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLineInput[]>([]);
@@ -276,6 +295,10 @@ const FinancePage = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (workspaceParam && !isFinanceWorkspace(workspaceParam)) {
+    return <Navigate to="/finance/collect" replace />;
+  }
+
   if (featureDisabled) {
     return (
       <div className="space-y-6 py-6 animate-fade-in">
@@ -295,30 +318,59 @@ const FinancePage = () => {
         <p className="text-muted-foreground mt-1">{t('subtitle')}</p>
       </div>
 
-      <Tabs defaultValue="invoices">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={financeWorkspace === 'collect' ? 'default' : 'outline'}
+          asChild
+        >
+          <Link to="/finance/collect">{t('workspace.collect')}</Link>
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={financeWorkspace === 'configure' ? 'default' : 'outline'}
+          asChild
+        >
+          <Link to="/finance/configure">{t('workspace.configure')}</Link>
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {financeWorkspace === 'collect' ? t('workspace.collectHint') : t('workspace.configureHint')}
+      </p>
+
+      <Tabs value={financeTab} onValueChange={setFinanceTab}>
         <div className="w-full min-w-0 overflow-x-auto pb-1">
           <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
-            <TabsTrigger value="invoices" className="shrink-0">
-              {t('tabs.invoices')}
-            </TabsTrigger>
-            <TabsTrigger value="lot54" className="shrink-0">
-              {t('tabs.lot54')}
-            </TabsTrigger>
-            <TabsTrigger value="plans" className="shrink-0">
-              {t('tabs.plans')}
-            </TabsTrigger>
-            <TabsTrigger value="schedules" className="shrink-0">
-              {t('tabs.schedules')}
-            </TabsTrigger>
-            <TabsTrigger value="balances" className="shrink-0">
-              {t('tabs.balances')}
-            </TabsTrigger>
-            <TabsTrigger value="fees" className="shrink-0">
-              {t('tabs.fees')}
-            </TabsTrigger>
-            <TabsTrigger value="bank" className="shrink-0">
-              {t('tabs.bank')}
-            </TabsTrigger>
+            {financeWorkspace === 'collect' ? (
+              <>
+                <TabsTrigger value="invoices" className="shrink-0">
+                  {t('tabs.invoices')}
+                </TabsTrigger>
+                <TabsTrigger value="plans" className="shrink-0">
+                  {t('tabs.plans')}
+                </TabsTrigger>
+                <TabsTrigger value="balances" className="shrink-0">
+                  {t('tabs.balances')}
+                </TabsTrigger>
+                <TabsTrigger value="lot54" className="shrink-0">
+                  {t('tabs.lot54')}
+                </TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="fees" className="shrink-0">
+                  {t('tabs.fees')}
+                </TabsTrigger>
+                <TabsTrigger value="schedules" className="shrink-0">
+                  {t('tabs.schedules')}
+                </TabsTrigger>
+                <TabsTrigger value="bank" className="shrink-0">
+                  {t('tabs.bank')}
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
         </div>
 

@@ -28,7 +28,7 @@
   "chooseStudent": "Choisir un élève",
   "noStudent": "Aucun élève",
   "title": "Services établissement",
-  "subtitle": "Transport, cantine, bibliothèque, internat, infirmerie, RH (hors paie)",
+  "subtitle": "Choisissez un module, puis travaillez — un job à la fois.",
   "disclaimer": "Cantine : inscription → facture Finance si prix > 0. Transport : circuits, arrêts et créneaux. Parent : onglet Services dans Mes enfants.",
   "planning": {
     "stops": "Arrêts",
@@ -120,5 +120,15 @@
   "featureDisabledTitle": "Services annexes désactivés",
   "featureDisabledBody": "Le module Lot 9 (flag lot9_services) est désactivé pour cet établissement. Contactez SDCREATIV pour le réactiver.",
   "canteenDisabledTitle": "Cantine désactivée",
-  "canteenDisabledBody": "Le flag « canteen » est désactivé. Les autres services restent disponibles."
+  "canteenDisabledBody": "Le flag « canteen » est désactivé. Les autres services restent disponibles.",
+  "hub": {
+    "pickHint": "Ouvrez un seul module à la fois — activez seulement ce dont l’établissement a besoin.",
+    "back": "← Tous les modules",
+    "transport": "Circuits, arrêts, inscriptions élèves.",
+    "canteen": "Formules et abonnements (facture Finance si prix > 0).",
+    "library": "Catalogue, prêts et retours.",
+    "boarding": "Chambres et affectations.",
+    "clinic": "Visites infirmerie.",
+    "hr": "Fiches RH (hors paie)."
+  }
 }

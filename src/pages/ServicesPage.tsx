@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -80,6 +81,13 @@ type StaffRow = {
 /**
  * Lot 9 — socle opérationnel sur `/services/*` + facturation cantine.
  */
+
+const SERVICE_MODULES = ['transport', 'canteen', 'library', 'boarding', 'clinic', 'hr'] as const;
+type ServiceModule = (typeof SERVICE_MODULES)[number];
+
+const isServiceModule = (value: string | undefined): value is ServiceModule =>
+  Boolean(value && (SERVICE_MODULES as readonly string[]).includes(value));
+
 const ServicesPage = () => {
   const { user } = useStrkAuth();
   const { toast } = useToast();
@@ -107,9 +115,25 @@ const ServicesPage = () => {
   const [institutionId, setInstitutionId] = useState<string | null>(user?.institutionId ?? null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('transport');
+  const navigate = useNavigate();
+  const { module: moduleParam } = useParams<{ module?: string }>();
+  const [searchParams] = useSearchParams();
   const [featureDisabled, setFeatureDisabled] = useState(false);
   const [canteenDisabled, setCanteenDisabled] = useState(false);
+
+  // Compat : `/services?module=transport` → `/services/transport`
+  useEffect(() => {
+    const legacy = searchParams.get('module');
+    if (!moduleParam && legacy && isServiceModule(legacy)) {
+      navigate(`/services/${legacy}`, { replace: true });
+    }
+  }, [moduleParam, navigate, searchParams]);
+
+  const activeTab: ServiceModule | null = isServiceModule(moduleParam) ? moduleParam : null;
+  const modulePicked = activeTab !== null;
+  const setActiveTab = (tab: string) => {
+    if (isServiceModule(tab)) navigate(`/services/${tab}`, { replace: true });
+  };
 
   useEffect(() => {
     if (user?.institutionId) {
@@ -346,6 +370,10 @@ const ServicesPage = () => {
     </div>
   );
 
+  if (moduleParam && !isServiceModule(moduleParam)) {
+    return <Navigate to="/services" replace />;
+  }
+
   return (
     <div className="space-y-6 py-6">
       <div>
@@ -380,7 +408,32 @@ const ServicesPage = () => {
         </div>
       )}
 
-      {!['clinic', 'hr'].includes(activeTab) && (
+      
+      {!modulePicked ? (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t('hub.pickHint')}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {SERVICE_MODULES.map((mod) => (
+              <Link
+                key={mod}
+                to={`/services/${mod}`}
+                className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:bg-muted/40"
+              >
+                <p className="font-semibold">{t(`tabs.${mod}`)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t(`hub.${mod}`)}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : (
+      <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button type="button" variant="ghost" size="sm" asChild>
+          <Link to="/services">{t('hub.back')}</Link>
+        </Button>
+        <p className="text-sm font-medium text-muted-foreground">{t(`tabs.${activeTab}`)}</p>
+      </div>
+{activeTab && !['clinic', 'hr'].includes(activeTab) && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="space-y-2">
             <Label htmlFor="services-name">{t('nameOrTitle')}</Label>
@@ -410,16 +463,8 @@ const ServicesPage = () => {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex h-auto flex-wrap">
-          <TabsTrigger value="transport">{t('tabs.transport')}</TabsTrigger>
-          <TabsTrigger value="canteen">{t('tabs.canteen')}</TabsTrigger>
-          <TabsTrigger value="library">{t('tabs.library')}</TabsTrigger>
-          <TabsTrigger value="boarding">{t('tabs.boarding')}</TabsTrigger>
-          <TabsTrigger value="clinic">{t('tabs.clinic')}</TabsTrigger>
-          <TabsTrigger value="hr">{t('tabs.hr')}</TabsTrigger>
-        </TabsList>
-
+      <Tabs value={activeTab ?? undefined} onValueChange={setActiveTab}>
+        {/* Un module à la fois — retour hub pour changer. */}
         <TabsContent value="transport" className="space-y-3">
           <Button onClick={createRoute} disabled={saving || loading}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
@@ -930,6 +975,8 @@ const ServicesPage = () => {
           )}
         </TabsContent>
       </Tabs>
+      </>
+      )}
       </>
       )}
     </div>

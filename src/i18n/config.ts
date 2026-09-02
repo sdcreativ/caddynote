@@ -42,7 +42,6 @@ import availability from './locales/fr/availability.json';
 import audit from './locales/fr/audit.json';
 import signatures from './locales/fr/signatures.json';
 import services from './locales/fr/services.json';
-import exercises from './locales/fr/exercises.json';
 import admin from './locales/fr/admin.json';
 import notifications from './locales/fr/notifications.json';
 import guides from './locales/fr/guides.json';
@@ -118,7 +117,6 @@ export const resources = {
     audit,
     signatures,
     services,
-    exercises,
     admin,
     notifications,
     guides,

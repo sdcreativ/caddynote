@@ -16,7 +16,6 @@ import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
 import { JustificationDialog } from '@/components/absences/JustificationDialog';
 import { StudentHealthForm } from '@/components/students/StudentHealthForm';
-import { StudentSuiviMobileView } from '@/components/suivi/StudentSuiviMobileView';
 import { fetchStudentGradeSummary, type StudentGradeSummary } from '@/services/strkGradeService';
 import {
   fetchInvoicesByStudent,
@@ -28,6 +27,7 @@ import {
 import { apiClient, ApiError } from '@/lib/apiClient';
 import { openAbsenceJustificationFile } from '@/services/strkAbsenceService';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import {
   fetchMyAdmissionApplications,
   type AdmissionApplication,
@@ -113,6 +113,7 @@ const MyChildrenPage = () => {
     if (tabParam === 'health' && selectedChild?.canViewHealth) return 'health';
     if (selectedChild?.canViewAttendance) return 'attendance';
     if (selectedChild?.canViewGrades) return 'grades';
+    if (selectedChild?.canViewBilling) return 'finance';
     return 'services';
   }, [searchParams, selectedChild]);
 
@@ -388,11 +389,11 @@ const MyChildrenPage = () => {
           </CardContent>
         </Card>
       )}
-      <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between md:gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <div>
           <h1 className="font-display text-[1.75rem] font-semibold tracking-tight md:text-3xl">Mes enfants</h1>
-          <p className="mt-1 text-base text-slate-600 md:text-base md:text-slate-500">
-            Suivez la présence et les résultats de vos enfants
+          <p className="mt-1 text-base text-slate-600 md:text-slate-500">
+            Absences, notes et finances — santé et services dans Plus.
           </p>
         </div>
 
@@ -414,46 +415,7 @@ const MyChildrenPage = () => {
 
       {selectedChild && (
         <>
-          <div className="md:hidden">
-            {children.length > 1 && (
-              <div className="mb-3">
-                <Select value={selectedChildId ?? undefined} onValueChange={setSelectedChildId}>
-                  <SelectTrigger className="w-full bg-white">
-                    <SelectValue placeholder="Choisir un enfant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {children.map((child) => (
-                      <SelectItem key={child.studentId} value={child.studentId}>
-                        {child.firstName} {child.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {selectedChild.canViewAttendance ? (
-              <StudentSuiviMobileView
-                headerTitle={`Suivi de ${selectedChild.firstName}`}
-                firstName={selectedChild.firstName}
-                lastName={selectedChild.lastName}
-                className={selectedChild.className}
-                profileImage={selectedChild.profileImage}
-                absences={absences}
-                absencesLoading={absencesLoading}
-              />
-            ) : (
-              <Card>
-                <CardContent className="space-y-2 p-4 text-center">
-                  <p className="font-semibold">
-                    {selectedChild.firstName} {selectedChild.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">Vous n&apos;avez pas accès à la présence de cet enfant.</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <Card className="hidden md:block">
+          <Card>
             <CardContent className="flex flex-wrap items-center gap-3 p-4">
               <div className="rounded-full bg-blue-100 p-3">
                 <GraduationCap className="h-6 w-6 text-blue-600" />
@@ -474,24 +436,54 @@ const MyChildrenPage = () => {
           </Card>
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-2 w-full md:mt-0">
-            <div className="-mx-1 overflow-x-auto pb-1">
-              <TabsList className="inline-flex h-auto min-w-full w-max justify-start gap-1.5 p-1.5 sm:min-w-0 sm:w-full">
-                <TabsTrigger value="attendance" disabled={!selectedChild.canViewAttendance} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
-                  Absences
-                </TabsTrigger>
-                <TabsTrigger value="grades" disabled={!selectedChild.canViewGrades} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
-                  Notes
-                </TabsTrigger>
-                <TabsTrigger value="health" disabled={!selectedChild.canViewHealth} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
-                  Santé
-                </TabsTrigger>
-                <TabsTrigger value="finance" disabled={!selectedChild.canViewBilling} className="shrink-0 px-4 py-2.5 text-sm font-semibold">
-                  Finances
-                </TabsTrigger>
-                <TabsTrigger value="services" className="shrink-0 px-4 py-2.5 text-sm font-semibold">
-                  Services
-                </TabsTrigger>
-              </TabsList>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="-mx-1 min-w-0 flex-1 overflow-x-auto pb-1 sm:mx-0">
+                <TabsList className="inline-flex h-auto w-max justify-start gap-1.5 p-1.5">
+                  <TabsTrigger
+                    value="attendance"
+                    disabled={!selectedChild.canViewAttendance}
+                    className="shrink-0 px-4 py-2.5 text-sm font-semibold"
+                  >
+                    Absences
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="grades"
+                    disabled={!selectedChild.canViewGrades}
+                    className="shrink-0 px-4 py-2.5 text-sm font-semibold"
+                  >
+                    Notes
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="finance"
+                    disabled={!selectedChild.canViewBilling}
+                    className="shrink-0 px-4 py-2.5 text-sm font-semibold"
+                  >
+                    Finances
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <Select
+                key={activeTab === 'health' || activeTab === 'services' ? activeTab : 'plus'}
+                value={activeTab === 'health' || activeTab === 'services' ? activeTab : undefined}
+                onValueChange={handleTabChange}
+              >
+                <SelectTrigger
+                  aria-label="Autres rubriques"
+                  className={cn(
+                    'h-11 w-full sm:w-[10.5rem]',
+                    (activeTab === 'health' || activeTab === 'services') &&
+                      'border-primary text-foreground ring-1 ring-primary/30'
+                  )}
+                >
+                  <SelectValue placeholder="Plus…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="health" disabled={!selectedChild.canViewHealth}>
+                    Santé
+                  </SelectItem>
+                  <SelectItem value="services">Services</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <TabsContent value="attendance" className="space-y-4 pt-4">

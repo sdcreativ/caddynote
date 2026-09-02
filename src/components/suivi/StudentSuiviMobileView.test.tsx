@@ -12,7 +12,7 @@ vi.mock('@/hooks/useMobileShell', () => ({
 }));
 
 describe('StudentSuiviMobileView', () => {
-  it('affiche la grille de raccourcis élève sans Message', () => {
+  it('affiche la grille de raccourcis élève sans Message ni mini À traiter', () => {
     render(
       <MemoryRouter>
         <StudentSuiviMobileView
@@ -22,14 +22,6 @@ describe('StudentSuiviMobileView', () => {
           className="6e"
           absences={[]}
           actionsMode="student"
-          toHandle={[
-            {
-              id: 'homework',
-              title: '2 devoir(s) en cours',
-              href: '/assignments',
-              tone: 'amber',
-            },
-          ]}
         />
       </MemoryRouter>
     );
@@ -51,7 +43,8 @@ describe('StudentSuiviMobileView', () => {
       '/assignments'
     );
     expect(screen.queryByRole('link', { name: /^Message$/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/2 devoir\(s\) en cours/i)).toBeInTheDocument();
+    expect(screen.queryByText(/devoir\(s\) en cours/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('À traiter')).not.toBeInTheDocument();
   });
 
   it('conserve le CTA message pour le mode parent', () => {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -49,50 +50,36 @@ type NavItemDef = {
 type NavGroupDef = {
   labelKey: string;
   items: NavItemDef[];
+  /** Groupe « Plus plateforme » — replié par défaut. */
+  defaultCollapsed?: boolean;
 };
 
 const NAV_GROUPS: NavGroupDef[] = [
   {
-    labelKey: 'groups.pilotage',
-    items: [{ titleKey: 'items.overview', hintKey: 'items.overviewHint', icon: LayoutDashboard, value: 'overview' }],
+    // Cœur : établissements · abonnements · support · sécurité (+ overview)
+    labelKey: 'groups.core',
+    items: [
+      { titleKey: 'items.overview', hintKey: 'items.overviewHint', icon: LayoutDashboard, value: 'overview' },
+      { titleKey: 'items.institutions', icon: Building2, value: 'institutions' },
+      { titleKey: 'items.subscriptions', icon: CreditCard, value: 'subscriptions' },
+      { titleKey: 'items.supportOps', hintKey: 'items.supportOpsHint', icon: Headphones, value: 'support-ops' },
+      { titleKey: 'items.securityCompliance', icon: Shield, value: 'security-compliance' },
+    ],
   },
   {
-    labelKey: 'groups.referentiel',
+    labelKey: 'groups.plus',
+    defaultCollapsed: true,
     items: [
       { titleKey: 'items.users', hintKey: 'items.usersHint', icon: Users, value: 'users' },
       { titleKey: 'items.advancedUsers', hintKey: 'items.advancedUsersHint', icon: UserCog, value: 'advanced-users' },
-      { titleKey: 'items.institutions', icon: Building2, value: 'institutions' },
-    ],
-  },
-  {
-    labelKey: 'groups.supervision',
-    items: [
       { titleKey: 'items.system', hintKey: 'items.systemHint', icon: Server, value: 'system' },
       { titleKey: 'items.logs', hintKey: 'items.logsHint', icon: ScrollText, value: 'logs' },
       { titleKey: 'items.observability', hintKey: 'items.observabilityHint', icon: Activity, value: 'observability' },
-    ],
-  },
-  {
-    labelKey: 'groups.analyse',
-    items: [
       { titleKey: 'items.analytics', icon: BarChart3, value: 'analytics' },
       { titleKey: 'items.businessKpis', icon: BarChart3, value: 'business-kpis' },
-    ],
-  },
-  {
-    labelKey: 'groups.conformite',
-    items: [
       { titleKey: 'items.security', hintKey: 'items.securityHint', icon: Shield, value: 'security' },
-      { titleKey: 'items.securityCompliance', icon: Shield, value: 'security-compliance' },
       { titleKey: 'items.habilitations', hintKey: 'items.habilitationsHint', icon: KeyRound, value: 'habilitations' },
-    ],
-  },
-  {
-    labelKey: 'groups.exploitation',
-    items: [
-      { titleKey: 'items.subscriptions', icon: CreditCard, value: 'subscriptions' },
       { titleKey: 'items.communicationTools', icon: Megaphone, value: 'communication-tools' },
-      { titleKey: 'items.supportOps', hintKey: 'items.supportOpsHint', icon: Headphones, value: 'support-ops' },
       { titleKey: 'items.notifications', hintKey: 'items.notificationsHint', icon: Bell, value: 'notifications' },
       { titleKey: 'items.settings', hintKey: 'items.settingsHint', icon: Settings, value: 'settings' },
     ],
@@ -129,6 +116,12 @@ const SuperAdminSidebar = ({
     ...group,
     items: group.items.filter((item) => canSeeSection(item.value)),
   })).filter((group) => group.items.length > 0);
+
+  const [plusOpen, setPlusOpen] = useState(() =>
+    visibleGroups.some(
+      (g) => g.defaultCollapsed && g.items.some((i) => i.value === activeSection)
+    )
+  );
 
   return (
     <>
@@ -197,11 +190,26 @@ const SuperAdminSidebar = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label={t('sectionsAria')}>
-          {visibleGroups.map((group) => (
+          {visibleGroups.map((group) => {
+            const collapsed = Boolean(group.defaultCollapsed) && !plusOpen;
+            return (
             <div key={group.labelKey} className="mb-5">
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                {t(group.labelKey)}
-              </p>
+              {group.defaultCollapsed ? (
+                <button
+                  type="button"
+                  className="mb-1.5 flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 hover:text-slate-600"
+                  onClick={() => setPlusOpen((o) => !o)}
+                  aria-expanded={plusOpen}
+                >
+                  <span>{t(group.labelKey)}</span>
+                  <span aria-hidden>{plusOpen ? '▾' : '▸'}</span>
+                </button>
+              ) : (
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {t(group.labelKey)}
+                </p>
+              )}
+              {collapsed ? null : (
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const active = activeSection === item.value;
@@ -240,8 +248,10 @@ const SuperAdminSidebar = ({
                   );
                 })}
               </ul>
+              )}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="shrink-0 border-t border-slate-100 p-4">
