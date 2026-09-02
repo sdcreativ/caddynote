@@ -29,7 +29,7 @@ export function PublicShell({ children, className, footer = true }: PublicShellP
         <div
           id="main-content"
           tabIndex={-1}
-          className="relative z-10 flex flex-1 flex-col pb-24 outline-none lg:pb-0"
+          className="relative z-10 flex flex-1 flex-col outline-none"
         >
           {children}
         </div>

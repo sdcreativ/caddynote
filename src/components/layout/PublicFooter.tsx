@@ -8,7 +8,7 @@ export function PublicFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative z-10 mt-auto w-full bg-[#001A3D] text-white">
+    <footer className="relative z-10 mt-auto w-full bg-[#001A3D] pb-24 text-white lg:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14 lg:px-10 lg:py-16">
         <div className="grid gap-8 sm:gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
