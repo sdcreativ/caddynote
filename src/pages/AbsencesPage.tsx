@@ -11,6 +11,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
 import { useQuickActions } from '@/components/quick-actions/QuickActionsManager';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -19,7 +20,7 @@ import { trackProductEvent } from '@/lib/productTelemetry';
 import { PresenceHubTabs } from '@/components/attendance/PresenceHubTabs';
 import { useNavigate } from 'react-router-dom';
 import { hasAnyRole, ATTENDANCE_HUB_ROLES, INSTITUTION_STAFF_ROLES } from '@/lib/roles';
-import { openAbsenceJustificationFile } from '@/services/strkAbsenceService';
+import { openAbsenceJustificationFile, type StrkAbsence } from '@/services/strkAbsenceService';
 
 const AbsencesPage = () => {
   const { t } = useTranslation('absences');
@@ -28,6 +29,7 @@ const AbsencesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedAbsence, setSelectedAbsence] = useState<StrkAbsence | null>(null);
   const { toast } = useToast();
   const { user } = useStrkAuth();
   const {
@@ -95,6 +97,7 @@ const AbsencesPage = () => {
           ? t('page.acceptedBody')
           : t('page.rejectedBody'),
       });
+      setSelectedAbsence(null);
     } else {
       toast({
         title: tc('status.error'),
@@ -380,7 +383,11 @@ const AbsencesPage = () => {
                           <Paperclip className="h-4 w-4" />
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedAbsence(absence)}
+                      >
                         {t('page.details')}
                       </Button>
                       {user?.role !== 'student' && absence.justification_status === 'pending' && (
@@ -417,6 +424,128 @@ const AbsencesPage = () => {
         )}
       </div>
 
+      <Dialog
+        open={!!selectedAbsence}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAbsence(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t('page.detailsTitle')}</DialogTitle>
+          </DialogHeader>
+
+          {selectedAbsence && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                {user?.role !== 'student' && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">{t('page.colStudent')}</p>
+                    <p className="font-medium">
+                      {[selectedAbsence.student?.first_name, selectedAbsence.student?.last_name]
+                        .filter(Boolean)
+                        .join(' ') || t('page.unknown')}
+                    </p>
+                    {selectedAbsence.student?.email ? (
+                      <p className="text-xs text-gray-500 mt-0.5">{selectedAbsence.student.email}</p>
+                    ) : null}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.colDate')}</p>
+                  <p className="font-medium">
+                    {new Date(selectedAbsence.date).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.colType')}</p>
+                  <Badge variant={getTypeColor(selectedAbsence.type)} className="mt-1">
+                    {getTypeLabel(selectedAbsence.type)}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.colDuration')}</p>
+                  <p className="font-medium">{formatDuration(selectedAbsence.duration_minutes)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.colCourse')}</p>
+                  <p className="font-medium">
+                    {selectedAbsence.course_name || selectedAbsence.class_name || t('page.unspecified')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.colStatus')}</p>
+                  {(() => {
+                    const badge = getJustificationBadge(selectedAbsence.justification_status);
+                    return (
+                      <Badge variant={badge.variant} className="mt-1">
+                        {badge.label}
+                      </Badge>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-500">{t('page.colReason')}</p>
+                <p className="mt-1">
+                  {selectedAbsence.justification_reason || t('page.reasonEmpty')}
+                </p>
+              </div>
+
+              {selectedAbsence.start_time || selectedAbsence.end_time ? (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{t('page.timeRange')}</p>
+                  <p className="mt-1">
+                    {t('mine.timeRange', {
+                      start: selectedAbsence.start_time || '—',
+                      end: selectedAbsence.end_time || '—',
+                    })}
+                  </p>
+                </div>
+              ) : null}
+
+              <DialogFooter className="flex-wrap gap-2 sm:justify-end">
+                {selectedAbsence.justification_file ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => void openJustificationFile(selectedAbsence.id)}
+                  >
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    {t('mine.viewDocument')}
+                  </Button>
+                ) : null}
+                {user?.role !== 'student' && selectedAbsence.justification_status === 'pending' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleReview(selectedAbsence.id, true)}
+                    >
+                      <Check className="mr-2 h-4 w-4 text-green-600" />
+                      {t('page.accept')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleReview(selectedAbsence.id, false)}
+                    >
+                      <X className="mr-2 h-4 w-4 text-destructive" />
+                      {t('page.reject')}
+                    </Button>
+                  </>
+                )}
+                {user?.role !== 'student' && selectedAbsence.justification_status === 'none' && (
+                  <Button onClick={() => void handleReview(selectedAbsence.id, true)}>
+                    {t('page.justify')}
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setSelectedAbsence(null)}>
+                  {tc('actions.close')}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
