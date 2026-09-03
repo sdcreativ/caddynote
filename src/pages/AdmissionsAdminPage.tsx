@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useStrkInstitutions } from '@/hooks/useStrkInstitutions';
 import { useToast } from '@/hooks/use-toast';
@@ -345,20 +345,24 @@ const AdmissionsAdminPage = () => {
         </Card>
       ) : (
       <Tabs value={admissionsTab} onValueChange={setAdmissionsTab} className="min-w-0">
-        <div className="space-y-2">
-          <div className="w-full min-w-0 overflow-x-auto pb-1">
-            <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
-              <TabsTrigger value="queue" className="shrink-0">
-                {t('admin.tabQueue')}
-              </TabsTrigger>
-              <TabsTrigger value="config" className="shrink-0">
-                {t('admin.tabConfig')}
-              </TabsTrigger>
-            </TabsList>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight">
+              {admissionsTab === 'queue' ? t('admin.tabQueue') : t('admin.tabConfig')}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {admissionsTab === 'queue' ? t('admin.tabQueueHint') : t('admin.tabConfigHint')}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {admissionsTab === 'queue' ? t('admin.tabQueueHint') : t('admin.tabConfigHint')}
-          </p>
+          {admissionsTab === 'queue' ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setAdmissionsTab('config')}>
+              {t('admin.openConfig')}
+            </Button>
+          ) : (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setAdmissionsTab('queue')}>
+              {t('admin.backToQueue')}
+            </Button>
+          )}
         </div>
 
         <TabsContent value="queue" className="min-w-0 space-y-4">

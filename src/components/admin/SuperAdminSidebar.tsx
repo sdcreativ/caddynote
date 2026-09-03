@@ -6,6 +6,7 @@ import {
   Building2,
   Server,
   BarChart3,
+  LineChart,
   Shield,
   Settings,
   CreditCard,
@@ -75,13 +76,20 @@ const NAV_GROUPS: NavGroupDef[] = [
       { titleKey: 'items.system', hintKey: 'items.systemHint', icon: Server, value: 'system' },
       { titleKey: 'items.logs', hintKey: 'items.logsHint', icon: ScrollText, value: 'logs' },
       { titleKey: 'items.observability', hintKey: 'items.observabilityHint', icon: Activity, value: 'observability' },
-      { titleKey: 'items.analytics', icon: BarChart3, value: 'analytics' },
-      { titleKey: 'items.businessKpis', icon: BarChart3, value: 'business-kpis' },
       { titleKey: 'items.security', hintKey: 'items.securityHint', icon: Shield, value: 'security' },
       { titleKey: 'items.habilitations', hintKey: 'items.habilitationsHint', icon: KeyRound, value: 'habilitations' },
       { titleKey: 'items.communicationTools', icon: Megaphone, value: 'communication-tools' },
       { titleKey: 'items.notifications', hintKey: 'items.notificationsHint', icon: Bell, value: 'notifications' },
       { titleKey: 'items.settings', hintKey: 'items.settingsHint', icon: Settings, value: 'settings' },
+    ],
+  },
+  {
+    // Famille analytics — demoted hors Essentiel / Plus ops
+    labelKey: 'groups.analyse',
+    defaultCollapsed: true,
+    items: [
+      { titleKey: 'items.analytics', hintKey: 'items.analyticsHint', icon: BarChart3, value: 'analytics' },
+      { titleKey: 'items.businessKpis', hintKey: 'items.businessKpisHint', icon: LineChart, value: 'business-kpis' },
     ],
   },
 ];
@@ -117,11 +125,15 @@ const SuperAdminSidebar = ({
     items: group.items.filter((item) => canSeeSection(item.value)),
   })).filter((group) => group.items.length > 0);
 
-  const [plusOpen, setPlusOpen] = useState(() =>
-    visibleGroups.some(
-      (g) => g.defaultCollapsed && g.items.some((i) => i.value === activeSection)
-    )
-  );
+  const [collapsedOpen, setCollapsedOpen] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of visibleGroups) {
+      if (group.defaultCollapsed) {
+        initial[group.labelKey] = group.items.some((i) => i.value === activeSection);
+      }
+    }
+    return initial;
+  });
 
   return (
     <>
@@ -191,18 +203,24 @@ const SuperAdminSidebar = ({
 
         <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label={t('sectionsAria')}>
           {visibleGroups.map((group) => {
-            const collapsed = Boolean(group.defaultCollapsed) && !plusOpen;
+            const isOpenGroup = Boolean(collapsedOpen[group.labelKey]);
+            const collapsed = Boolean(group.defaultCollapsed) && !isOpenGroup;
             return (
             <div key={group.labelKey} className="mb-5">
               {group.defaultCollapsed ? (
                 <button
                   type="button"
                   className="mb-1.5 flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 hover:text-slate-600"
-                  onClick={() => setPlusOpen((o) => !o)}
-                  aria-expanded={plusOpen}
+                  onClick={() =>
+                    setCollapsedOpen((prev) => ({
+                      ...prev,
+                      [group.labelKey]: !prev[group.labelKey],
+                    }))
+                  }
+                  aria-expanded={isOpenGroup}
                 >
                   <span>{t(group.labelKey)}</span>
-                  <span aria-hidden>{plusOpen ? '▾' : '▸'}</span>
+                  <span aria-hidden>{isOpenGroup ? '▾' : '▸'}</span>
                 </button>
               ) : (
                 <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">

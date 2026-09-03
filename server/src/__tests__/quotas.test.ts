@@ -2,7 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../index.js';
 import { prisma } from '../lib/prisma.js';
-import { checkQuota, getQuotaOverview } from '../lib/quotas.js';
+import {
+  assertStorageAllowsBytes,
+  checkQuota,
+  getQuotaOverview,
+  institutionIdFromObjectKey,
+  recordStorageUsage,
+} from '../lib/quotas.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
 /**
@@ -99,5 +105,46 @@ describe('Quotas SaaS (SAA-003)', () => {
       checkQuota(fx.a.institutionId, 'aiPerMonth', 0),
     ]);
     expect(overview).toEqual(individual);
+  });
+
+  it('assertStorageAllowsBytes refuse un upload qui dépasserait storageLimitGb', async () => {
+    await prisma.subscriptionPlan.update({
+      where: { id: planId },
+      data: { storageLimitGb: 1 },
+    });
+    // Compteur déjà à ~1 Go → tout octet supplémentaire doit être refusé.
+    await prisma.strkInstitution.update({
+      where: { id: fx.a.institutionId },
+      data: { storageUsedBytes: BigInt(1024 * 1024 * 1024) },
+    });
+
+    const status = await assertStorageAllowsBytes(fx.a.institutionId, 1);
+    expect(status.allowed).toBe(false);
+    expect(status.limit).toBe(1);
+
+    await prisma.strkInstitution.update({
+      where: { id: fx.a.institutionId },
+      data: { storageUsedBytes: BigInt(0) },
+    });
+  });
+
+  it('recordStorageUsage incrémente le compteur local', async () => {
+    await prisma.strkInstitution.update({
+      where: { id: fx.a.institutionId },
+      data: { storageUsedBytes: BigInt(0) },
+    });
+    await recordStorageUsage(fx.a.institutionId, 4096);
+    const inst = await prisma.strkInstitution.findUnique({
+      where: { id: fx.a.institutionId },
+      select: { storageUsedBytes: true },
+    });
+    expect(Number(inst?.storageUsedBytes ?? 0)).toBe(4096);
+  });
+
+  it('institutionIdFromObjectKey extrait l’UUID tenant depuis une clé objet', () => {
+    const id = fx.a.institutionId;
+    expect(institutionIdFromObjectKey(`inscription/inst-${id}-app-abc/file.pdf`)).toBe(id);
+    expect(institutionIdFromObjectKey(`documents/inst-${id}/logo.png`)).toBe(id);
+    expect(institutionIdFromObjectKey('documents/orphan/file.pdf')).toBeNull();
   });
 });

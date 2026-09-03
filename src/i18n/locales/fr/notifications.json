@@ -1,6 +1,7 @@
 {
   "view": "Voir",
   "loadError": "Impossible de charger les notifications",
+  "markError": "Impossible de marquer la notification comme lue",
   "markedTitle": "Notifications marquées",
   "markedBody": "Toutes les notifications ont été marquées comme lues",
   "agoMinutes": "Il y a {{count}} min",
@@ -11,5 +12,9 @@
   "unread": "Non lues",
   "all": "Toutes",
   "markRead": "Marquer comme lu",
-  "empty": "Aucune nouvelle notification"
+  "empty": "Aucune nouvelle notification",
+  "emptyUnreadTitle": "Aucune notification non lue",
+  "emptyUnreadBody": "Vous êtes à jour — les nouvelles alertes apparaîtront ici.",
+  "emptyAllTitle": "Aucune notification",
+  "emptyAllBody": "Votre établissement n’a encore rien envoyé dans cette boîte."
 }

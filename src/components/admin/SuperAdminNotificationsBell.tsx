@@ -15,30 +15,25 @@ import {
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { fetchUnreadNotifications, markNotificationAsRead } from '@/services/strkNotificationService';
 import { fetchContactOpsMessages, type ContactOpsMessage } from '@/services/strkSupportService';
+import type { StrkNotification } from '@/types/strk';
 import { cn } from '@/lib/utils';
 
 const DEMO_SUBJECT_RE = /d[eé]mo|d[eé]monstration|pr[eé]sentation|essai/i;
 const POLL_MS = 20_000;
 
-type NormalizedNotif = {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  actionUrl?: string;
-  createdAt: string;
+type BellNotif = Pick<StrkNotification, 'id' | 'title' | 'message' | 'read' | 'actionUrl' | 'createdAt'> & {
   kind?: string;
 };
 
-const normalizeNotif = (raw: Record<string, unknown>): NormalizedNotif => {
-  const data = (raw.data && typeof raw.data === 'object' ? raw.data : {}) as Record<string, unknown>;
+const toBellNotif = (n: StrkNotification): BellNotif => {
+  const data = (n.data && typeof n.data === 'object' ? n.data : {}) as Record<string, unknown>;
   return {
-    id: String(raw.id),
-    title: String(raw.title ?? ''),
-    message: String(raw.message ?? ''),
-    read: Boolean(raw.read ?? raw.read_at),
-    actionUrl: (raw.actionUrl as string | undefined) || (raw.action_url as string | undefined),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? new Date().toISOString()),
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    read: n.read,
+    actionUrl: n.actionUrl,
+    createdAt: n.createdAt,
     kind: typeof data.kind === 'string' ? data.kind : undefined,
   };
 };
@@ -66,7 +61,7 @@ export const SuperAdminNotificationsBell = ({
   const { user } = useStrkAuth();
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<ContactOpsMessage[]>([]);
-  const [unread, setUnread] = useState<NormalizedNotif[]>([]);
+  const [unread, setUnread] = useState<BellNotif[]>([]);
   const [open, setOpen] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -79,9 +74,7 @@ export const SuperAdminNotificationsBell = ({
       setContacts(contactsSettled.value);
     }
     if (notifsSettled.status === 'fulfilled') {
-      setUnread(
-        (notifsSettled.value as unknown as Record<string, unknown>[]).map(normalizeNotif).filter((n) => !n.read)
-      );
+      setUnread(notifsSettled.value.map(toBellNotif).filter((n) => !n.read));
     }
   }, [user?.id]);
 
@@ -111,7 +104,7 @@ export const SuperAdminNotificationsBell = ({
     else navigate('/super-admin/support-ops');
   };
 
-  const openNotif = async (n: NormalizedNotif) => {
+  const openNotif = async (n: BellNotif) => {
     try {
       await markNotificationAsRead(n.id);
     } catch {

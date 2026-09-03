@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/hooks/useStrkAuth', () => ({
@@ -43,7 +43,27 @@ describe('SuperAdminSidebar a11y (§7)', () => {
       expect(getByLabelText('Navigation ops plateforme')).toBeInTheDocument();
       expect(getByRole('button', { name: /Vue d'ensemble/i })).toBeInTheDocument();
       expect(getByRole('button', { name: /Support ops/i })).toBeInTheDocument();
+      expect(getByRole('button', { name: /^Plus plateforme$/i })).toBeInTheDocument();
+      expect(getByRole('button', { name: /^Analyse$/i })).toBeInTheDocument();
     },
     30_000
   );
+
+  it('ouvre le groupe Analyse pour afficher Analytics et KPIs business', () => {
+    const { getByRole, queryByRole } = render(
+      <MemoryRouter>
+        <SuperAdminSidebar
+          activeSection="overview"
+          onSectionChange={() => undefined}
+          isOpen
+          onClose={() => undefined}
+        />
+      </MemoryRouter>
+    );
+
+    expect(queryByRole('button', { name: /^Analytics$/i })).not.toBeInTheDocument();
+    fireEvent.click(getByRole('button', { name: /^Analyse$/i }));
+    expect(getByRole('button', { name: /^Analytics$/i })).toBeInTheDocument();
+    expect(getByRole('button', { name: /KPIs business/i })).toBeInTheDocument();
+  });
 });

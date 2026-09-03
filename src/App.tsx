@@ -312,6 +312,7 @@ function App() {
                 } />
                 {/* Ancien AdminDashboardV2 (no-ops) → console Super Admin */}
                 <Route path="/admin-dashboard-v2" element={<Navigate to="/super-admin/overview" replace />} />
+                {/* Élève : redirect /grades → /my-grades (GradesPageEntry). Staff : TEACHING_ROLES. */}
                 <Route path="/grades" element={
                   <ProtectedRoute>
                     <MainLayout>
@@ -340,8 +341,9 @@ function App() {
                     </MainLayout>
                   </ProtectedRoute>
                 } />
+                {/* Deep-link PER-003 : hors nav jour 1, page + API conservées. */}
                 <Route path="/teacher-availability" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRoles={TEACHING_ROLES}>
                     <MainLayout>
                       <TeacherAvailabilityPage />
                     </MainLayout>

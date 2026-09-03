@@ -17,6 +17,8 @@
   },
   "tabs": {
     "system": "Système",
+    "institution": "Établissement",
+    "pedagogy": "Pédagogie",
     "notifications": "Notifications",
     "attendance": "Assiduité",
     "grading": "Barèmes",

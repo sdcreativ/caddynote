@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ type EditForm = {
 const EMPTY_INSTITUTION = '__none__';
 
 const SuperAdminUsers = () => {
+  const { t } = useTranslation('superAdmin');
   const { metrics } = useSystemMetrics();
   const { toast } = useToast();
   const { user: currentUser } = useStrkAuth();
@@ -302,14 +304,14 @@ const SuperAdminUsers = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Gestion des utilisateurs</h2>
+          <h2 className="text-2xl font-bold">{t('usersPage.title')}</h2>
           <p className="text-muted-foreground">
-            {metrics.totalUsers} utilisateurs au total
+            {t('usersPage.subtitle', { count: metrics.totalUsers })}
           </p>
         </div>
         <Button type="button" onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Nouvel utilisateur
+          {t('usersPage.create')}
         </Button>
       </div>
 

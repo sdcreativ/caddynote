@@ -80,8 +80,11 @@ notificationsRouter.patch('/:id/read', async (req, res) => {
   if (!notification || notification.userId !== req.auth!.sub) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
-  await prisma.notification.update({ where: { id: req.params.id }, data: { read: true } });
-  res.json({ success: true });
+  const updated = await prisma.notification.update({
+    where: { id: req.params.id },
+    data: { read: true },
+  });
+  res.json({ success: true, notification: updated });
 });
 
 notificationsRouter.patch('/read-all', async (req, res) => {

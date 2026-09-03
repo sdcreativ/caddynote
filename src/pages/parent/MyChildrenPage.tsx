@@ -11,17 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle, Award, Bus, Calendar, Clock, CreditCard, FileText, GraduationCap, HeartPulse, School, Users, Utensils } from 'lucide-react';
+import { GraduationCap, HeartPulse, School, Users } from 'lucide-react';
 import { useGuardianChildren } from '@/hooks/useGuardianChildren';
 import { useStrkAbsences } from '@/hooks/useStrkAbsences';
 import { JustificationDialog } from '@/components/absences/JustificationDialog';
 import { StudentHealthForm } from '@/components/students/StudentHealthForm';
+import { ParentAttendancePanel } from '@/components/parent/ParentAttendancePanel';
+import { ParentGradesPanel } from '@/components/parent/ParentGradesPanel';
+import { ParentFinancePanel } from '@/components/parent/ParentFinancePanel';
+import {
+  ParentServicesPanel,
+  type ParentServicesChild,
+} from '@/components/parent/ParentServicesPanel';
 import { fetchStudentGradeSummary, type StudentGradeSummary } from '@/services/strkGradeService';
 import {
   fetchInvoicesByStudent,
   initiateCinetPayPayment,
   initiateStripePayment,
-  formatInvoiceMoney,
   type StrkInvoice,
 } from '@/services/strkFinanceService';
 import { apiClient, ApiError } from '@/lib/apiClient';
@@ -41,47 +47,7 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   other_authorized: 'Autre personne autorisée',
 };
 
-type ParentServicesChild = {
-  studentId: string;
-  canteenEnabled?: boolean;
-  canteenSubscriptions: Array<{
-    id: string;
-    planName: string;
-    priceCents: number;
-    currency: string;
-    invoice?: { invoiceNumber: string; totalCents: number; status: string } | null;
-  }>;
-  transportEnrollments: Array<{
-    id: string;
-    routeName: string;
-    scheduleSlots?: Array<{
-      id: string;
-      dayOfWeek: number;
-      departureTime: string;
-      direction: string;
-      label?: string | null;
-    }>;
-  }>;
-  availableTransportRoutes?: Array<{
-    id: string;
-    name: string;
-    capacity: number | null;
-    seatsLeft: number | null;
-    scheduleSlots?: Array<{
-      id: string;
-      dayOfWeek: number;
-      departureTime: string;
-      direction: string;
-    }>;
-  }>;
-  availableCanteenPlans?: Array<{
-    id: string;
-    name: string;
-    priceCents: number;
-    currency: string;
-  }>;
-  servicesEnabled: boolean;
-};
+
 
 const MyChildrenPage = () => {
   const [searchParams] = useSearchParams();
@@ -487,194 +453,33 @@ const MyChildrenPage = () => {
             </div>
 
             <TabsContent value="attendance" className="space-y-4 pt-4">
-              {!selectedChild.canViewAttendance ? (
-                <p className="text-sm text-gray-500">Vous n'avez pas accès à la présence de cet enfant.</p>
-              ) : absencesLoading ? (
-                <p className="text-sm text-gray-500">Chargement…</p>
-              ) : absences.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune absence</h3>
-                    <p className="text-gray-500">Aucune absence enregistrée pour le moment.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {absences.map((absence) => {
-                    const isJustified = absence.justified;
-                    const hasJustificationPending = absence.justification_reason && !isJustified;
-                    const cardClass = !isJustified && !hasJustificationPending
-                      ? 'border-red-200 bg-red-50'
-                      : hasJustificationPending
-                      ? 'border-orange-200 bg-orange-50'
-                      : 'border-green-200 bg-green-50';
-
-                    return (
-                      <Card key={absence.id} className={cardClass}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <CardTitle className="flex items-center gap-2 text-base">
-                                {!isJustified && !hasJustificationPending && <AlertCircle className="h-4 w-4" />}
-                                {hasJustificationPending && <Clock className="h-4 w-4" />}
-                                {isJustified && <FileText className="h-4 w-4" />}
-                                {absence.type === 'absence' ? 'Absence' : 'Retard'}
-                              </CardTitle>
-                              <CardDescription>
-                                {absence.course_name
-                                  ? `Cours : ${absence.course_name}`
-                                  : absence.class_name
-                                    ? `Classe : ${absence.class_name}`
-                                    : null}
-                              </CardDescription>
-                            </div>
-                            <Badge variant={isJustified ? 'default' : hasJustificationPending ? 'secondary' : 'destructive'}>
-                              {isJustified ? 'Justifiée' : hasJustificationPending ? 'En attente' : 'Non justifiée'}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(absence.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              {absence.duration_minutes} minutes
-                            </div>
-                          </div>
-                          {absence.justification_reason && (
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Motif :</strong> {absence.justification_reason}
-                            </p>
-                          )}
-                          <div className="flex flex-wrap gap-2">
-                            {!isJustified && (
-                              <Button size="sm" onClick={() => handleJustifyAbsence(absence.id)}>
-                                {hasJustificationPending ? 'Modifier le justificatif' : "Justifier l'absence"}
-                              </Button>
-                            )}
-                            {absence.justification_file ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    await openAbsenceJustificationFile(absence.id);
-                                  } catch {
-                                    toast({
-                                      title: 'Erreur',
-                                      description: 'Impossible d’ouvrir le justificatif.',
-                                      variant: 'destructive',
-                                    });
-                                  }
-                                }}
-                              >
-                                Voir le document
-                              </Button>
-                            ) : null}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+              <ParentAttendancePanel
+                canView={Boolean(selectedChild.canViewAttendance)}
+                loading={absencesLoading}
+                absences={absences}
+                onJustify={handleJustifyAbsence}
+                onOpenFile={(absenceId) => {
+                  void (async () => {
+                    try {
+                      await openAbsenceJustificationFile(absenceId);
+                    } catch {
+                      toast({
+                        title: 'Erreur',
+                        description: 'Impossible d’ouvrir le justificatif.',
+                        variant: 'destructive',
+                      });
+                    }
+                  })();
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="grades" className="space-y-4 pt-4">
-              {!selectedChild.canViewGrades ? (
-                <p className="text-sm text-gray-500">Vous n'avez pas accès aux notes de cet enfant.</p>
-              ) : gradesLoading ? (
-                <p className="text-sm text-gray-500">Chargement…</p>
-              ) : !gradeSummary || gradeSummary.subjects.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Award className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune note publiée</h3>
-                    <p className="text-gray-500">Les notes apparaîtront ici dès qu'elles seront publiées.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {gradeSummary.overallAverageOutOf20 != null && (
-                    <Card className="border-blue-100 bg-blue-50/40">
-                      <CardContent className="flex items-center justify-between gap-3 p-4">
-                        <div>
-                          <p className="text-sm font-medium text-slate-600">Moyenne générale</p>
-                          <p className="text-xs text-slate-500">
-                            Pondérée par le coefficient de chaque matière
-                          </p>
-                        </div>
-                        <p className="text-2xl font-bold text-blue-700">
-                          {gradeSummary.overallAverageOutOf20.toLocaleString('fr-FR', {
-                            maximumFractionDigits: 2,
-                          })}
-                          <span className="text-base font-semibold text-slate-500"> / 20</span>
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {gradeSummary.subjects.map((subject) => (
-                    <Card key={subject.key}>
-                      <CardHeader className="pb-2">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <CardTitle className="text-base">{subject.subjectName}</CardTitle>
-                            {subject.courseName && subject.courseName !== subject.subjectName && (
-                              <CardDescription>{subject.courseName}</CardDescription>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                              Moyenne
-                            </p>
-                            <p className="text-xl font-bold text-slate-900">
-                              {subject.averageOutOf20 == null
-                                ? '—'
-                                : `${subject.averageOutOf20.toLocaleString('fr-FR', {
-                                    maximumFractionDigits: 2,
-                                  })} / 20`}
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                              Coeff. matière {subject.courseCoefficient}
-                            </p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {subject.grades.map((grade) => (
-                          <div
-                            key={grade.id}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate font-medium text-slate-900">{grade.title}</p>
-                              <p className="text-xs text-slate-500">
-                                {new Date(grade.date).toLocaleDateString('fr-FR')}
-                                {grade.coefficient !== 1 ? ` · coeff. ${grade.coefficient}` : ''}
-                              </p>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-lg font-semibold">
-                                {grade.gradeValue}/{grade.maxGrade}
-                              </p>
-                              {grade.maxGrade !== 20 && (
-                                <p className="text-[11px] text-slate-400">
-                                  ≈ {grade.normalizedOutOf20}/20
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <ParentGradesPanel
+                canView={Boolean(selectedChild.canViewGrades)}
+                loading={gradesLoading}
+                gradeSummary={gradeSummary}
+              />
             </TabsContent>
 
             <TabsContent value="health" className="space-y-4 pt-4">
@@ -699,306 +504,27 @@ const MyChildrenPage = () => {
             </TabsContent>
 
             <TabsContent value="finance" className="space-y-4 pt-4">
-              {familyFinance.length > 1 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Vue famille</CardTitle>
-                    <CardDescription>
-                      Soldes par enfant (paiement multi-factures reporté — chaque facture se paie
-                      séparément).
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {familyFinance.map((row) => (
-                      <button
-                        key={row.studentId}
-                        type="button"
-                        onClick={() => setSelectedChildId(row.studentId)}
-                        className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                          selectedChildId === row.studentId
-                            ? 'border-blue-300 bg-blue-50'
-                            : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="font-medium">{row.name}</span>
-                        <span className="text-muted-foreground">
-                          {!row.canView
-                            ? 'Accès facturation fermé'
-                            : row.openCount === 0
-                              ? 'À jour'
-                              : `${row.openCount} ouverte(s) · ${row.unpaidCents.toLocaleString('fr-FR')} ${
-                                  invoices[0]?.currency || 'XOF'
-                                }`}
-                        </span>
-                      </button>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {!selectedChild.canViewBilling ? (
-                <p className="text-sm text-gray-500">Vous n&apos;avez pas accès à la facturation de cet enfant.</p>
-              ) : invoicesLoading ? (
-                <p className="text-sm text-gray-500">Chargement…</p>
-              ) : invoices.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune facture</h3>
-                    <p className="text-gray-500">Les factures de scolarité apparaîtront ici.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {invoices.map((inv) => {
-                    const remaining = Math.max(0, inv.total_cents - inv.paid_cents);
-                    const canPay =
-                      selectedChild.canMakePayments &&
-                      remaining > 0 &&
-                      inv.status !== 'cancelled' &&
-                      inv.status !== 'paid';
-                    const stateLines = inv.lines.filter(
-                      (l) => l.line_type === 'fee' && l.fee_origin === 'state'
-                    );
-                    const schoolLines = inv.lines.filter(
-                      (l) => l.line_type === 'fee' && l.fee_origin !== 'state'
-                    );
-                    const discountLines = inv.lines.filter((l) => l.line_type === 'discount');
-                    const hasOriginSplit = inv.lines.some((l) => l.fee_origin);
-
-                    return (
-                      <Card key={inv.id}>
-                        <CardContent className="space-y-3 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold">{inv.invoice_number}</p>
-                              <p className="text-sm text-gray-500">
-                                Émise le {new Date(inv.issued_at).toLocaleDateString('fr-FR')}
-                                {inv.due_date
-                                  ? ` · échéance ${new Date(inv.due_date).toLocaleDateString('fr-FR')}`
-                                  : ''}
-                                {inv.fee_schedule_id ? ' · grille tarifaire' : ''}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold">{formatInvoiceMoney(inv, inv.total_cents)}</p>
-                              <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>
-                                {inv.status}
-                              </Badge>
-                              <p className="mt-1 text-xs text-slate-500">
-                                Payé {formatInvoiceMoney(inv, inv.paid_cents)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {hasOriginSplit && (
-                            <div className="grid gap-2 text-sm md:grid-cols-2">
-                              <div className="rounded-md border bg-slate-50/80 p-3">
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Frais officiels (État)
-                                </p>
-                                {stateLines.length === 0 ? (
-                                  <p className="text-muted-foreground">Aucun</p>
-                                ) : (
-                                  <ul className="space-y-1">
-                                    {stateLines.map((l) => (
-                                      <li key={l.id} className="flex justify-between gap-2">
-                                        <span>{l.label}</span>
-                                        <span>{formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                              <div className="rounded-md border bg-slate-50/80 p-3">
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Frais établissement
-                                </p>
-                                {schoolLines.length === 0 ? (
-                                  <p className="text-muted-foreground">Aucun</p>
-                                ) : (
-                                  <ul className="space-y-1">
-                                    {schoolLines.map((l) => (
-                                      <li key={l.id} className="flex justify-between gap-2">
-                                        <span>{l.label}</span>
-                                        <span>{formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                              {discountLines.length > 0 && (
-                                <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3 md:col-span-2">
-                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                                    Remises / prises en charge
-                                  </p>
-                                  <ul className="space-y-1">
-                                    {discountLines.map((l) => (
-                                      <li key={l.id} className="flex justify-between gap-2">
-                                        <span>{l.label}</span>
-                                        <span>− {formatInvoiceMoney(inv, l.amount_cents * l.quantity)}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {canPay && (
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              <Button
-                                size="sm"
-                                disabled={payingId === inv.id}
-                                onClick={() => void handlePay(inv.id, 'cinetpay')}
-                              >
-                                Payer par Mobile Money
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={payingId === inv.id}
-                                onClick={() => void handlePay(inv.id, 'stripe')}
-                              >
-                                Payer par carte
-                              </Button>
-                            </div>
-                          )}
-                          {!selectedChild.canMakePayments && remaining > 0 && inv.status !== 'cancelled' && (
-                            <p className="text-xs text-muted-foreground">
-                              Consultation seule — le paiement en ligne n’est pas autorisé pour votre lien.
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+              <ParentFinancePanel
+                canViewBilling={Boolean(selectedChild.canViewBilling)}
+                canMakePayments={Boolean(selectedChild.canMakePayments)}
+                loading={invoicesLoading}
+                invoices={invoices}
+                familyFinance={familyFinance}
+                selectedChildId={selectedChildId}
+                payingId={payingId}
+                onSelectChild={setSelectedChildId}
+                onPay={(invoiceId, provider) => void handlePay(invoiceId, provider)}
+              />
             </TabsContent>
 
             <TabsContent value="services" className="space-y-4 pt-4">
-              {servicesLoading ? (
-                <p className="text-sm text-gray-500">Chargement…</p>
-              ) : !servicesChild?.servicesEnabled ? (
-                <Card>
-                  <CardContent className="text-center py-12 text-sm text-gray-500">
-                    Aucun service établissement actif pour cet enfant.
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Utensils className="h-4 w-4" /> Cantine
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      {(servicesChild.canteenSubscriptions?.length ?? 0) === 0 ? (
-                        <p className="text-muted-foreground">Pas d’abonnement cantine</p>
-                      ) : (
-                        servicesChild.canteenSubscriptions.map((s) => (
-                          <div key={s.id} className="flex justify-between gap-2 rounded border px-3 py-2">
-                            <span>{s.planName}</span>
-                            <span className="text-right">
-                              {(s.priceCents / 100).toLocaleString('fr-FR')} {s.currency}
-                              {s.invoice?.invoiceNumber ? (
-                                <Badge className="ml-2" variant="secondary">
-                                  {s.invoice.invoiceNumber}
-                                </Badge>
-                              ) : null}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                      {servicesChild.canteenEnabled !== false &&
-                      (servicesChild.availableCanteenPlans?.length ?? 0) > 0 ? (
-                        <div className="space-y-2 border-t pt-3">
-                          <p className="text-xs font-medium text-muted-foreground">Formules disponibles</p>
-                          {servicesChild.availableCanteenPlans!.map((plan) => (
-                            <div
-                              key={plan.id}
-                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
-                            >
-                              <span>
-                                {plan.name}
-                                <span className="ml-2 text-muted-foreground">
-                                  {(plan.priceCents / 100).toLocaleString('fr-FR')} {plan.currency}
-                                </span>
-                              </span>
-                              <Button
-                                size="sm"
-                                disabled={servicesActionId === plan.id}
-                                onClick={() => void subscribeCanteen(plan.id)}
-                              >
-                                {servicesActionId === plan.id ? '…' : 'Souscrire'}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Bus className="h-4 w-4" /> Transport
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      {(servicesChild.transportEnrollments?.length ?? 0) === 0 ? (
-                        <p className="text-muted-foreground">Pas d’inscription transport</p>
-                      ) : (
-                        servicesChild.transportEnrollments.map((e) => (
-                          <div key={e.id} className="rounded border px-3 py-2 space-y-1">
-                            <p className="font-medium">{e.routeName}</p>
-                            {(e.scheduleSlots?.length ?? 0) > 0 ? (
-                              <ul className="text-xs text-muted-foreground space-y-0.5">
-                                {e.scheduleSlots!.slice(0, 6).map((s) => (
-                                  <li key={s.id}>
-                                    J{s.dayOfWeek} · {s.departureTime} ·{' '}
-                                    {s.direction === 'inbound' ? 'retour' : 'aller'}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">Horaires à venir</p>
-                            )}
-                          </div>
-                        ))
-                      )}
-                      {(servicesChild.availableTransportRoutes?.length ?? 0) > 0 ? (
-                        <div className="space-y-2 border-t pt-3">
-                          <p className="text-xs font-medium text-muted-foreground">Circuits disponibles</p>
-                          {servicesChild.availableTransportRoutes!.map((route) => (
-                            <div
-                              key={route.id}
-                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
-                            >
-                              <span>
-                                {route.name}
-                                {route.seatsLeft != null ? (
-                                  <span className="ml-2 text-muted-foreground">
-                                    {route.seatsLeft} place{route.seatsLeft > 1 ? 's' : ''}
-                                  </span>
-                                ) : null}
-                              </span>
-                              <Button
-                                size="sm"
-                                disabled={servicesActionId === route.id}
-                                onClick={() => void enrollTransport(route.id)}
-                              >
-                                {servicesActionId === route.id ? '…' : 'Inscrire'}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+              <ParentServicesPanel
+                loading={servicesLoading}
+                child={servicesChild}
+                actionId={servicesActionId}
+                onSubscribeCanteen={(planId) => void subscribeCanteen(planId)}
+                onEnrollTransport={(routeId) => void enrollTransport(routeId)}
+              />
             </TabsContent>
           </Tabs>
         </>

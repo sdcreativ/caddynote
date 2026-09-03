@@ -185,6 +185,14 @@ export const fetchGradesByTeacher = async (teacherId: string): Promise<StrkGrade
   }
 };
 
+/** Notes de l’établissement (direction) — `GET /grades?scope=institution`. */
+export const fetchGradesByInstitution = async (institutionId?: string): Promise<StrkGradeWithRelations[]> => {
+  const qs = new URLSearchParams({ scope: 'institution' });
+  if (institutionId) qs.set('institutionId', institutionId);
+  const { grades } = await apiClient.get<{ grades: ApiGrade[] }>(`/grades?${qs.toString()}`);
+  return grades.map(mapApiGrade);
+};
+
 export const calculateStudentCourseAverage = async (studentId: string, courseId: string): Promise<number> => {
   try {
     const { average } = await apiClient.get<{ average: number }>(

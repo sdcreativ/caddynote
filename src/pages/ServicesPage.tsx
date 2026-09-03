@@ -21,6 +21,9 @@ import { fetchStrkUsersByInstitution, type User } from '@/services/strkUserServi
 import { Loader2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { tCommon } from '@/i18n/config';
+import { ServicesTransportPanel } from '@/components/services/ServicesTransportPanel';
+import { ServicesCanteenPanel } from '@/components/services/ServicesCanteenPanel';
+import { ServicesLibraryPanel } from '@/components/services/ServicesLibraryPanel';
 
 type InstitutionOption = { id: string; name: string };
 type StudentOpt = { id: string; label: string };
@@ -466,338 +469,115 @@ const ServicesPage = () => {
       <Tabs value={activeTab ?? undefined} onValueChange={setActiveTab}>
         {/* Un module à la fois — retour hub pour changer. */}
         <TabsContent value="transport" className="space-y-3">
-          <Button onClick={createRoute} disabled={saving || loading}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            {t('route')}
-          </Button>
-          {routes.length === 0 ? (
-            <EmptyState title={t('emptyRoutesTitle')} description={t('emptyRoutesBody')} />
-          ) : (
-            routes.map((r) => (
-              <Card key={r.id}>
-                <CardHeader className="py-3">
-                  <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-                    {r.name}
-                    <Badge variant="outline">
-                      {t('enrolled', {
-                        enrolled: r.enrollments.length,
-                        cap: r.capacity != null ? `/${r.capacity}` : '',
-                      })}
-                    </Badge>
-                    {!r.isActive && <Badge variant="secondary">{t('inactive')}</Badge>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pb-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={saving || !r.isActive}
-                    onClick={() => {
-                      if (!needStudent()) return;
-                      void run(t('studentEnrolled'), () =>
-                        apiClient.post(`/services/transport/routes/${r.id}/enroll`, {
-                          studentId: selectedStudentId,
-                        })
-                      );
-                    }}
-                  >
-                    {t('enrollStudent')}
-                  </Button>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {r.enrollments.map((e) => (
-                      <li key={e.id} className="flex items-center justify-between gap-2">
-                        <span>{e.studentName ?? e.studentId}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={saving}
-                          onClick={() =>
-                            void run(t('enrollmentClosed'), () =>
-                              apiClient.post(`/services/transport/enrollments/${e.id}/end`, {})
-                            )
-                          }
-                        >
-                          {tc('actions.remove')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="space-y-2 border-t pt-3">
-                    <p className="text-sm font-medium">{t('planning.stops')}</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {(r.stops ?? []).map((s) => (
-                        <li key={s.id} className="flex items-center justify-between gap-2">
-                          <span>
-                            {s.sequence}. {s.name}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={saving}
-                            onClick={() =>
-                              void run(t('planning.stopRemoved'), () =>
-                                apiClient.delete(`/services/transport/stops/${s.id}`)
-                              )
-                            }
-                          >
-                            {tc('actions.remove')}
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex flex-wrap gap-2">
-                      <Input
-                        className="max-w-xs"
-                        placeholder={t('planning.stopPlaceholder')}
-                        value={stopName}
-                        onChange={(e) => setStopName(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        disabled={saving || !stopName.trim()}
-                        onClick={() => {
-                          const name = stopName.trim();
-                          if (!name) return;
-                          void run(t('planning.stopAdded'), async () => {
-                            await apiClient.post(`/services/transport/routes/${r.id}/stops`, { name });
-                            setStopName('');
-                          });
-                        }}
-                      >
-                        {t('planning.addStop')}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 border-t pt-3">
-                    <p className="text-sm font-medium">{t('planning.schedule')}</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {(r.scheduleSlots ?? []).map((slot) => (
-                        <li key={slot.id} className="flex items-center justify-between gap-2">
-                          <span>
-                            {t(`planning.day${slot.dayOfWeek}`)} · {slot.departureTime} ·{' '}
-                            {slot.direction === 'inbound' ? t('planning.inbound') : t('planning.outbound')}
-                            {slot.label ? ` — ${slot.label}` : ''}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={saving}
-                            onClick={() =>
-                              void run(t('planning.slotRemoved'), () =>
-                                apiClient.delete(`/services/transport/schedule/${slot.id}`)
-                              )
-                            }
-                          >
-                            {tc('actions.remove')}
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div>
-                        <Label className="text-xs">{t('planning.day')}</Label>
-                        <Select value={slotDay} onValueChange={setSlotDay}>
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                              <SelectItem key={d} value={String(d)}>
-                                {t(`planning.day${d}`)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs">{t('planning.time')}</Label>
-                        <Input
-                          className="w-[110px]"
-                          type="time"
-                          value={slotTime}
-                          onChange={(e) => setSlotTime(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">{t('planning.direction')}</Label>
-                        <Select
-                          value={slotDirection}
-                          onValueChange={(v) => setSlotDirection(v as 'outbound' | 'inbound')}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="outbound">{t('planning.outbound')}</SelectItem>
-                            <SelectItem value="inbound">{t('planning.inbound')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        size="sm"
-                        disabled={saving || !slotTime}
-                        onClick={() =>
-                          void run(t('planning.slotAdded'), () =>
-                            apiClient.post(`/services/transport/routes/${r.id}/schedule`, {
-                              dayOfWeek: Number(slotDay),
-                              departureTime: slotTime,
-                              direction: slotDirection,
-                            })
-                          )
-                        }
-                      >
-                        {t('planning.addSlot')}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+          <ServicesTransportPanel
+            routes={routes}
+            saving={saving}
+            loading={loading}
+            stopName={stopName}
+            onStopNameChange={setStopName}
+            slotDay={slotDay}
+            onSlotDayChange={setSlotDay}
+            slotTime={slotTime}
+            onSlotTimeChange={setSlotTime}
+            slotDirection={slotDirection}
+            onSlotDirectionChange={setSlotDirection}
+            onCreateRoute={createRoute}
+            onEnroll={(routeId) => {
+              if (!needStudent()) return;
+              void run(t('studentEnrolled'), () =>
+                apiClient.post(`/services/transport/routes/${routeId}/enroll`, {
+                  studentId: selectedStudentId,
+                })
+              );
+            }}
+            onEndEnrollment={(enrollmentId) =>
+              void run(t('enrollmentClosed'), () =>
+                apiClient.post(`/services/transport/enrollments/${enrollmentId}/end`, {})
+              )
+            }
+            onRemoveStop={(stopId) =>
+              void run(t('planning.stopRemoved'), () =>
+                apiClient.delete(`/services/transport/stops/${stopId}`)
+              )
+            }
+            onAddStop={(routeId) => {
+              const name = stopName.trim();
+              if (!name) return;
+              void run(t('planning.stopAdded'), async () => {
+                await apiClient.post(`/services/transport/routes/${routeId}/stops`, { name });
+                setStopName('');
+              });
+            }}
+            onRemoveSlot={(slotId) =>
+              void run(t('planning.slotRemoved'), () =>
+                apiClient.delete(`/services/transport/schedule/${slotId}`)
+              )
+            }
+            onAddSlot={(routeId) =>
+              void run(t('planning.slotAdded'), () =>
+                apiClient.post(`/services/transport/routes/${routeId}/schedule`, {
+                  dayOfWeek: Number(slotDay),
+                  departureTime: slotTime,
+                  direction: slotDirection,
+                })
+              )
+            }
+          />
         </TabsContent>
 
         <TabsContent value="canteen" className="space-y-3">
-          {canteenDisabled ? (
-            <EmptyState title={t('canteenDisabledTitle')} description={t('canteenDisabledBody')} />
-          ) : (
-            <>
-          <Button onClick={createPlan} disabled={saving || loading}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            {t('plan')}
-          </Button>
-          {plans.length === 0 ? (
-            <EmptyState title={t('emptyPlansTitle')} description={t('emptyPlansBody')} />
-          ) : (
-            plans.map((p) => (
-              <Card key={p.id}>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-base">
-                    {p.name} — {(p.priceCents / 100).toFixed(0)}{' '}
-                    <Badge variant="outline">{t('abo', { count: p.subscriptions.length })}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 pb-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={saving || !p.isActive}
-                    onClick={() => {
-                      if (!needStudent()) return;
-                      void run(t('subscriptionCreated'), async () => {
-                        const res = await apiClient.post<{
-                          subscription: Enrollment;
-                          invoice?: { invoiceNumber: string; totalCents: number } | null;
-                        }>(`/services/canteen/plans/${p.id}/subscribe`, {
-                          studentId: selectedStudentId,
-                        });
-                        if (res.invoice) {
-                          toast({
-                            title: t('invoiceCreatedTitle'),
-                            description: t('invoiceCreatedBody', {
-                              number: res.invoice.invoiceNumber,
-                              amount: (res.invoice.totalCents / 100).toFixed(0),
-                            }),
-                          });
-                        }
-                      });
-                    }}
-                  >
-                    {t('subscribeStudent')}
-                  </Button>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {p.subscriptions.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between gap-2">
-                        <span className="flex flex-wrap items-center gap-2">
-                          {s.studentName ?? s.studentId}
-                          {s.invoice?.invoiceNumber ? (
-                            <Badge variant="secondary">
-                              {t('invoiced', { number: s.invoice.invoiceNumber })}
-                            </Badge>
-                          ) : p.priceCents > 0 ? (
-                            <Badge variant="outline">{t('notInvoiced')}</Badge>
-                          ) : null}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={saving}
-                          onClick={() =>
-                            void run(t('subscriptionClosed'), () =>
-                              apiClient.post(`/services/canteen/subscriptions/${s.id}/end`, {})
-                            )
-                          }
-                        >
-                          {t('close')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))
-          )}
-            </>
-          )}
+          <ServicesCanteenPanel
+            canteenDisabled={canteenDisabled}
+            plans={plans}
+            saving={saving}
+            loading={loading}
+            onCreatePlan={createPlan}
+            onSubscribe={(planId) => {
+              if (!needStudent()) return;
+              void run(t('subscriptionCreated'), async () => {
+                const res = await apiClient.post<{
+                  subscription: Enrollment;
+                  invoice?: { invoiceNumber: string; totalCents: number } | null;
+                }>(`/services/canteen/plans/${planId}/subscribe`, {
+                  studentId: selectedStudentId,
+                });
+                if (res.invoice) {
+                  toast({
+                    title: t('invoiceCreatedTitle'),
+                    description: t('invoiceCreatedBody', {
+                      number: res.invoice.invoiceNumber,
+                      amount: (res.invoice.totalCents / 100).toFixed(0),
+                    }),
+                  });
+                }
+              });
+            }}
+            onEndSubscription={(subscriptionId) =>
+              void run(t('subscriptionClosed'), () =>
+                apiClient.post(`/services/canteen/subscriptions/${subscriptionId}/end`, {})
+              )
+            }
+          />
         </TabsContent>
 
         <TabsContent value="library" className="space-y-3">
-          <Button onClick={createItem} disabled={saving || loading}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            {t('item')}
-          </Button>
-          {items.length === 0 ? (
-            <EmptyState title={t('emptyLibraryTitle')} description={t('emptyLibraryBody')} />
-          ) : (
-            items.map((i) => (
-              <Card key={i.id}>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-base">
-                    {t('available', { title: i.title, available: i.available, quantity: i.quantity })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 pb-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={saving || i.available < 1}
-                    onClick={() => {
-                      if (!needStudent()) return;
-                      void run(t('loanCreated'), () =>
-                        apiClient.post(`/services/library/items/${i.id}/loan`, {
-                          studentId: selectedStudentId,
-                        })
-                      );
-                    }}
-                  >
-                    {t('loanToStudent')}
-                  </Button>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {i.loans.map((l) => (
-                      <li key={l.id} className="flex items-center justify-between gap-2">
-                        <span>
-                          {t('due', { name: l.studentName ?? l.studentId, date: new Date(l.dueAt).toLocaleDateString('fr-FR') })}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={saving}
-                          onClick={() =>
-                            void run(t('returned'), () =>
-                              apiClient.post(`/services/library/loans/${l.id}/return`, {})
-                            )
-                          }
-                        >
-                          {t('return')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))
-          )}
+          <ServicesLibraryPanel
+            items={items}
+            saving={saving}
+            loading={loading}
+            onCreateItem={createItem}
+            onLoan={(itemId) => {
+              if (!needStudent()) return;
+              void run(t('loanCreated'), () =>
+                apiClient.post(`/services/library/items/${itemId}/loan`, {
+                  studentId: selectedStudentId,
+                })
+              );
+            }}
+            onReturn={(loanId) =>
+              void run(t('returned'), () => apiClient.post(`/services/library/loans/${loanId}/return`, {}))
+            }
+          />
         </TabsContent>
 
         <TabsContent value="boarding" className="space-y-3">

@@ -90,7 +90,7 @@ describe('i18n — architecture (NFR-009)', () => {
     expect(i18n.t('page.title', { ns: 'attendance' })).toMatch(/Présences/i);
     expect(i18n.t('title', { ns: 'classes' })).toBe('Classes');
     expect(i18n.t('title', { ns: 'settings' })).toMatch(/Paramètres/i);
-    expect(i18n.t('title', { ns: 'users' })).toMatch(/Utilisateurs/i);
+    expect(i18n.t('title', { ns: 'users' })).toMatch(/Comptes/i);
     expect(i18n.t('title', { ns: 'calendar' })).toBe('Calendrier');
     expect(i18n.t('title', { ns: 'teaching' })).toBe('Cahier / cours');
     expect(i18n.t('parent.heroTitle', { ns: 'guides' })).toMatch(/parent/i);

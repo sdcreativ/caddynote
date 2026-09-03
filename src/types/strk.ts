@@ -244,17 +244,18 @@ export interface StrkMessage {
 
 export interface StrkNotification {
   id: string;
-  user_id: string;
+  userId: string;
   title: string;
   message: string;
   type: string;
-  data: any;
+  data?: unknown;
+  /** Source de vérité serveur (`notifications.read`). */
   read: boolean;
-  read_at?: string;
+  actionUrl?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  /** Optionnel — absent du schéma Prisma ; dérivable côté UI. */
   priority?: string;
-  action_url?: string;
-  expires_at?: string;
-  created_at: string;
 }
 
 export interface StrkAttendance {

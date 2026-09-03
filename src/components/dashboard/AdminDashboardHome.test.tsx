@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminDashboardHome from './AdminDashboardHome';
 import type { DashboardMetrics } from '@/services/strkAnalyticsService';
@@ -10,10 +10,19 @@ vi.mock('@/lib/navConfig', async (importOriginal) => {
 });
 
 const fetchOps = vi.fn();
+const navigateMock = vi.fn();
 
 vi.mock('@/services/strkOpsService', () => ({
   fetchPlatformOpsQueue: (...args: unknown[]) => fetchOps(...args),
 }));
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 const metrics: DashboardMetrics = {
   totalInstitutions: 4,
@@ -29,6 +38,7 @@ const metrics: DashboardMetrics = {
 describe('AdminDashboardHome (équipe CaddyNote)', () => {
   beforeEach(() => {
     fetchOps.mockResolvedValue([]);
+    navigateMock.mockReset();
   });
 
   it('expose la console, les KPI et les raccourcis ops plateforme', async () => {
@@ -128,5 +138,41 @@ describe('AdminDashboardHome (équipe CaddyNote)', () => {
     });
     expect(screen.getAllByRole('button', { name: /^Élèves$/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: /^Finances$/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('envoie les KPI plateforme vers utilisateurs SA / établissements / analytics (pas /users ni observability)', async () => {
+    render(
+      <MemoryRouter>
+        <AdminDashboardHome
+          userName="Alex"
+          metrics={metrics}
+          metricsState="ready"
+          totalInstitutions={4}
+          totalStudents={80}
+          totalTeachers={12}
+        />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Rien d’urgent/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Élèves/i })[0]);
+    expect(navigateMock).toHaveBeenCalledWith('/super-admin/users');
+
+    navigateMock.mockClear();
+    fireEvent.click(screen.getAllByRole('button', { name: /Enseignants/i })[0]);
+    expect(navigateMock).toHaveBeenCalledWith('/super-admin/users');
+
+    navigateMock.mockClear();
+    fireEvent.click(screen.getAllByRole('button', { name: /Absences/i })[0]);
+    expect(navigateMock).toHaveBeenCalledWith('/super-admin/analytics');
+    expect(navigateMock).not.toHaveBeenCalledWith('/super-admin/observability');
+
+    navigateMock.mockClear();
+    fireEvent.click(screen.getAllByRole('button', { name: /Comptes plateforme/i })[0]);
+    expect(navigateMock).toHaveBeenCalledWith('/super-admin/users');
+    expect(navigateMock).not.toHaveBeenCalledWith('/users');
   });
 });

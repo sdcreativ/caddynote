@@ -125,6 +125,39 @@ const ALL_QUOTA_TYPES: QuotaType[] = ['students', 'users', 'smsPerMonth', 'stora
 export const getQuotaOverview = async (institutionId: string): Promise<QuotaStatus[]> =>
   Promise.all(ALL_QUOTA_TYPES.map((type) => checkQuota(institutionId, type, 0)));
 
+const GIB = 1024 * 1024 * 1024;
+
+/**
+ * Vérifie le plafond stockage en **octets** (pas en Go arrondis).
+ * `checkQuota(..., 'storageGb', 0)` seul ne voit pas un fichier de 50 Mo
+ * tant que le plafond Go n’est pas déjà atteint.
+ */
+export const assertStorageAllowsBytes = async (
+  institutionId: string,
+  additionalBytes: number
+): Promise<QuotaStatus> => {
+  const plan = await getActivePlan(institutionId);
+  const limitGb = plan ? ((plan.storageLimitGb as number | null) ?? null) : null;
+  const usedBytes = await estimateInstitutionStorageBytes(institutionId);
+  const currentGb = Math.ceil(usedBytes / GIB);
+
+  if (limitGb === null) {
+    return { type: 'storageGb', current: currentGb, limit: null, allowed: true, warning: false };
+  }
+
+  const limitBytes = limitGb * GIB;
+  const projected = usedBytes + Math.max(0, additionalBytes);
+  const allowed = projected <= limitBytes;
+  const warning = allowed && projected >= limitBytes * WARNING_RATIO;
+  return { type: 'storageGb', current: currentGb, limit: limitGb, allowed, warning };
+};
+
+/** Extrait `institutionId` depuis une clé `…/inst-{uuid}/…` ou `…/inst-{uuid}-app-…`. */
+export const institutionIdFromObjectKey = (key: string): string | null => {
+  const match = key.match(/\/inst-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:-app-|\/|$)/i);
+  return match?.[1] ?? null;
+};
+
 /** Incrémente le compteur local après un upload confirmé (taille connue). */
 export const recordStorageUsage = async (institutionId: string, deltaBytes: number): Promise<void> => {
   if (!institutionId || !Number.isFinite(deltaBytes) || deltaBytes === 0) return;

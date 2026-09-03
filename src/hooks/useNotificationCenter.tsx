@@ -28,12 +28,8 @@ export function useNotificationCenter(userId: string) {
   const handleMarkAsRead = useCallback(async (notificationId: string) => {
     try {
       await markAsRead(() => markNotificationAsRead(notificationId));
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, read_at: new Date().toISOString() }
-            : notif
-        )
+      setNotifications((prev) =>
+        prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif))
       );
     } catch (error) {
       console.error('Erreur lors du marquage de la notification:', error);
@@ -43,9 +39,7 @@ export function useNotificationCenter(userId: string) {
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsRead(() => markAllNotificationsAsRead(userId));
-      setNotifications(prev => 
-        prev.map(notif => ({ ...notif, read_at: new Date().toISOString() }))
-      );
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
     } catch (error) {
       console.error('Erreur lors du marquage de toutes les notifications:', error);
     }

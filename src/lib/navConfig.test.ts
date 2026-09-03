@@ -147,14 +147,21 @@ describe('navConfig (NFR-009)', () => {
     expect(items![4]).toMatchObject({ kind: 'more' });
   });
 
-  it('Équipe CaddyNote : barre du bas = Accueil · Établissements · Console · Support · Plus', () => {
+  it('Équipe CaddyNote : barre du bas = Console · Établissements · Profil · Plus', () => {
     const items = mobileBottomNavForRole('admin');
-    expect(items).toHaveLength(5);
-    expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
+    expect(items).toHaveLength(4);
+    expect(items![0]).toMatchObject({ kind: 'link', href: '/super-admin' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/institutions' });
-    expect(items![2]).toMatchObject({ kind: 'link', href: '/super-admin' });
-    expect(items![3]).toMatchObject({ kind: 'link', href: '/super-admin/support-ops' });
-    expect(items![4]).toMatchObject({ kind: 'more' });
+    expect(items![2]).toMatchObject({ kind: 'link', href: '/profile' });
+    expect(items![3]).toMatchObject({ kind: 'more' });
+  });
+
+  it('Équipe CaddyNote : MainLayout allégé (console + établissements + compte)', () => {
+    const hrefs = navSectionsForRole('admin').flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).toEqual(['/super-admin', '/institutions', '/profile', '/settings']);
+    expect(hrefs).not.toContain('/users');
+    expect(hrefs).not.toContain('/students');
+    expect(hrefs).not.toContain('/finance');
   });
 
   it('isNavHrefActive reste vrai sur /finance/* et /services/*', () => {
@@ -235,7 +242,14 @@ describe('navConfig (NFR-009)', () => {
     expect(hrefs).not.toContain('/users');
     const advancedHrefs = advanced?.items.map((i) => i.href) ?? [];
     expect(advancedHrefs).toEqual(
-      expect.arrayContaining(['/subjects', '/documents', '/users', '/communications', '/calendar'])
+      expect.arrayContaining([
+        '/subjects',
+        '/documents',
+        '/teachers',
+        '/users',
+        '/communications',
+        '/calendar',
+      ])
     );
   });
 

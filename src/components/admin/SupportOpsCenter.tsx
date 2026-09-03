@@ -31,6 +31,7 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { adminSearch } from '@/services/strkOpsService';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import TenantHealthDialog from '@/components/admin/TenantHealthDialog';
+import { SupportContactInboxPanel } from '@/components/admin/SupportContactInboxPanel';
 import ProvisionDemoFromContactDialog from '@/components/admin/ProvisionDemoFromContactDialog';
 import {
   fetchSupportTickets,
@@ -405,103 +406,46 @@ const SupportOpsCenter = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-base">File contact public</CardTitle>
-            <CardDescription>
-              Messages `/contact` non traités — créer une session démo en un clic, ou convertir en
-              ticket.
-            </CardDescription>
-          </div>
-          <Button type="button" size="sm" variant="outline" onClick={() => void loadContactInbox()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {contactMessages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucun message en attente.</p>
-          ) : (
-            <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
-              {contactMessages.map((m) => {
-                const isDemo = /d[eé]mo|d[eé]monstration|pr[eé]sentation|essai/i.test(m.subject);
-                return (
-                <li key={m.id} className="rounded-md border p-3 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="font-medium">{m.subject}</div>
-                    {isDemo ? <Badge variant="secondary">Démo</Badge> : null}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {m.name} &lt;{m.email}&gt; · {new Date(m.createdAt).toLocaleString('fr-FR')}
-                  </div>
-                  <p className="line-clamp-2 text-muted-foreground">{m.message}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => setProvisionContact(m)}
-                    >
-                      Créer la session démo
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() =>
-                        void (async () => {
-                          setBusy(true);
-                          try {
-                            const res = await convertContactToTicket(m.id);
-                            toast({ title: 'Converti en ticket', description: res.ticket.subject });
-                            await loadContactInbox();
-                            await loadTickets();
-                            await openTicket(res.ticket.id);
-                          } catch (e) {
-                            toast({
-                              title: 'Conversion impossible',
-                              description: e instanceof ApiError ? e.message : 'Erreur',
-                              variant: 'destructive',
-                            });
-                          } finally {
-                            setBusy(false);
-                          }
-                        })()
-                      }
-                    >
-                      Convertir en ticket
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            await updateContactOpsMessage(m.id, 'acknowledged');
-                            await loadContactInbox();
-                          } catch (e) {
-                            toast({
-                              title: 'Mise à jour impossible',
-                              description: e instanceof ApiError ? e.message : 'Erreur',
-                              variant: 'destructive',
-                            });
-                          }
-                        })()
-                      }
-                    >
-                      Accuser réception
-                    </Button>
-                  </div>
-                </li>
-              );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <SupportContactInboxPanel
+        messages={contactMessages}
+        busy={busy}
+        onRefresh={() => void loadContactInbox()}
+        onProvision={(m) => setProvisionContact(m)}
+        onConvert={(m) =>
+          void (async () => {
+            setBusy(true);
+            try {
+              const res = await convertContactToTicket(m.id);
+              toast({ title: 'Converti en ticket', description: res.ticket.subject });
+              await loadContactInbox();
+              await loadTickets();
+              await openTicket(res.ticket.id);
+            } catch (e) {
+              toast({
+                title: 'Conversion impossible',
+                description: e instanceof ApiError ? e.message : 'Erreur',
+                variant: 'destructive',
+              });
+            } finally {
+              setBusy(false);
+            }
+          })()
+        }
+        onAcknowledge={(m) =>
+          void (async () => {
+            try {
+              await updateContactOpsMessage(m.id, 'acknowledged');
+              await loadContactInbox();
+            } catch (e) {
+              toast({
+                title: 'Mise à jour impossible',
+                description: e instanceof ApiError ? e.message : 'Erreur',
+                variant: 'destructive',
+              });
+            }
+          })()
+        }
+      />
 
       <Card>
         <CardHeader>

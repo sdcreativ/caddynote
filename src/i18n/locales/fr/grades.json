@@ -1,7 +1,13 @@
 {
   "title": "Notes",
   "subtitleStudent": "Consultez vos notes et évaluations",
-  "subtitleTeacher": "Saisie du jour d’abord — publication, calcul et import en secondaire.",
+  "subtitleTeacher": "Saisie du jour d’abord — publication, calcul et import dans l’onglet dédié.",
+  "subtitleDirection": "Vue établissement des notes — saisie possible dès qu’un cours existe.",
+  "panels": {
+    "entry": "Saisie",
+    "workflow": "Publication & calcul",
+    "workflowHint": "Publier les brouillons, calculer les moyennes, importer ou exporter — hors du flux de saisie du jour."
+  },
   "publish": "Publier",
   "computeAverages": "Calculer moyennes",
   "importCsv": "Import CSV",
@@ -42,7 +48,8 @@
   "empty": {
     "title": "Aucune note trouvée",
     "noMatch": "Aucune note ne correspond à vos critères de recherche.",
-    "none": "Aucune note publiée pour le moment."
+    "none": "Aucune note publiée pour le moment.",
+    "noCourses": "Aucun cours configuré : créez d’abord des cours pour saisir des notes."
   },
   "my": {
     "title": "Mes notes",

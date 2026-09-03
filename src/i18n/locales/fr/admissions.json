@@ -3,6 +3,8 @@
     "title": "Préinscriptions",
     "tabQueue": "File d’attente",
     "tabConfig": "Configuration campagnes",
+    "openConfig": "Configurer les campagnes",
+    "backToQueue": "← Retour à la file",
     "empty": "Aucun dossier.",
     "noInstitutionTitle": "Établissement manquant",
     "noInstitutionBody": "Votre compte n’est rattaché à aucun établissement : la file d’admissions ne peut pas s’afficher. Connectez-vous avec le compte direction de l’école, ou sélectionnez un établissement ci-dessous (admin plateforme).",

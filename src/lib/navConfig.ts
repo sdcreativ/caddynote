@@ -178,12 +178,11 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'admin':
-      // Accueil · Établissements · Console · Support ops · Plus
+      // Console · Établissements · Profil · Plus (réglages)
       return [
-        { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: LayoutDashboard },
-        { kind: 'link', titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
         { kind: 'link', titleKey: 'items.platformConsole', href: '/super-admin', icon: Shield },
-        { kind: 'link', titleKey: 'items.support', href: '/super-admin/support-ops', icon: LifeBuoy },
+        { kind: 'link', titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
+        { kind: 'link', titleKey: 'items.profile', href: '/profile', icon: User },
         { kind: 'more', titleKey: 'bottomNav.more', icon: MoreHorizontal },
       ];
     case 'parent':
@@ -313,7 +312,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.classes', href: '/classes', icon: GraduationCap },
             { titleKey: 'items.teachers', href: '/teachers', icon: Users },
             { titleKey: 'items.grades', href: '/grades', icon: GraduationCap },
-            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
+            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes login — dossiers → /students / /teachers
             // Emploi du temps : accès via Vue d’ensemble (résumé + tuile), pas une 2ᵉ entrée nav.
             { titleKey: 'items.followUp', href: '/follow-up', icon: HeartHandshake },
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
@@ -380,7 +379,8 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
           items: [
             { titleKey: 'items.subjects', href: '/subjects', icon: BookOpen },
             { titleKey: 'items.documents', href: '/documents', icon: FileText },
-            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
+            { titleKey: 'items.teachers', href: '/teachers', icon: Users },
+            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes login — dossiers → /students / /teachers
             { titleKey: 'items.communications', href: '/communications', icon: Megaphone },
             { titleKey: 'items.calendar', href: '/calendar', icon: Calendar },
           ],
@@ -493,34 +493,19 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'admin':
+      // Dual nav allégée : console plateforme + établissements + compte.
+      // Le reste (élèves, finance, docs…) vit dans la console / l’espace école.
       return [
         {
           labelKey: 'sections.spaces',
           items: [
             { titleKey: 'items.platformConsole', href: '/super-admin', icon: Shield },
-            { titleKey: 'items.businessSteering', href: '/dashboard', icon: LayoutDashboard },
-          ],
-        },
-        {
-          labelKey: 'sections.steering',
-          items: [
             { titleKey: 'items.institutions', href: '/institutions', icon: Building2 },
-            { titleKey: 'items.users', href: '/users', icon: UserCog }, // Comptes & accès (login), pas le dossier élève/enseignant
-            { titleKey: 'items.students', href: '/students', icon: Users, requiresInstitution: true },
-            { titleKey: 'items.finance', href: '/finance', icon: Receipt, requiresInstitution: true },
-            { titleKey: 'items.documents', href: '/documents', icon: FileText, requiresInstitution: true },
-            { titleKey: 'items.communications', href: '/communications', icon: Megaphone, requiresInstitution: true },
-            { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
-            { titleKey: 'items.exports', href: '/exports', icon: Download, requiresInstitution: true },
-            { titleKey: 'items.services', href: '/services', icon: Bus },
           ],
         },
         {
           labelKey: 'sections.account',
           items: [
-            { titleKey: 'items.plansCatalog', href: '/subscription', icon: CreditCard },
-            { titleKey: 'items.support', href: '/support', icon: LifeBuoy },
-            { titleKey: 'items.auditLog', href: '/audit-log', icon: ScrollText },
             { titleKey: 'items.profile', href: '/profile', icon: User },
             { titleKey: 'items.settings', href: '/settings', icon: Settings },
           ],

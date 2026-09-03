@@ -83,7 +83,8 @@ describe('SettingsPage (sécurité compte → Profil)', () => {
 
     expect(screen.queryByRole('tab', { name: 'Sécurité' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Journal d’audit/i })).toHaveAttribute('href', '/audit-log');
-    expect(screen.getByRole('tab', { name: 'Système' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Assiduité' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Établissement' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Pédagogie' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Notifications' })).toBeInTheDocument();
   });
 });

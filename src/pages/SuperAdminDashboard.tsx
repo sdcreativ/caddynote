@@ -35,6 +35,7 @@ import { TwoFactorAuthDialog } from '@/components/settings/TwoFactorAuthDialog';
 export const SUPER_ADMIN_SECTIONS = [
   'overview',
   'users',
+  // Alias historiques (redirect → users) — plus de clones métier.
   'teachers',
   'students',
   'classes',

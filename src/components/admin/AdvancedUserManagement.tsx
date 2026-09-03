@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,7 @@ const ROLE_OPTIONS = [
 ] as const;
 
 const AdvancedUserManagement = () => {
+  const { t } = useTranslation('superAdmin');
   const { toast } = useToast();
   const { user: currentUser } = useStrkAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -270,10 +272,8 @@ const AdvancedUserManagement = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Actions en masse</h2>
-          <p className="text-muted-foreground">
-            Bulk plateforme (suspendre, réactiver, rôle, établissement) — distinct de « Utilisateurs » (fiches).
-          </p>
+          <h2 className="text-2xl font-bold">{t('advancedUsersPage.title')}</h2>
+          <p className="text-muted-foreground">{t('advancedUsersPage.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={() => void load()} disabled={loading}>
@@ -291,7 +291,7 @@ const AdvancedUserManagement = () => {
         <Card>
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-muted-foreground">Comptes visibles</p>
+              <p className="text-sm text-muted-foreground">{t('advancedUsersPage.visibleAccounts')}</p>
               <p className="text-2xl font-bold">{filteredUsers.length}</p>
             </div>
             <Users className="h-8 w-8 text-muted-foreground" />
@@ -437,7 +437,7 @@ const AdvancedUserManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Utilisateurs</CardTitle>
+          <CardTitle>{t('advancedUsersPage.listTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

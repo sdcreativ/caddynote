@@ -152,7 +152,7 @@
     },
     "modules": {
       "console": "Console",
-      "users": "Utilisateurs",
+      "users": "Comptes plateforme",
       "audit": "Journal d’audit",
       "exports": "Exports",
       "plans": "Offres",

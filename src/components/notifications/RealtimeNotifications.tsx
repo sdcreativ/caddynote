@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { apiClient } from '@/lib/apiClient';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, MessageSquare, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { StrkNotification } from '@/types/strk';
+import { fetchUnreadNotifications } from '@/services/strkNotificationService';
 import { useTranslation } from 'react-i18next';
 
 interface RealtimeNotificationsProps {
@@ -31,11 +30,35 @@ export const RealtimeNotifications = ({ onNewNotification }: RealtimeNotificatio
 
     let cancelled = false;
 
+    const handleNewNotification = (notification: StrkNotification) => {
+      const variant = notification.type === 'error' ? 'destructive' : 'default';
+      const actionUrl = notification.actionUrl?.trim() || null;
+
+      toast({
+        title: notification.title,
+        description: notification.message,
+        variant,
+        action: actionUrl ? (
+          <a href={actionUrl} className="text-sm font-medium hover:underline">
+            {t('view')}
+          </a>
+        ) : undefined,
+      });
+
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/logo-cn-light.png',
+          tag: notification.id,
+        });
+      }
+
+      onNewNotification?.(notification);
+    };
+
     const poll = async () => {
       try {
-        const { notifications } = await apiClient.get<{ notifications: StrkNotification[] }>(
-          `/notifications?userId=${encodeURIComponent(user.id)}&unread=true`
-        );
+        const notifications = await fetchUnreadNotifications(user.id);
         if (cancelled) return;
 
         if (seenIds.current === null) {
@@ -56,73 +79,21 @@ export const RealtimeNotifications = ({ onNewNotification }: RealtimeNotificatio
       }
     };
 
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    void poll();
+    const interval = setInterval(() => void poll(), POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [user]);
-
-  const handleNewNotification = (notification: StrkNotification) => {
-    const variant = getNotificationVariant(notification.type);
-    const actionUrl =
-      notification.action_url ||
-      (notification as StrkNotification & { actionUrl?: string }).actionUrl;
-
-    toast({
-      title: notification.title,
-      description: notification.message,
-      variant: variant as any,
-      action: actionUrl ? (
-        <a
-          href={actionUrl}
-          className="text-sm font-medium hover:underline"
-        >
-          {t('view')}
-        </a>
-      ) : undefined,
-    });
-
-    if (Notification.permission === 'granted') {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: '/logo-cn-light.png',
-        tag: notification.id,
-      });
-    }
-
-    if (onNewNotification) {
-      onNewNotification(notification);
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'message': return MessageSquare;
-      case 'warning': return AlertTriangle;
-      case 'success': return CheckCircle;
-      case 'info': return Info;
-      default: return Bell;
-    }
-  };
-
-  const getNotificationVariant = (type: string) => {
-    switch (type) {
-      case 'error': return 'destructive';
-      case 'warning': return 'default';
-      case 'success': return 'default';
-      default: return 'default';
-    }
-  };
+  }, [onNewNotification, t, toast, user]);
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      void Notification.requestPermission();
     }
   }, []);
 
-  return null; // Ce composant ne rend rien visuellement
+  return null;
 };
 
 export default RealtimeNotifications;

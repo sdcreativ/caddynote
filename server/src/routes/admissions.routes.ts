@@ -15,6 +15,11 @@ import {
 import { isS3Configured, buildObjectKey, createPresignedUploadPost } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { getFileStorageMode, isFileStorageAvailable, getStoredObjectBytes, deleteStoredObject, putStoredObject } from '../lib/fileStorage.js';
+import {
+  QUOTA_LABELS,
+  assertStorageAllowsBytes,
+  recordStorageUsage,
+} from '../lib/quotas.js';
 import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
 import {
   ImageOptimizeError,
@@ -481,6 +486,18 @@ admissionsPublicRouter.post('/status/:token/documents/presign-upload', submitLim
   if (!ADMISSION_DOCUMENT_TYPES.includes(parsed.data.contentType as (typeof ADMISSION_DOCUMENT_TYPES)[number])) {
     return res.status(400).json({ error: `Type de fichier non autorisé (autorisés : ${ADMISSION_DOCUMENT_TYPES.join(', ')})` });
   }
+
+  const storageQuota = await assertStorageAllowsBytes(
+    application.institutionId,
+    ADMISSION_DOCUMENT_MAX_BYTES
+  );
+  if (!storageQuota.allowed) {
+    return res.status(403).json({
+      error: `Quota de ${QUOTA_LABELS.storageGb} atteint (${storageQuota.current}/${storageQuota.limit} Go).`,
+      quota: storageQuota,
+    });
+  }
+
   const scope = `inst-${application.institutionId}-app-${application.id}`;
   const willOptimize = isOptimizableImageMime(parsed.data.contentType);
   const filenameForKey = willOptimize
@@ -562,7 +579,15 @@ admissionsPublicRouter.put('/status/:token/documents/direct-upload', submitLimit
     if (!result.key.startsWith(expectedPrefix)) {
       return res.status(403).json({ error: 'Clé de fichier invalide pour ce dossier' });
     }
+    const storageQuota = await assertStorageAllowsBytes(application.institutionId, result.body.length);
+    if (!storageQuota.allowed) {
+      return res.status(403).json({
+        error: `Quota de ${QUOTA_LABELS.storageGb} atteint (${storageQuota.current}/${storageQuota.limit} Go).`,
+        quota: storageQuota,
+      });
+    }
     await putStoredObject(result.key, result.body, result.contentType);
+    await recordStorageUsage(application.institutionId, result.body.length);
     return res.status(201).json({
       key: result.key,
       bytes: result.body.length,

@@ -181,26 +181,39 @@ const SettingsPage = () => {
   };
 
   // Sécurité compte (2FA / sessions) → Profil uniquement. Audit → carte Outils /audit-log.
+  // Onglets regroupés : Notifications · Établissement (système + quotas) · Pédagogie (assiduité + barèmes).
   const getAvailableTabs = () => {
     const hasInstitution = Boolean(user?.institutionId);
+    const tabs: string[] = ['notifications'];
 
     if (user?.role === 'admin' && !hasInstitution) {
-      // Super admin plateforme : pas de barèmes / assiduité (liés à un établissement).
-      return ['system', 'notifications', 'saas'];
+      tabs.push('institution');
+      return tabs;
     }
 
     if (user?.role === 'admin' || user?.role === 'school_admin') {
-      return ['system', 'notifications', 'attendance', 'grading', 'saas'];
+      tabs.push('institution', 'pedagogy');
+      return tabs;
     }
 
     if (user?.role === 'teacher' || user?.role === 'head_teacher') {
-      return ['notifications', 'attendance'];
+      tabs.push('pedagogy');
+      return tabs;
     }
 
-    return ['notifications'];
+    return tabs;
   };
 
   const availableTabs = getAvailableTabs();
+  const showSystem = user?.role === 'admin' || user?.role === 'school_admin';
+  const showSaas = user?.role === 'admin' || user?.role === 'school_admin';
+  const showAttendance =
+    user?.role === 'admin' ||
+    user?.role === 'school_admin' ||
+    user?.role === 'teacher' ||
+    user?.role === 'head_teacher';
+  const showGrading =
+    (user?.role === 'admin' || user?.role === 'school_admin') && Boolean(user?.institutionId);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -256,36 +269,26 @@ const SettingsPage = () => {
       <Tabs defaultValue={availableTabs[0]} className="space-y-4">
         <div className="w-full min-w-0 overflow-x-auto pb-1">
           <TabsList className="inline-flex h-auto min-w-max w-max justify-start">
-            {availableTabs.includes('system') && (
-              <TabsTrigger value="system" className="shrink-0">
-                {t('tabs.system')}
-              </TabsTrigger>
-            )}
             {availableTabs.includes('notifications') && (
               <TabsTrigger value="notifications" className="shrink-0">
                 {t('tabs.notifications')}
               </TabsTrigger>
             )}
-            {availableTabs.includes('attendance') && (
-              <TabsTrigger value="attendance" className="shrink-0">
-                {t('tabs.attendance')}
+            {availableTabs.includes('institution') && (
+              <TabsTrigger value="institution" className="shrink-0">
+                {t('tabs.institution')}
               </TabsTrigger>
             )}
-            {availableTabs.includes('grading') && (
-              <TabsTrigger value="grading" className="shrink-0">
-                {t('tabs.grading')}
-              </TabsTrigger>
-            )}
-            {availableTabs.includes('saas') && (
-              <TabsTrigger value="saas" className="shrink-0">
-                {t('tabs.saas')}
+            {availableTabs.includes('pedagogy') && (
+              <TabsTrigger value="pedagogy" className="shrink-0">
+                {t('tabs.pedagogy')}
               </TabsTrigger>
             )}
           </TabsList>
         </div>
 
-        {availableTabs.includes('system') && (
-        <TabsContent value="system" className="space-y-4">
+        {availableTabs.includes('institution') && showSystem && (
+        <TabsContent value="institution" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -355,9 +358,12 @@ const SettingsPage = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {showSaas ? <QuotasAndFlagsPanel /> : null}
         </TabsContent>
         )}
 
+        {availableTabs.includes('notifications') && (
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
@@ -379,9 +385,10 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
-        {availableTabs.includes('attendance') && (
-        <TabsContent value="attendance" className="space-y-4">
+        {availableTabs.includes('pedagogy') && showAttendance && (
+        <TabsContent value="pedagogy" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -449,11 +456,9 @@ const SettingsPage = () => {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-        )}
+        
 
-        {availableTabs.includes('grading') && (
-        <TabsContent value="grading" className="space-y-4">
+          {showGrading && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -522,14 +527,13 @@ const SettingsPage = () => {
               <Button onClick={handleCreateGradingScale}>{t('grading.add')}</Button>
             </CardContent>
           </Card>
-        </TabsContent>
+          )}
+</TabsContent>
         )}
 
-        {availableTabs.includes('saas') && (
-        <TabsContent value="saas" className="space-y-4">
-          <QuotasAndFlagsPanel />
-        </TabsContent>
-        )}
+        
+
+        
       </Tabs>
     </div>
   );

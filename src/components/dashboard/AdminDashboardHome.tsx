@@ -75,7 +75,7 @@ const PLATFORM_OPS: Shortcut[] = [
     href: '/super-admin/subscriptions',
     icon: <CreditCard aria-hidden />,
   },
-  { labelKey: 'teamCockpit.modules.users', href: '/users', icon: <UserCog aria-hidden /> },
+  { labelKey: 'teamCockpit.modules.users', href: '/super-admin/users', icon: <UserCog aria-hidden /> },
   {
     labelKey: 'teamCockpit.modules.supportOps',
     href: '/super-admin/support-ops',
@@ -267,13 +267,13 @@ const AdminDashboardHome = ({
           title={t('stats.students')}
           value={studentsDisplay}
           tone="emerald"
-          onClick={() => navigate('/users')}
+          onClick={() => navigate('/super-admin/users')}
         />
         <MobileCompactStat
           title={t('stats.teachers')}
           value={teachersDisplay}
           tone="violet"
-          onClick={() => navigate('/users')}
+          onClick={() => navigate('/super-admin/users')}
         />
         <MobileCompactStat
           title={t('stats.attendance')}
@@ -297,14 +297,14 @@ const AdminDashboardHome = ({
           value={studentsDisplay}
           description={metricsState === 'error' ? t('empty.metricsUnavailable') : undefined}
           icon={<Users className="h-5 w-5" />}
-          onClick={() => navigate('/users')}
+          onClick={() => navigate('/super-admin/users')}
         />
         <StatCard
           title={t('stats.teachers')}
           value={teachersDisplay}
           icon={<Award className="h-5 w-5" />}
           color="purple"
-          onClick={() => navigate('/users')}
+          onClick={() => navigate('/super-admin/users')}
         />
         <StatCard
           title={t('stats.attendance')}
@@ -323,7 +323,7 @@ const AdminDashboardHome = ({
           value={absencesDisplay}
           icon={<AlertCircle className="h-5 w-5" />}
           color="red"
-          onClick={() => navigate('/super-admin/observability')}
+          onClick={() => navigate('/super-admin/analytics')}
         />
       </div>
 

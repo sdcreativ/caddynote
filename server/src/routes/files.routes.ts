@@ -10,7 +10,7 @@ import {
   getPresignedDownloadUrl,
 } from '../lib/s3.js';
 import { isGlobalAdmin, isSameInstitution, canViewInstitutionBrand } from '../lib/authz.js';
-import { checkQuota, QUOTA_LABELS } from '../lib/quotas.js';
+import { QUOTA_LABELS, assertStorageAllowsBytes, recordStorageUsage, institutionIdFromObjectKey } from '../lib/quotas.js';
 import { runFilePurge } from '../lib/filePurge.js';
 import { putStoredObject, getFileStorageMode, getStoredObjectBytes, isAtRestEncryptionEnabled } from '../lib/fileStorage.js';
 import { AntivirusGateError, assertCleanUpload } from '../lib/antivirus.js';
@@ -78,7 +78,7 @@ filesRouter.post('/presign-upload', async (req, res) => {
   }
 
   if (scopeInstitutionId) {
-    const storageQuota = await checkQuota(scopeInstitutionId, 'storageGb', 0);
+    const storageQuota = await assertStorageAllowsBytes(scopeInstitutionId, rules.maxSizeBytes);
     if (!storageQuota.allowed) {
       return res.status(403).json({
         error: `Quota de ${QUOTA_LABELS.storageGb} atteint (${storageQuota.current}/${storageQuota.limit} Go).`,
@@ -192,8 +192,24 @@ filesRouter.put('/direct-upload', async (req, res) => {
         return res.status(403).json({ error: 'Accès refusé à cette clé de fichier' });
       }
     }
+
+    const storageInstitutionId =
+      req.auth!.institutionId || institutionIdFromObjectKey(result.key) || null;
+    if (storageInstitutionId) {
+      const storageQuota = await assertStorageAllowsBytes(storageInstitutionId, result.body.length);
+      if (!storageQuota.allowed) {
+        return res.status(403).json({
+          error: `Quota de ${QUOTA_LABELS.storageGb} atteint (${storageQuota.current}/${storageQuota.limit} Go).`,
+          quota: storageQuota,
+        });
+      }
+    }
+
     await assertCleanUpload(result.body);
     await putStoredObject(result.key, result.body, result.contentType);
+    if (storageInstitutionId) {
+      await recordStorageUsage(storageInstitutionId, result.body.length);
+    }
     return res.status(201).json({
       key: result.key,
       bytes: result.body.length,

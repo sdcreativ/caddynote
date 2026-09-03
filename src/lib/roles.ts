@@ -9,6 +9,7 @@ export const DIRECTION_ROLES: readonly StrkUserRole[] = ['admin', 'school_admin'
 export const SECRETARIAT_ROLES: readonly StrkUserRole[] = ['admin', 'school_admin', 'secretary'];
 export const FINANCE_ROLES: readonly StrkUserRole[] = ['admin', 'school_admin', 'accountant'];
 export const TEACHING_ROLES: readonly StrkUserRole[] = ['admin', 'school_admin', 'teacher', 'head_teacher'];
+/** Surfaces notes/cours : toujours exiger aussi `user.institutionId` (voir `GradesPageEntry`). */
 export const SUPERVISION_ROLES: readonly StrkUserRole[] = [
   'admin',
   'school_admin',

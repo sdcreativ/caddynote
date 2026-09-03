@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { isSameInstitution, TEACHING_ROLES, DIRECTION_ROLES } from '../lib/authz.js';
+import { isGlobalAdmin, isSameInstitution, TEACHING_ROLES, DIRECTION_ROLES } from '../lib/authz.js';
 import {
   rejectUnlessCourseTenant,
   rejectUnlessSameInstitution,
@@ -69,7 +69,7 @@ const enrichGrades = async <T extends { studentId: string; courseId: string; tea
 };
 
 gradesRouter.get('/', async (req, res) => {
-  const { studentId, courseId, teacherId } = req.query;
+  const { studentId, courseId, teacherId, scope } = req.query;
 
   if (typeof studentId === 'string') {
     const access = await rejectUnlessStudentAccess(res, req.auth!, studentId, { guardianPermission: 'canViewGrades' });
@@ -102,7 +102,44 @@ gradesRouter.get('/', async (req, res) => {
     return res.json({ grades: await enrichGrades(applyVisibility(grades, req.auth!.role)) });
   }
 
-  return res.status(400).json({ error: 'studentId, courseId ou teacherId requis' });
+  // Direction : liste réelle des notes de l’établissement (JWT tenant),
+  // plus de page vide + CTA de création trompeurs.
+  if (scope === 'institution') {
+    if (!DIRECTION_ROLES.includes(req.auth!.role) && req.auth!.role !== 'head_teacher') {
+      sendForbidden(res);
+      return;
+    }
+    let institutionId = req.auth!.institutionId;
+    if (!institutionId && isGlobalAdmin(req.auth!)) {
+      const q = typeof req.query.institutionId === 'string' ? req.query.institutionId : '';
+      if (!q) {
+        return res.status(400).json({ error: 'institutionId requis pour un admin global' });
+      }
+      institutionId = q;
+    }
+    if (!institutionId) {
+      sendForbidden(res);
+      return;
+    }
+    if (rejectUnlessSameInstitution(res, req.auth!, institutionId)) return;
+
+    const courses = await prisma.strkCourse.findMany({
+      where: { institutionId },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+    const grades =
+      courseIds.length === 0
+        ? []
+        : await prisma.strkGrade.findMany({
+            where: { courseId: { in: courseIds } },
+            orderBy: { date: 'desc' },
+            take: 200,
+          });
+    return res.json({ grades: await enrichGrades(applyVisibility(grades, req.auth!.role)) });
+  }
+
+  return res.status(400).json({ error: 'studentId, courseId, teacherId ou scope=institution requis' });
 });
 
 const gradeSchema = z.object({

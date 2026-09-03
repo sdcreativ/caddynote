@@ -32,6 +32,9 @@ const PAGES = [
   { id: 'contact', path: '/contact' },
   { id: 'help', path: '/aide' },
   { id: 'forgot', path: '/forgot-password' },
+  // Parcours public admissions (wizard + récupération) — contraste peint NFR-008
+  { id: 'admissions', path: '/admissions' },
+  { id: 'admissions-recover', path: '/admissions/retrouver' },
 ];
 
 async function auditPage(browser, pageSpec) {

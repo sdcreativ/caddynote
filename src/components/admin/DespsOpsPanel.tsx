@@ -12,6 +12,7 @@ import {
 import { apiClient, ApiError } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { Cable, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 type DespsStatus = {
   configured: boolean;
@@ -20,8 +21,13 @@ type DespsStatus = {
   pingReady?: boolean;
 };
 
+/** Affiché uniquement si `VITE_DESPS_PREVIEW=true` (ops plateforme). */
+export const isDespsPreviewEnabled = () =>
+  String(import.meta.env.VITE_DESPS_PREVIEW ?? '').toLowerCase() === 'true';
+
 /**
  * Ops DESPS — dry-run export élèves (permission platform.integrations.desps).
+ * Surface preview uniquement : pas d’envoi live tant que le contrat API n’est pas figé.
  */
 export function DespsOpsPanel({ institutions }: { institutions: { id: string; name: string }[] }) {
   const { toast } = useToast();
@@ -58,11 +64,12 @@ export function DespsOpsPanel({ institutions }: { institutions: { id: string; na
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Cable className="h-4 w-4" /> DESPS / DSC
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          <Cable className="h-4 w-4" aria-hidden /> DESPS / DSC
+          <Badge variant="outline">Preview</Badge>
         </CardTitle>
         <CardDescription>
-          Connecteur stub — dry-run local. Sync live quand le contrat API sera branché.
+          Connecteur stub — dry-run local uniquement. Sync live désactivée tant que le contrat API n’est pas branché.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

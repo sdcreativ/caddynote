@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Receipt, Plus, Trash2, Wallet, RotateCcw } from 'lucide-react';
@@ -15,8 +14,6 @@ import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingState } from '@/components/ui/LoadingState';
-import { ErrorState } from '@/components/ui/ErrorState';
 import { fetchStrkUsersByInstitution } from '@/services/strkUserService';
 import {
   fetchFeeItems,
@@ -42,6 +39,9 @@ import { BankReconciliationPanel } from '@/components/finance/BankReconciliation
 import { FeeGridPanel } from '@/components/finance/FeeGridPanel';
 import { FinanceBalancesPanel } from '@/components/finance/FinanceBalancesPanel';
 import { FinanceLot54Panel } from '@/components/finance/FinanceLot54Panel';
+import { FinanceInvoicesPanel } from '@/components/finance/FinanceInvoicesPanel';
+import { FinancePlansPanel } from '@/components/finance/FinancePlansPanel';
+import { FinanceFeesPanel } from '@/components/finance/FinanceFeesPanel';
 import { trackProductEvent } from '@/lib/productTelemetry';
 import { ApiError } from '@/lib/apiClient';
 import { generatePaymentReceipt, generateInvoiceDocument, downloadDocument } from '@/services/strkDocumentService';
@@ -375,59 +375,17 @@ const FinancePage = () => {
         </div>
 
         <TabsContent value="invoices" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowCreateInvoice(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('invoices.new')}
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <LoadingState label={t('invoices.loading')} />
-              ) : loadError ? (
-                <ErrorState description={loadError} onRetry={() => void loadData()} />
-              ) : invoices.length === 0 ? (
-                <EmptyState
-                  title={t('invoices.emptyTitle')}
-                  description={t('invoices.emptyDescription')}
-                  actionLabel={t('invoices.new')}
-                  onAction={() => setShowCreateInvoice(true)}
-                />
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('invoices.number')}</TableHead>
-                      <TableHead>{t('invoices.student')}</TableHead>
-                      <TableHead>{t('invoices.total')}</TableHead>
-                      <TableHead>{t('invoices.paid')}</TableHead>
-                      <TableHead>{t('invoices.status')}</TableHead>
-                      <TableHead className="text-right">{t('invoices.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
-                        <TableCell>{inv.student.name}</TableCell>
-                        <TableCell>{formatAmount(inv.total_cents, inv.currency)}</TableCell>
-                        <TableCell>{formatAmount(inv.paid_cents, inv.currency)}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariant(inv.status)}>{statusLabel(inv.status)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(inv)}>
-                            {t('invoices.details')}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <FinanceInvoicesPanel
+            invoices={invoices}
+            isLoading={isLoading}
+            loadError={loadError}
+            formatAmount={formatAmount}
+            statusVariant={statusVariant}
+            statusLabel={statusLabel}
+            onRetry={() => void loadData()}
+            onCreate={() => setShowCreateInvoice(true)}
+            onSelect={setSelectedInvoice}
+          />
         </TabsContent>
 
         <TabsContent value="lot54" className="space-y-4">
@@ -435,65 +393,23 @@ const FinancePage = () => {
         </TabsContent>
 
         <TabsContent value="plans" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowCreatePlan(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('plans.new')}
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              {paymentPlans.length === 0 ? (
-                <EmptyState title={t('plans.emptyTitle')} description={t('plans.emptyDescription')} />
-              ) : (
-                paymentPlans.map((plan) => (
-                  <div key={plan.id} className="rounded-md border p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{plan.label}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatAmount(plan.totalCents, plan.currency)} — {plan.status}
-                          {plan.academicYear ? ` — ${plan.academicYear}` : ''}
-                        </p>
-                      </div>
-                      {plan.status !== 'cancelled' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            const ok = await cancelPaymentPlan(plan.id);
-                            if (ok) {
-                              toast({ title: t('toasts.planCancelled') });
-                              loadData();
-                            } else {
-                              toast({ title: t('toasts.planCancelImpossible'), variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          {tc('actions.cancel')}
-                        </Button>
-                      )}
-                    </div>
-                    <ul className="text-sm space-y-1">
-                      {(plan.invoices || []).map((inv) => (
-                        <li key={inv.id}>
-                          {t('plans.installmentLine', {
-                            index: inv.installmentIndex ?? '?',
-                            number: inv.invoiceNumber,
-                            amount: formatAmount(inv.totalCents, plan.currency),
-                            due: inv.dueDate
-                              ? t('plans.dueDateSuffix', { date: new Date(inv.dueDate).toLocaleDateString('fr-FR') })
-                              : '',
-                            status: statusLabel(inv.status),
-                          })}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <FinancePlansPanel
+            paymentPlans={paymentPlans}
+            formatAmount={formatAmount}
+            statusLabel={statusLabel}
+            onCreate={() => setShowCreatePlan(true)}
+            onCancel={(planId) =>
+              void (async () => {
+                const ok = await cancelPaymentPlan(planId);
+                if (ok) {
+                  toast({ title: t('toasts.planCancelled') });
+                  loadData();
+                } else {
+                  toast({ title: t('toasts.planCancelImpossible'), variant: 'destructive' });
+                }
+              })()
+            }
+          />
         </TabsContent>
 
         <TabsContent value="schedules" className="space-y-4">
@@ -511,71 +427,16 @@ const FinancePage = () => {
         </TabsContent>
 
         <TabsContent value="fees" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowCreateFee(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('fees.new')}
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('fees.name')}</TableHead>
-                    <TableHead>{t('fees.amount')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {feeItems.map((f) => (
-                    <TableRow key={f.id}>
-                      <TableCell>{f.name}</TableCell>
-                      <TableCell>{formatAmount(f.amount_cents, f.currency)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {feeItems.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
-                        {t('fees.empty')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('lateFees.title')}</CardTitle>
-              <CardDescription>
-                {t('lateFees.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('lateFees.amountLabel')}</Label>
-                  <Input
-                    type="number"
-                    placeholder={t('lateFees.amountPlaceholder')}
-                    value={lateFeeAmount}
-                    onChange={(e) => setLateFeeAmount(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('lateFees.graceDays')}</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={lateFeeGraceDays}
-                    onChange={(e) => setLateFeeGraceDays(e.target.value)}
-                  />
-                </div>
-              </div>
-              <Button onClick={handleSaveLateFeeSettings}>{tc('actions.save')}</Button>
-            </CardContent>
-          </Card>
+          <FinanceFeesPanel
+            feeItems={feeItems}
+            formatAmount={formatAmount}
+            lateFeeAmount={lateFeeAmount}
+            lateFeeGraceDays={lateFeeGraceDays}
+            onLateFeeAmountChange={setLateFeeAmount}
+            onLateFeeGraceDaysChange={setLateFeeGraceDays}
+            onCreateFee={() => setShowCreateFee(true)}
+            onSaveLateFees={() => void handleSaveLateFeeSettings()}
+          />
         </TabsContent>
 
         <TabsContent value="bank" className="space-y-4">
