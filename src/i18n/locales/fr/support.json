@@ -42,7 +42,7 @@
     "replyEmailedTitle": "Réponse envoyée au prospect",
     "replyEmailedBody": "E-mail remis à {{email}}.",
     "replySavedNoSmtpTitle": "Réponse enregistrée (e-mail non envoyé)",
-    "replySavedNoSmtpBody": "Le message est dans le ticket, mais SMTP n’est pas configuré — {{email}} n’a pas reçu d’e-mail.",
+    "replySavedNoSmtpBody": "Le message est dans le ticket, mais l’e-mail n’a pas pu être envoyé à {{email}}.",
     "statusError": "Impossible de mettre à jour le statut.",
     "escalatedTitle": "Ticket escaladé",
     "escalatedBody": "Le support plateforme a été alerté.",

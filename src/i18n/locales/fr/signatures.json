@@ -122,7 +122,7 @@
     "recipients": "Destinataires ({{count}})",
     "pending": "En attente",
     "message": "Message",
-    "hint": "Envoi via POST /communications/send. Si SMTP n’est pas configuré, l’API répond 501 (pas de faux succès).",
+    "hint": "Un e-mail de rappel est envoyé à chaque élève concerné. Si l’envoi n’est pas disponible, le système l’indique clairement (aucun faux succès).",
     "sending": "Envoi…"
   },
   "create": {

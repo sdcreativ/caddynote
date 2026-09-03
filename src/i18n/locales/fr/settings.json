@@ -38,7 +38,7 @@
   },
   "notifications": {
     "title": "Canaux de communication",
-    "subtitle": "Opt-in / opt-out par canal (API /communications/preferences)."
+    "subtitle": "Activez ou désactivez chaque canal de communication."
   },
   "webPush": {
     "title": "Notifications navigateur (Web Push)",

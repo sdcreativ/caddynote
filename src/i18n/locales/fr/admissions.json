@@ -186,7 +186,7 @@
     "loadInstitutionsError": "Impossible de charger les établissements.",
     "docsHint": "Pièces optionnelles (PDF ou image).",
     "docsHintTyped": "Déposez les pièces demandées par l’établissement. Les pièces obligatoires sont marquées.",
-    "localStorageHint": "Stockage local actif (S3 non configuré) — adapté au développement ; en production, branchez un bucket S3-compatible.",
+    "localStorageHint": "Stockage temporaire actif sur cette instance. Les pièces restent disponibles pour finaliser votre dossier.",
     "completeness": "Dossier complété à {{percent}} %",
     "requiredShort": "obligatoires",
     "requiredBadge": "Obligatoire",

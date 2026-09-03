@@ -131,7 +131,7 @@
     "addedTitle": "Ressource ajoutée",
     "saveError": "Impossible d’enregistrer cette ressource.",
     "title": "Ajouter une ressource de cours",
-    "description": "Lien, texte ou fichier (PDF, image, Word). Le fichier est envoyé vers le stockage S3 s’il est configuré.",
+    "description": "Lien, texte ou fichier (PDF, image, Word). Le fichier est déposé dans le stockage de l’établissement s’il est disponible.",
     "titleLabel": "Titre",
     "type": "Type",
     "typePdf": "PDF",
@@ -270,7 +270,7 @@
   "fileUpload": {
     "sentTitle": "Fichier envoyé",
     "sentBody": "{{name}} a été déposé dans le stockage.",
-    "s3Missing": "Le stockage de fichiers n'est pas configuré sur cette instance (S3).",
+    "s3Missing": "Le dépôt de fichiers n’est pas disponible pour le moment. Réessayez plus tard ou contactez l’établissement.",
     "sendError": "Impossible d'envoyer le fichier.",
     "sendImpossible": "Envoi impossible",
     "uploading": "Envoi…",

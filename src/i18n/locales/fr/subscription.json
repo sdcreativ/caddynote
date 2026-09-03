@@ -14,7 +14,7 @@
   "perMonth": "par mois",
   "perYear": "par an",
   "checkoutSuccessTitle": "Paiement initié",
-  "checkoutSuccessBody": "Votre abonnement sera activé dès confirmation Stripe (webhook).",
+  "checkoutSuccessBody": "Votre abonnement sera activé dès confirmation du paiement.",
   "checkoutCancelledTitle": "Paiement annulé",
   "checkoutCancelledBody": "Aucun prélèvement n’a été effectué. Vous pouvez réessayer quand vous voulez.",
   "tabs": {
@@ -83,7 +83,7 @@
     "cancelledBody": "Votre abonnement a été annulé avec succès",
     "cancelError": "Impossible d'annuler l'abonnement",
     "title": "Méthodes de paiement",
-    "stripeManaged": "Vos méthodes de paiement sont gérées de manière sécurisée par Stripe. Cliquez sur \"Gérer les paiements\" pour accéder au portail sécurisé.",
+    "stripeManaged": "Vos moyens de paiement sont gérés de manière sécurisée. Cliquez sur « Gérer les paiements » pour ouvrir le portail de facturation.",
     "manage": "Gérer les paiements",
     "infoTitle": "Informations d'abonnement",
     "billingCycle": "Cycle de facturation:",

@@ -89,7 +89,7 @@
     "successRecordBody": "Fiche créée sans accès de connexion. Activez l’espace élève depuis la fiche si besoin.",
     "successLoginBody": "Identifiant : {{email}} — Mot de passe temporaire : {{password}}. À changer à la première connexion.",
     "emailSent": "Invitation e-mail envoyée.",
-    "emailNotSent": "Invitation e-mail non envoyée (SMTP ou adresse).",
+    "emailNotSent": "Invitation e-mail non envoyée (envoi indisponible ou adresse invalide).",
     "errorBody": "Impossible de créer l'étudiant. Veuillez réessayer."
   },
   "login": {
