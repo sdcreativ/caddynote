@@ -78,10 +78,11 @@ describe('navConfig (NFR-009)', () => {
       const day1 = sections.filter((s) => !s.collapsible);
       const advanced = sections.find((s) => s.collapsible);
       const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
-      expect(visibleCount).toBeLessThanOrEqual(8);
+      expect(visibleCount).toBeLessThanOrEqual(9);
       expect(advanced?.defaultCollapsed).toBe(true);
       const hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
       expect(hrefs).toContain('/teacher-attendance');
+      expect(hrefs).toContain('/signatures');
       expect(hrefs).toContain('/grades');
       expect(hrefs).toContain('/teaching');
       expect(hrefs).toContain('/messages');

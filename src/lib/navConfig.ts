@@ -7,7 +7,8 @@
  *   enseignants y sont redirigés vers `/teacher-attendance`.
  * - `/teacher-attendance` — appel enseignant (cours / QR / offline).
  * - `/absences` — suivi & justificatifs ; `/my-absences` côté élève.
- * - `/signatures` — émargement électronique (distinct de l’appel).
+ * - `/signatures` — émargement électronique (distinct de l’appel) ; accessible
+ *   enseignant via sidebar + onglet hub Présences (créer / relancer des demandes).
  * Persistance : `POST /absences` (+ bulk + `clientId` offline) et `/signatures`.
  * Voir `docs/PRESENCE.md`.
  */
@@ -328,14 +329,15 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
 
     case 'teacher':
     case 'head_teacher':
-      // Jour 1 : boucle métier (appel, notes, cours, messages). Le reste sous « Plus ».
+      // Jour 1 : boucle métier (appel, émargement, notes, cours, messages). Le reste sous « Plus ».
       return [
         {
           labelKey: 'sections.workspace',
           items: [
             { titleKey: 'items.overview', href: '/dashboard', icon: LayoutDashboard },
-            // Hub Présences enseignant : Appel | Justificatifs
+            // Hub Présences enseignant : Appel | Justificatifs | Émargement
             { titleKey: 'items.attendance', href: '/teacher-attendance', icon: ClipboardCheck },
+            { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
             { titleKey: 'items.notes', href: '/grades', icon: GraduationCap },
             { titleKey: 'items.teaching', href: '/teaching', icon: School },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },

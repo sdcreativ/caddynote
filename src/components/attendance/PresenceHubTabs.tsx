@@ -43,15 +43,13 @@ export function PresenceHubTabs() {
       >
         {ta('page.justificationsTab')}
       </Link>
-      {!isTeacher ? (
-        <Link
-          to="/signatures"
-          className={tabClass(onSignatures)}
-          aria-current={onSignatures ? 'page' : undefined}
-        >
-          {t('items.signatures')}
-        </Link>
-      ) : null}
+      <Link
+        to="/signatures"
+        className={tabClass(onSignatures)}
+        aria-current={onSignatures ? 'page' : undefined}
+      >
+        {t('items.signatures')}
+      </Link>
     </div>
   );
 }

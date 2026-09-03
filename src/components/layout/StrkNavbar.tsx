@@ -93,6 +93,7 @@ const StrkNavbar: React.FC<StrkNavbarProps> = ({ onToggleSidebar }) => {
           { titleKey: 'items.students' as const, href: '/students' },
           { titleKey: 'items.call' as const, href: callHref },
           { titleKey: 'items.absences' as const, href: absencesHref },
+          { titleKey: 'items.signatures' as const, href: '/signatures' },
         ]
       : [
           { titleKey: 'items.myAbsences' as const, href: '/my-absences' },
