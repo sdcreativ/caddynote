@@ -199,11 +199,12 @@ export function mobileBottomNavForRole(
         { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'student':
-      // Accueil · Suivi · Messages · Menu (notifications = cloche header)
+      // Accueil · Suivi · Messages · Signatures · Menu (émargement hors « Plus »)
       return [
         { kind: 'link', titleKey: 'bottomNav.home', href: '/dashboard', icon: Home },
         { kind: 'link', titleKey: 'bottomNav.suivi', href: '/my-suivi', icon: BarChart3 },
         { kind: 'link', titleKey: 'bottomNav.messagesLong', href: '/messages', icon: MessageSquare },
+        { kind: 'link', titleKey: 'bottomNav.signatures', href: '/signatures', icon: PenTool },
         { kind: 'more', titleKey: 'bottomNav.menu', icon: Menu },
       ];
     case 'secretary':
@@ -437,8 +438,8 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
       ];
 
     case 'student':
-      // Accueil ≠ Suivi (écrans distincts). Jour 1 allégé ; scolaire + avancé sous Plus.
-      // Support uniquement dans Compte (Menu / profil), pas dans le parcours jour 1.
+      // Accueil ≠ Suivi. Signatures en jour 1 (action à faire) ; scolaire sous Plus.
+      // Support uniquement dans Compte (Menu / profil).
       return [
         {
           labelKey: 'sections.journey',
@@ -446,6 +447,7 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.home', href: '/dashboard', icon: Home },
             { titleKey: 'items.mySuivi', href: '/my-suivi', icon: BarChart3 },
             { titleKey: 'items.messages', href: '/messages', icon: MessageSquare },
+            { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
           ],
         },
         {
@@ -466,7 +468,6 @@ export function navSectionsForRole(role: string | null | undefined): NavSection[
             { titleKey: 'items.myGrades', href: '/my-grades', icon: GraduationCap },
             { titleKey: 'items.myAbsences', href: '/my-absences', icon: ClipboardCheck },
             { titleKey: 'items.assignments', href: '/assignments', icon: FileText },
-            { titleKey: 'items.signatures', href: '/signatures', icon: PenTool },
           ],
         },
       ];

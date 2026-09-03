@@ -9,6 +9,7 @@ import {
   GraduationCap,
   ClipboardCheck,
   FileText,
+  PenTool,
   type LucideIcon,
 } from 'lucide-react';
 import { useMobileShell } from '@/hooks/useMobileShell';
@@ -29,6 +30,7 @@ const STUDENT_ACTIONS: SuiviAction[] = [
   { label: 'Matières', hint: 'Cours & contenus', href: '/my-courses', icon: BookOpen },
   { label: 'Notes', href: '/my-grades', icon: GraduationCap },
   { label: 'Absences', href: '/my-absences', icon: ClipboardCheck },
+  { label: 'Signatures', hint: 'Émargement à faire', href: '/signatures', icon: PenTool },
   { label: 'Devoirs', href: '/assignments', icon: FileText },
 ];
 

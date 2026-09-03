@@ -292,20 +292,21 @@ describe('navConfig (NFR-009)', () => {
     expect(hrefs.filter((h) => h.startsWith('/my-children'))).toHaveLength(1);
   });
 
-  it('Élève : barre du bas mobile = Accueil · Suivi · Messages · Menu', () => {
+  it('Élève : barre du bas mobile = Accueil · Suivi · Messages · Signatures · Menu', () => {
     const items = mobileBottomNavForRole('student');
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
     expect(items![0]).toMatchObject({ kind: 'link', href: '/dashboard' });
     expect(items![1]).toMatchObject({ kind: 'link', href: '/my-suivi' });
     expect(items![2]).toMatchObject({ kind: 'link', href: '/messages' });
-    expect(items![3]).toMatchObject({ kind: 'more' });
+    expect(items![3]).toMatchObject({ kind: 'link', href: '/signatures' });
+    expect(items![4]).toMatchObject({ kind: 'more' });
     expect(items!.some((i) => i.kind === 'link' && i.href === '/notifications')).toBe(false);
     for (const item of items!) {
       expect(i18n.t(item.titleKey, { ns: 'nav' })).not.toBe(item.titleKey);
     }
   });
 
-  it('Élève : Accueil et Suivi distincts ; avancé + Support sous Menu', () => {
+  it('Élève : Accueil et Suivi distincts ; signatures en jour 1 ; scolaire sous Plus', () => {
     const sections = navSectionsForRole('student');
     const day1 = sections.filter((s) => !s.collapsible);
     const journey = sections.find((s) => s.labelKey === 'sections.journey');
@@ -313,11 +314,11 @@ describe('navConfig (NFR-009)', () => {
     const advanced = sections.find((s) => s.collapsible);
 
     const visibleCount = day1.reduce((n, s) => n + s.items.length, 0);
-    expect(visibleCount).toBeLessThanOrEqual(6);
+    expect(visibleCount).toBeLessThanOrEqual(7);
     expect(advanced?.defaultCollapsed).toBe(true);
 
     const journeyHrefs = journey?.items.map((i) => i.href) ?? [];
-    expect(journeyHrefs).toEqual(['/dashboard', '/my-suivi', '/messages']);
+    expect(journeyHrefs).toEqual(['/dashboard', '/my-suivi', '/messages', '/signatures']);
 
     const accountHrefs = account?.items.map((i) => i.href) ?? [];
     expect(accountHrefs).toContain('/profile');
@@ -325,8 +326,8 @@ describe('navConfig (NFR-009)', () => {
     expect(accountHrefs).toContain('/support');
 
     const day1Hrefs = day1.flatMap((s) => s.items.map((i) => i.href));
+    expect(day1Hrefs).toContain('/signatures');
     expect(day1Hrefs).not.toContain('/exercises');
-    expect(day1Hrefs).not.toContain('/signatures');
     expect(day1Hrefs).not.toContain('/communications');
     expect(day1Hrefs).not.toContain('/calendar');
 
@@ -338,9 +339,9 @@ describe('navConfig (NFR-009)', () => {
         '/my-grades',
         '/my-absences',
         '/assignments',
-        '/signatures',
       ])
     );
+    expect(advancedHrefs).not.toContain('/signatures');
     expect(advancedHrefs).not.toContain('/exercises');
     expect(advancedHrefs).not.toContain('/communications');
     expect(advancedHrefs).not.toContain('/support');

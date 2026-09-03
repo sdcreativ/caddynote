@@ -38,6 +38,11 @@ describe('StudentSuiviMobileView', () => {
       'href',
       '/my-absences'
     );
+    expect(screen.getByRole('link', { name: /Signatures/i })).toHaveAttribute(
+      'href',
+      '/signatures'
+    );
+    expect(screen.getByText(/Émargement à faire/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Devoirs$/i })).toHaveAttribute(
       'href',
       '/assignments'
