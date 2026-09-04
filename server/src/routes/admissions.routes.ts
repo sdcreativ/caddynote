@@ -349,24 +349,20 @@ admissionsPublicRouter.post('/recover', recoverLimiter, async (req, res) => {
     },
   });
 
-  let sent = 0;
   for (const app of applications) {
-    const ok = await sendAdmissionFollowEmail({
+    await sendAdmissionFollowEmail({
       to: app.contactEmail,
       studentFirstName: app.studentFirstName,
       studentLastName: app.studentLastName,
       publicToken: app.publicToken,
       kind: 'recover',
     });
-    if (ok) sent += 1;
   }
 
   res.json({
     ok: true,
     message:
       'Si un dossier est associé à cette adresse, un e-mail avec le lien de suivi vient d’être envoyé.',
-    emailDeliveryAttempted: applications.length > 0,
-    emailsSent: sent,
   });
 });
 

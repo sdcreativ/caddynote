@@ -92,8 +92,6 @@ export const recoverAdmissionByEmail = (email: string) =>
   apiClient.post<{
     ok: boolean;
     message: string;
-    emailDeliveryAttempted: boolean;
-    emailsSent: number;
   }>('/admissions/recover', { email }, { skipAuth: true });
 
 export const fetchAdmissionByToken = (token: string) =>

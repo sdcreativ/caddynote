@@ -7,7 +7,7 @@ import { isTestMode } from '../lib/testMode.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireFeature } from '../middleware/requireFeature.js';
 import { getStudentAccess, isSameInstitution, FINANCE_ROLES } from '../lib/authz.js';
-import { isCinetPayConfigured, initiatePayment, checkTransactionStatus } from '../lib/cinetpay.js';
+import { isCinetPayConfigured, initiatePayment, checkTransactionStatus, parseCinetPayNotify } from '../lib/cinetpay.js';
 import { isStripeConfigured, getStripeClient } from '../lib/stripeClient.js';
 import { logAudit } from '../lib/audit.js';
 import { importBankStatementLines, attemptAutoMatch } from '../lib/bankReconciliation.js';
@@ -1189,11 +1189,11 @@ const cinetPayWebhookLimiter = createCinetPayWebhookLimiter();
 // CinetPay POST notify_url : le corps n'est jamais interprété comme preuve de
 // paiement, uniquement comme déclencheur d'un appel de contrôle serveur.
 financePublicRouter.post('/webhooks/cinetpay', cinetPayWebhookLimiter, async (req, res) => {
-  const transactionId =
-    (req.body?.cpm_trans_id as string | undefined) ?? (req.body?.transaction_id as string | undefined);
-  if (!transactionId) {
-    return res.status(400).send('transaction_id manquant');
+  const parsed = parseCinetPayNotify(req.body);
+  if (!parsed.ok) {
+    return res.status(400).send(parsed.error);
   }
+  const { transactionId } = parsed;
   try {
     const result = await checkTransactionStatus(transactionId);
     const payment = await prisma.strkPayment.findUnique({ where: { id: transactionId }, include: { invoice: true } });

@@ -1,6 +1,7 @@
 import { scheduleExclusiveCron } from './cronLock.js';
 import { prisma } from './prisma.js';
 import { sendEmail } from './email.js';
+import { escapeHtml } from './emailLayout.js';
 import { logAudit } from './audit.js';
 
 /**
@@ -84,7 +85,7 @@ export const runDunningReminders = async (): Promise<{ nudged: number }> => {
       await sendEmail({
         to: profile.email,
         subject: `Action requise : renouveler CaddyNote (J+${day})`,
-        html: `<p>Bonjour ${profile.firstName ?? ''},</p>
+        html: `<p>Bonjour ${escapeHtml(profile.firstName ?? '')},</p>
 <p>Votre abonnement est en période de grâce depuis ${daysPast} jour(s). Sans paiement, l’accès passera en lecture seule.</p>
 <p><a href="${portalUrl}">Renouveler / ouvrir le portail de paiement</a></p>`,
       });

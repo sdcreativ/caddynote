@@ -4,7 +4,6 @@
  */
 import type { Request } from 'express';
 import { prisma } from './prisma.js';
-import { signAccessToken, signMfaChallengeToken } from './jwt.js';
 import { createSession } from './sessions.js';
 import { logAudit } from './audit.js';
 import { PUBLIC_PROFILE_SELECT } from './profileSelect.js';
@@ -12,8 +11,8 @@ import type { SsoConfigStored } from './ssoConfig.js';
 import { normalizeEmail } from './emailNormalize.js';
 
 export type SsoLoginResult =
-  | { kind: 'token'; token: string; user: Record<string, unknown> }
-  | { kind: 'mfa'; challengeToken: string }
+  | { kind: 'token'; userId: string; sid: string; user: Record<string, unknown> }
+  | { kind: 'mfa'; userId: string }
   | { kind: 'error'; status: number; error: string; code: string };
 
 export const completeSsoLogin = async (opts: {
@@ -65,7 +64,7 @@ export const completeSsoLogin = async (opts: {
       ipAddress: opts.req.ip,
       metadata: { idpSub: opts.idpSub },
     }).catch(() => undefined);
-    return { kind: 'mfa', challengeToken: signMfaChallengeToken(profile.id) };
+    return { kind: 'mfa', userId: profile.id };
   }
 
   await prisma.strkProfile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } });
@@ -75,14 +74,6 @@ export const completeSsoLogin = async (opts: {
     userAgent: typeof opts.req.headers['user-agent'] === 'string' ? opts.req.headers['user-agent'] : undefined,
     ipAddress: opts.req.ip,
   });
-  const token = signAccessToken({
-    sub: profile.id,
-    role: profile.role,
-    institutionId: profile.institutionId,
-    groupId: profile.groupId,
-    sid: session.id,
-  });
-
   await logAudit({
     institutionId: profile.institutionId,
     actorId: profile.id,
@@ -107,5 +98,5 @@ export const completeSsoLogin = async (opts: {
     select: PUBLIC_PROFILE_SELECT,
   });
 
-  return { kind: 'token', token, user: full as unknown as Record<string, unknown> };
+  return { kind: 'token', userId: profile.id, sid: session.id, user: full as unknown as Record<string, unknown> };
 };

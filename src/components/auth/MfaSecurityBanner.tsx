@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 type MfaSecurityBannerProps = {
   onEnable: () => void;
   onDismiss: () => void;
-  /** ISO date de fin de grâce MFA (option A : 7 jours). */
+  /** Date optionnelle (colonne héritée, plus de grâce API). */
   graceUntil?: string | null;
 };
 
-/** Bannière non bloquante pendant la grâce MFA (rôles sensibles). */
+/** Bannière non bloquante si le serveur envoie encore `mfaRecommended`. */
 export function MfaSecurityBanner({ onEnable, onDismiss, graceUntil }: MfaSecurityBannerProps) {
   const { t } = useTranslation('nav');
   const deadline =

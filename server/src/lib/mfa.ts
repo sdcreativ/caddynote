@@ -7,9 +7,9 @@ import { prisma } from './prisma.js';
  * MFA TOTP pour CaddyNote (IAM-003). Compatible Google Authenticator / Authy / 1Password
  * via otplib (RFC 6238). Codes de secours à usage unique (hashes SHA-256).
  *
- * Rôles à données sensibles : grâce de 7 jours après la 1ʳᵉ connexion sans MFA
- * (bandeau), puis obligation API + dialog bloquant. Challenge TOTP au login
- * si déjà activée.
+ * Rôles à données sensibles : MFA obligatoire dès le premier accès métier
+ * (hors `/auth` et hors impersonation). Plus de fenêtre de 7 jours avec
+ * l’API complète. Challenge TOTP au login si déjà activée.
  *
  * Personnel avec accès notes / dossiers / finance / multi-établissements :
  * inclus. Élèves et parents : MFA optionnelle (appareils souvent partagés) —
@@ -20,8 +20,8 @@ const ISSUER = 'CaddyNote';
 const BACKUP_CODE_COUNT = 10;
 const BACKUP_HASH_PREFIX = 'caddynote-mfa-backup:';
 
-/** Jours de grâce MFA après le premier login sans 2FA (option A hardening prod). */
-export const MFA_GRACE_DAYS = 7;
+/** @deprecated Grâce API retirée (0 j). Conservé pour les colonnes existantes. */
+export const MFA_GRACE_DAYS = 0;
 
 export const generateMfaSecret = (): string => generateSecret();
 
@@ -125,8 +125,8 @@ export const looksLikeBackupCode = (code: string): boolean => {
 };
 
 /**
- * Gate MFA après expiration de la grâce (hors NODE_ENV=test / CADDYNOTE_TEST_MODE).
- * Si `mfaGraceUntil` est null, ne bloque pas (la grâce sera démarrée au login ou /me).
+ * Gate MFA pour les rôles sensibles (hors NODE_ENV=test / CADDYNOTE_TEST_MODE).
+ * `mfaGraceUntil` n’autorise plus l’API métier.
  */
 export const shouldEnforceMfaSetup = (opts: {
   nodeEnv: string | undefined;
@@ -140,8 +140,7 @@ export const shouldEnforceMfaSetup = (opts: {
   if (!isMfaRequiredRole(opts.role)) return false;
   if (isAuthRouterExempt(opts.routeBaseUrl)) return false;
   if (opts.mfaEnabled) return false;
-  if (!opts.mfaGraceUntil) return false;
-  return isMfaGraceExpired(opts.mfaGraceUntil);
+  return true;
 };
 
 /** Gate 1ʳᵉ connexion : mot de passe provisoire à changer (hors `/auth`). */
@@ -151,21 +150,11 @@ export const shouldEnforcePasswordChange = (opts: {
 }): boolean => opts.mustChangePassword && !isAuthRouterExempt(opts.routeBaseUrl);
 
 /**
- * Démarre la fenêtre de grâce MFA (7 j) au premier login /me si absente.
- * No-op si rôle non sensible, MFA déjà active, ou grâce déjà posée.
+ * @deprecated Plus de grâce API. No-op conservé pour d’éventuels backfills.
  */
 export const ensureMfaGraceStarted = async (profile: {
   id: string;
   role: string;
   mfaEnabled: boolean;
   mfaGraceUntil: Date | null;
-}): Promise<Date | null> => {
-  if (!isMfaRequiredRole(profile.role) || profile.mfaEnabled) return profile.mfaGraceUntil;
-  if (profile.mfaGraceUntil) return profile.mfaGraceUntil;
-  const until = computeMfaGraceUntil();
-  await prisma.strkProfile.update({
-    where: { id: profile.id },
-    data: { mfaGraceUntil: until },
-  });
-  return until;
-};
+}): Promise<Date | null> => profile.mfaGraceUntil;

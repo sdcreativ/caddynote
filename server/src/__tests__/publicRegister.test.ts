@@ -8,6 +8,7 @@ describe('IAM-001 — inscription publique fermée (modèle Pronote)', () => {
   const prevNodeEnv = process.env.NODE_ENV;
   const prevAllow = process.env.CADDYNOTE_ALLOW_PRIVILEGED_REGISTER;
   const prevTestMode = process.env.CADDYNOTE_TEST_MODE;
+  const prevDeploy = process.env.CADDYNOTE_DEPLOYMENT;
 
   afterEach(() => {
     process.env.NODE_ENV = prevNodeEnv;
@@ -15,6 +16,8 @@ describe('IAM-001 — inscription publique fermée (modèle Pronote)', () => {
     else process.env.CADDYNOTE_ALLOW_PRIVILEGED_REGISTER = prevAllow;
     if (prevTestMode === undefined) delete process.env.CADDYNOTE_TEST_MODE;
     else process.env.CADDYNOTE_TEST_MODE = prevTestMode;
+    if (prevDeploy === undefined) delete process.env.CADDYNOTE_DEPLOYMENT;
+    else process.env.CADDYNOTE_DEPLOYMENT = prevDeploy;
   });
 
   it('refuse student et parent hors mode privilegié', () => {
@@ -25,6 +28,15 @@ describe('IAM-001 — inscription publique fermée (modèle Pronote)', () => {
     expect(canSelfAssignRole('admin')).toBe(false);
     expect(canSelfAssignRole('school_admin')).toBe(false);
     expect(canSelfAssignRole('teacher')).toBe(false);
+  });
+
+  it('ignore CADDYNOTE_ALLOW_PRIVILEGED_REGISTER en runtime durci', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CADDYNOTE_DEPLOYMENT = 'production';
+    process.env.CADDYNOTE_ALLOW_PRIVILEGED_REGISTER = 'true';
+    process.env.CADDYNOTE_TEST_MODE = 'false';
+    expect(allowPrivilegedSelfRegister()).toBe(false);
+    expect(canSelfAssignRole('admin')).toBe(false);
   });
 
   it('autorise les rôles en NODE_ENV=test (fixtures)', () => {

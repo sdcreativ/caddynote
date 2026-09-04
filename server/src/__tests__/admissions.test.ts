@@ -230,12 +230,14 @@ describe('Préinscription publique et admission (chap. 8)', () => {
     const recover = await request(app).post('/admissions/recover').send({ email: contactEmail });
     expect(recover.status).toBe(200);
     expect(recover.body.ok).toBe(true);
-    expect(recover.body.emailDeliveryAttempted).toBe(true);
+    expect(recover.body.emailDeliveryAttempted).toBeUndefined();
+    expect(recover.body.emailsSent).toBeUndefined();
     expect(JSON.stringify(recover.body)).not.toContain(created.body.application.publicToken);
 
     const unknown = await request(app).post('/admissions/recover').send({ email: 'inconnu.jamais@admissions.test' });
     expect(unknown.status).toBe(200);
     expect(unknown.body.ok).toBe(true);
-    expect(unknown.body.emailDeliveryAttempted).toBe(false);
+    expect(unknown.body.message).toBe(recover.body.message);
+    expect(unknown.body.emailDeliveryAttempted).toBeUndefined();
   });
 });

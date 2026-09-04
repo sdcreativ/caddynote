@@ -20,7 +20,11 @@ export const BEARER_IN_BODY_HEADER = 'x-caddynote-bearer';
  */
 export const shouldIssueAccessTokenInBody = (req: Request): boolean => {
   if (process.env.NODE_ENV === 'test' || isTestMode()) return true;
-  if (process.env.ISSUE_BEARER_IN_BODY === 'true' || process.env.ISSUE_BEARER_IN_BODY === '1') {
+  // staging/prod : ignorer ISSUE_BEARER_IN_BODY (sinon le navigateur reçoit le JWT).
+  if (
+    !isHardenedRuntime() &&
+    (process.env.ISSUE_BEARER_IN_BODY === 'true' || process.env.ISSUE_BEARER_IN_BODY === '1')
+  ) {
     return true;
   }
   const header = String(req.headers[BEARER_IN_BODY_HEADER] ?? '').toLowerCase();
@@ -39,16 +43,38 @@ const LOCAL_ORIGINS = [
   'http://127.0.0.1:5173',
 ];
 
+/** Premier URL public (front, puis CORS). Sert à décider Secure / SameSite. */
+const publicSiteUrl = (): string => {
+  const app = (process.env.APP_URL || '').trim();
+  if (app) return app;
+  return parseCorsOrigins(process.env.CORS_ORIGIN)[0] ?? '';
+};
+
+/** Chrome refuse un cookie `Secure` (et `SameSite=None`) sur du HTTP hors localhost. */
+export const publicOriginIsHttps = (): boolean => {
+  const raw = publicSiteUrl();
+  if (!raw) return false;
+  try {
+    const href = raw.includes('://') ? raw : `https://${raw}`;
+    return new URL(href).protocol === 'https:';
+  } catch {
+    return raw.toLowerCase().startsWith('https:');
+  }
+};
+
 export const cookieSameSite = (): 'lax' | 'strict' | 'none' => {
   const explicit = (process.env.COOKIE_SAMESITE || '').trim().toLowerCase();
   if (explicit === 'none' || explicit === 'lax' || explicit === 'strict') return explicit;
-  return isHardenedRuntime() ? 'none' : 'lax';
+  // SameSite=None exige Secure ; en HTTP (IP:8080) le navigateur jette le cookie
+  // → MFA « OK » puis session perdue au /auth/me suivant.
+  return isHardenedRuntime() && publicOriginIsHttps() ? 'none' : 'lax';
 };
 
 export const cookieSecure = (): boolean => {
   if (process.env.COOKIE_SECURE === 'true') return true;
   if (process.env.COOKIE_SECURE === 'false') return false;
-  return isHardenedRuntime() || cookieSameSite() === 'none';
+  if (cookieSameSite() === 'none') return true;
+  return isHardenedRuntime() && publicOriginIsHttps();
 };
 
 export const setAccessTokenCookie = (res: Response, token: string, expiresIn?: string): void => {

@@ -202,8 +202,8 @@ describe('SSO OIDC (S4)', () => {
     try {
       const res = await request(app).get(`/auth/sso/start?institutionId=${fx.a.institutionId}`).expect(302);
       const location = res.headers.location as string;
-      expect(location).toMatch(/sso_error=sso_issuer_invalide/);
-      expect(location).not.toMatch(/127\.0\.0\.1|169\.254|SSO_UNSAFE_URL/);
+      expect(location).toMatch(/sso_error=sso_failed/);
+      expect(location).not.toMatch(/sso_issuer_invalide|127\.0\.0\.1|169\.254|SSO_UNSAFE_URL/);
     } finally {
       if (previous?.value) {
         await prisma.strkSetting.update({

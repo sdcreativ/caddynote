@@ -31,6 +31,12 @@ const frontendRedirect = (params: Record<string, string>) => {
   return `${base}#${hash}`;
 };
 
+/** Jamais de détail IdP / tenant / config dans le fragment (énumération). */
+const ssoFailedRedirect = (reason: string) => {
+  console.error('SSO redirect:', reason);
+  return frontendRedirect({ sso_error: 'sso_failed' });
+};
+
 /** Config publique (pas de secrets) pour afficher le bouton SSO. */
 ssoRouter.get('/public-config', ssoLimiter, async (req, res) => {
   const institutionId = typeof req.query.institutionId === 'string' ? req.query.institutionId : '';
@@ -70,7 +76,7 @@ ssoRouter.get('/start', ssoLimiter, async (req, res) => {
     return res.redirect(302, url);
   } catch (e) {
     const message = e instanceof UnsafeSsoUrlError ? 'sso_issuer_invalide' : e instanceof Error ? e.message : 'SSO indisponible';
-    return res.redirect(302, frontendRedirect({ sso_error: message.slice(0, 180) }));
+    return res.redirect(302, ssoFailedRedirect(message));
   }
 });
 
@@ -78,23 +84,23 @@ ssoRouter.get('/start', ssoLimiter, async (req, res) => {
 ssoRouter.get('/callback', ssoLimiter, async (req, res) => {
   const err = typeof req.query.error === 'string' ? req.query.error : '';
   if (err) {
-    return res.redirect(302, frontendRedirect({ sso_error: err.slice(0, 180) }));
+    return res.redirect(302, ssoFailedRedirect(`idp:${err.slice(0, 80)}`));
   }
 
   const code = typeof req.query.code === 'string' ? req.query.code : '';
   const state = typeof req.query.state === 'string' ? req.query.state : '';
   if (!code || !state) {
-    return res.redirect(302, frontendRedirect({ sso_error: 'callback_incomplet' }));
+    return res.redirect(302, ssoFailedRedirect('callback_incomplet'));
   }
 
   const pending = await consumePending(state);
   if (!pending) {
-    return res.redirect(302, frontendRedirect({ sso_error: 'state_invalide_ou_expire' }));
+    return res.redirect(302, ssoFailedRedirect('state_invalide_ou_expire'));
   }
 
   const cfg = await loadSsoConfig(pending.institutionId);
   if (!cfg?.enabled) {
-    return res.redirect(302, frontendRedirect({ sso_error: 'sso_desactive' }));
+    return res.redirect(302, ssoFailedRedirect('sso_desactive'));
   }
 
   try {
@@ -105,7 +111,7 @@ ssoRouter.get('/callback', ssoLimiter, async (req, res) => {
     });
     const email = emailFromClaims(claims);
     if (!email) {
-      return res.redirect(302, frontendRedirect({ sso_error: 'email_claim_manquant' }));
+      return res.redirect(302, ssoFailedRedirect('email_claim_manquant'));
     }
 
     const result = await completeSsoLogin({
@@ -117,16 +123,16 @@ ssoRouter.get('/callback', ssoLimiter, async (req, res) => {
     });
 
     if (result.kind === 'error') {
-      return res.redirect(302, frontendRedirect({ sso_error: result.code }));
+      return res.redirect(302, ssoFailedRedirect(result.code));
     }
     if (result.kind === 'mfa') {
-      const adoptCode = await issueAdoptCode({ kind: 'mfa', token: result.challengeToken });
+      const adoptCode = await issueAdoptCode({ kind: 'mfa', userId: result.userId });
       return res.redirect(302, frontendRedirect({ sso_code: adoptCode }));
     }
-    const adoptCode = await issueAdoptCode({ kind: 'token', token: result.token });
+    const adoptCode = await issueAdoptCode({ kind: 'token', userId: result.userId, sid: result.sid });
     return res.redirect(302, frontendRedirect({ sso_code: adoptCode }));
   } catch (e) {
     console.error('SSO callback error:', e instanceof Error ? e.message : e);
-    return res.redirect(302, frontendRedirect({ sso_error: 'sso_exchange_failed' }));
+    return res.redirect(302, ssoFailedRedirect('sso_exchange_failed'));
   }
 });

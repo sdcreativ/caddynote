@@ -48,7 +48,7 @@ const isOwnUserKey = (auth: JwtPayload, key: string): boolean =>
 /**
  * Flux OIDC pending + codes adopt : jamais exposés via l’API générique /settings.
  */
-const INTERNAL_ONLY_CATEGORIES = new Set(['sso_pending', 'sso_adopt']);
+const INTERNAL_ONLY_CATEGORIES = new Set(['sso_pending', 'sso_adopt', 'mfa_challenge']);
 
 export const isInternalOnlyCategory = (category: string): boolean => INTERNAL_ONLY_CATEGORIES.has(category);
 
@@ -87,7 +87,7 @@ const USER_WRITE_CATEGORIES = new Set(['notifications', 'attendance']);
 
 /**
  * Écriture : jamais de clé hors périmètre.
- * - `sso_pending` / `sso_adopt` interdits (flux OIDC interne).
+ * - `sso_pending` / `sso_adopt` / `mfa_challenge` interdits (flux interne).
  * - Clé `{userId}:…` : uniquement notifications / attendance, et uniquement le titulaire.
  * - Admin : catégories allowlistées, tous tenants.
  * - Direction : uniquement `institution:{sso|admissions|onboarding}:{son établissement}`.

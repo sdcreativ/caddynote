@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
-import { signAccessToken, signMfaChallengeToken, verifyAccessToken, verifyMfaChallengeToken } from '../lib/jwt.js';
+import { signAccessToken } from '../lib/jwt.js';
+import { consumeMfaChallengeJti, issueMfaChallengeToken, peekMfaChallengeToken } from '../lib/mfaChallenge.js';
 import {
   accessTokenInBody,
   clearAccessTokenCookie,
@@ -14,7 +15,7 @@ import {
 import { isSessionValid } from '../lib/sessions.js';
 import { requireAuth } from '../middleware/auth.js';
 import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
-import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, tryConsumeBackupCode, looksLikeBackupCode, ensureMfaGraceStarted, isMfaGraceExpired, computeMfaGraceUntil } from '../lib/mfa.js';
+import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, tryConsumeBackupCode, looksLikeBackupCode } from '../lib/mfa.js';
 import { isEmailConfigured, sendEmail } from '../lib/email.js';
 import { escapeHtml, wrapTransactionalEmail } from '../lib/emailLayout.js';
 import { createSession } from '../lib/sessions.js';
@@ -56,13 +57,27 @@ export const authRouter = Router();
 // bourrage d'identifiants (register, login, vérification MFA, mot de passe
 // oublié/réinitialisé, adopt SSO) — jamais sur ce qui exige déjà une session
 // valide (/me, /logout, /sessions...). Désactivé en test (fixtures >10 comptes).
+const limiterSkip = () => process.env.NODE_ENV === 'test' || isTestMode();
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: { error: 'Trop de tentatives, réessayez plus tard.' },
-  skip: () => process.env.NODE_ENV === 'test' || isTestMode(),
+  skip: limiterSkip,
+});
+
+/** Budget séparé : un mot de passe OK + quelques essais TOTP ne doivent pas verrouiller /login. */
+const mfaVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Trop de tentatives, réessayez plus tard.' },
+  skip: limiterSkip,
 });
 
 const registerSchema = z.object({
@@ -174,16 +189,10 @@ authRouter.post('/login', authLimiter, async (req, res) => {
   // tout de suite, seulement un jeton de défi de courte durée. L'accès réel
   // n'est délivré qu'après vérification du code TOTP (POST /auth/mfa/login-verify).
   if (profile.mfaEnabled) {
-    return res.json({ mfaRequired: true, challengeToken: signMfaChallengeToken(profile.id) });
+    return res.json({ mfaRequired: true, challengeToken: await issueMfaChallengeToken(profile.id) });
   }
 
   await prisma.strkProfile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } });
-  const mfaGraceUntil = await ensureMfaGraceStarted({
-    id: profile.id,
-    role: profile.role,
-    mfaEnabled: profile.mfaEnabled,
-    mfaGraceUntil: profile.mfaGraceUntil,
-  });
 
   const token = await issueAccessToken(req, res, profile);
   await logAudit({ institutionId: profile.institutionId, actorId: profile.id, action: 'auth.login', ipAddress: req.ip });
@@ -202,7 +211,7 @@ authRouter.post('/login', authLimiter, async (req, res) => {
   const { passwordHash: _omit, mfaSecret: _omit2, passwordResetToken: _omit3, mfaBackupCodeHashes: _omit4, ...safeProfile } = profile;
   res.json({
     ...accessTokenInBody(req, token),
-    user: { ...safeProfile, mfaGraceUntil },
+    user: safeProfile,
   });
 });
 
@@ -212,15 +221,16 @@ const mfaLoginVerifySchema = z.object({
   code: z.string().min(6).max(19),
 });
 
-authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
+authRouter.post('/mfa/login-verify', mfaVerifyLimiter, async (req, res) => {
   const parsed = mfaLoginVerifySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
 
   let sub: string;
+  let jti: string;
   try {
-    sub = verifyMfaChallengeToken(parsed.data.challengeToken).sub;
+    ({ sub, jti } = peekMfaChallengeToken(parsed.data.challengeToken));
   } catch {
     return res.status(401).json({ error: 'Jeton de défi expiré ou invalide, reconnectez-vous' });
   }
@@ -257,6 +267,10 @@ authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
       ipAddress: req.ip,
     }).catch(() => undefined);
     return res.status(401).json({ error: 'Code de vérification incorrect' });
+  }
+
+  if (!(await consumeMfaChallengeJti(profile.id, jti))) {
+    return res.status(401).json({ error: 'Jeton de défi déjà utilisé ou expiré, reconnectez-vous' });
   }
 
   await prisma.strkProfile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } });
@@ -370,27 +384,14 @@ authRouter.post('/mfa/disable', requireAuth, async (req, res) => {
 });
 
 authRouter.get('/me', requireAuth, async (req, res) => {
-  let profile = await prisma.strkProfile.findUnique({
+  const profile = await prisma.strkProfile.findUnique({
     where: { id: req.auth!.sub },
     select: PUBLIC_PROFILE_SELECT,
   });
   if (!profile) {
     return res.status(404).json({ error: 'Utilisateur introuvable' });
   }
-  // Démarre la grâce 7 j au premier accès authentifié (backfill comptes existants).
-  const mfaGraceUntil = await ensureMfaGraceStarted({
-    id: profile.id,
-    role: profile.role,
-    mfaEnabled: profile.mfaEnabled,
-    mfaGraceUntil: profile.mfaGraceUntil,
-  });
-  if (mfaGraceUntil !== profile.mfaGraceUntil) {
-    profile = { ...profile, mfaGraceUntil };
-  }
-
   const needsMfa = isMfaRequiredRole(profile.role) && !profile.mfaEnabled;
-  const graceExpired = needsMfa && isMfaGraceExpired(mfaGraceUntil);
-  const inGrace = needsMfa && !!mfaGraceUntil && !graceExpired;
   const impersonation = req.auth!.impersonatorId
     ? {
         active: true,
@@ -413,9 +414,9 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   res.json({
     user: profile,
     mustChangePassword: !!profile.mustChangePassword,
-    mfaRecommended: inGrace,
-    mfaSetupRequired: graceExpired && !isTestMode(),
-    mfaGraceUntil: mfaGraceUntil ? mfaGraceUntil.toISOString() : null,
+    mfaRecommended: false,
+    mfaSetupRequired: needsMfa && !isTestMode(),
+    mfaGraceUntil: profile.mfaGraceUntil ? profile.mfaGraceUntil.toISOString() : null,
     impersonation,
   });
 });
@@ -604,42 +605,41 @@ authRouter.post('/logout', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-/** Échange un code SSO (usage unique) ou un jeton de test contre le cookie HttpOnly. */
+/** Échange un code SSO à usage unique contre le cookie HttpOnly. Pas de Bearer brut. */
 authRouter.post('/adopt', authLimiter, async (req, res) => {
   if (!isCookieMutationOriginAllowed(req)) {
     return res.status(403).json({ error: 'Origine de la requête refusée', code: 'csrf' });
   }
-  const parsed = z
-    .object({
-      code: z.string().min(16).max(128).optional(),
-      token: z.string().min(20).max(4000).optional(),
-    })
-    .safeParse(req.body);
-  if (!parsed.success || (!parsed.data.code && !parsed.data.token)) {
-    return res.status(400).json({ error: 'Jeton manquant' });
+  const parsed = z.object({ code: z.string().min(16).max(128) }).safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Code manquant' });
   }
 
-  const setCookieFromAccessToken = async (token: string) => {
-    const payload = verifyAccessToken(token);
-    if (!(await isSessionValid(payload.sid))) {
+  try {
+    const adopted = await consumeAdoptCode(parsed.data.code);
+    if (!adopted) {
+      return res.status(401).json({ error: 'Code invalide ou expiré' });
+    }
+    if (adopted.kind === 'mfa') {
+      const challengeToken = await issueMfaChallengeToken(adopted.userId);
+      return res.json({ ok: true, mfaRequired: true, challengeToken });
+    }
+    if (!(await isSessionValid(adopted.sid))) {
       return res.status(401).json({ error: 'Session révoquée ou expirée, reconnectez-vous' });
     }
+    const profile = await prisma.strkProfile.findUnique({ where: { id: adopted.userId } });
+    if (!profile?.isActive) {
+      return res.status(401).json({ error: 'Session révoquée ou expirée, reconnectez-vous' });
+    }
+    const token = signAccessToken({
+      sub: profile.id,
+      role: profile.role,
+      institutionId: profile.institutionId,
+      groupId: profile.groupId,
+      sid: adopted.sid,
+    });
     setAccessTokenCookie(res, token);
     return res.json({ ok: true });
-  };
-
-  try {
-    if (parsed.data.code) {
-      const adopted = await consumeAdoptCode(parsed.data.code);
-      if (!adopted) {
-        return res.status(401).json({ error: 'Code invalide ou expiré' });
-      }
-      if (adopted.kind === 'mfa') {
-        return res.json({ ok: true, mfaRequired: true, challengeToken: adopted.token });
-      }
-      return await setCookieFromAccessToken(adopted.token);
-    }
-    return await setCookieFromAccessToken(parsed.data.token!);
   } catch {
     return res.status(401).json({ error: 'Jeton invalide ou expiré' });
   }

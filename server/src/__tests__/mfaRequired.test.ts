@@ -8,8 +8,6 @@ import {
   isMfaSetupExempt,
   MFA_REQUIRED_ROLES,
   MFA_GRACE_DAYS,
-  computeMfaGraceUntil,
-  isMfaGraceExpired,
   shouldEnforceMfaSetup,
   shouldEnforcePasswordChange,
   generateBackupCodes,
@@ -21,7 +19,7 @@ import {
 } from '../lib/mfa.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
-describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
+describe('IAM-003 — MFA obligatoire (rôles sensibles)', () => {
   it('couvre le personnel à données sensibles, pas les familles', () => {
     expect(MFA_REQUIRED_ROLES).toEqual([
       'admin',
@@ -33,7 +31,7 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
       'supervisor',
       'group_owner',
     ]);
-    expect(MFA_GRACE_DAYS).toBe(7);
+    expect(MFA_GRACE_DAYS).toBe(0);
     expect(isMfaRequiredRole('admin')).toBe(true);
     expect(isMfaRequiredRole('teacher')).toBe(true);
     expect(isMfaRequiredRole('supervisor')).toBe(true);
@@ -47,9 +45,8 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
     expect(isMfaSetupExempt('/finance')).toBe(false);
   });
 
-  it('shouldEnforceMfaSetup : pas de blocage pendant la grâce', () => {
-    const inGrace = computeMfaGraceUntil();
-    expect(isMfaGraceExpired(inGrace)).toBe(false);
+  it('shouldEnforceMfaSetup : bloque dès qu’un rôle sensible n’a pas de MFA', () => {
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     expect(
       shouldEnforceMfaSetup({
         nodeEnv: 'production',
@@ -57,22 +54,7 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
         role: 'school_admin',
         mfaEnabled: false,
         routeBaseUrl: '/students',
-        mfaGraceUntil: inGrace,
-      })
-    ).toBe(false);
-  });
-
-  it('shouldEnforceMfaSetup : bloque après expiration de la grâce', () => {
-    const expired = new Date(Date.now() - 60_000);
-    expect(isMfaGraceExpired(expired)).toBe(true);
-    expect(
-      shouldEnforceMfaSetup({
-        nodeEnv: 'production',
-        testMode: false,
-        role: 'school_admin',
-        mfaEnabled: false,
-        routeBaseUrl: '/students',
-        mfaGraceUntil: expired,
+        mfaGraceUntil: future,
       })
     ).toBe(true);
     expect(
@@ -82,7 +64,7 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
         role: 'teacher',
         mfaEnabled: false,
         routeBaseUrl: '/grades',
-        mfaGraceUntil: expired,
+        mfaGraceUntil: null,
       })
     ).toBe(true);
     expect(
@@ -92,20 +74,16 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
         role: 'parent',
         mfaEnabled: false,
         routeBaseUrl: '/messages',
-        mfaGraceUntil: expired,
+        mfaGraceUntil: null,
       })
     ).toBe(false);
-  });
-
-  it('shouldEnforceMfaSetup : null = pas encore démarré → ne bloque pas', () => {
     expect(
       shouldEnforceMfaSetup({
         nodeEnv: 'production',
         testMode: false,
         role: 'school_admin',
-        mfaEnabled: false,
+        mfaEnabled: true,
         routeBaseUrl: '/students',
-        mfaGraceUntil: null,
       })
     ).toBe(false);
   });
@@ -207,27 +185,27 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
     });
   });
 
-  it('pendant la grâce : school_admin sans MFA non bloqué + mfaRecommended', async () => {
+  it('une date de grâce future n’ouvre plus l’API métier', async () => {
     process.env.NODE_ENV = 'production';
     process.env.CADDYNOTE_TEST_MODE = 'false';
 
-    const graceUntil = computeMfaGraceUntil();
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await prisma.strkProfile.update({
       where: { id: fx.a.schoolAdmin.id },
-      data: { mfaEnabled: false, mustChangePassword: false, mfaGraceUntil: graceUntil },
+      data: { mfaEnabled: false, mustChangePassword: false, mfaGraceUntil: future },
     });
 
-    const ok = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
-    expect(ok.status).not.toBe(403);
+    const blocked = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe('mfa_setup_required');
 
     const me = await request(app).get('/auth/me').set(auth(fx.a.schoolAdmin.token));
     expect(me.status).toBe(200);
-    expect(me.body.mfaSetupRequired).toBe(false);
-    expect(me.body.mfaRecommended).toBe(true);
-    expect(me.body.mfaGraceUntil).toBeTruthy();
+    expect(me.body.mfaSetupRequired).toBe(true);
+    expect(me.body.mfaRecommended).toBe(false);
   });
 
-  it('après expiration grâce : APIs métier bloquées (mfa_setup_required)', async () => {
+  it('sans MFA : APIs métier bloquées (mfa_setup_required)', async () => {
     process.env.NODE_ENV = 'production';
     process.env.CADDYNOTE_TEST_MODE = 'false';
 
@@ -274,7 +252,8 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
     expect(changed.status).toBe(200);
 
     const after = await request(app).get('/students').set(auth(fx.a.schoolAdmin.token));
-    expect(after.status).not.toBe(403);
+    expect(after.status).toBe(403);
+    expect(after.body.code).toBe('mfa_setup_required');
 
     // Restaure le mot de passe fixture pour les autres tests.
     await request(app)
@@ -357,5 +336,108 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
       .post('/auth/mfa/disable')
       .set(auth(winner.body.token))
       .send({ password: 'Password123!' });
+  });
+
+  it('login-verify : le challenge n’est plus rejouable après succès', async () => {
+    const setup = await request(app).post('/auth/mfa/setup').set(auth(fx.a.teacher.token));
+    expect(setup.status).toBe(200);
+    const secret = setup.body.secret as string;
+    const confirm = await request(app)
+      .post('/auth/mfa/confirm')
+      .set(auth(fx.a.teacher.token))
+      .send({ code: generateSync({ secret }) });
+    expect(confirm.status).toBe(200);
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({ email: fx.a.teacher.email, password: 'Password123!' });
+    expect(login.body.mfaRequired).toBe(true);
+    const challengeToken = login.body.challengeToken as string;
+
+    const first = await request(app)
+      .post('/auth/mfa/login-verify')
+      .send({ challengeToken, code: generateSync({ secret }) });
+    expect(first.status).toBe(200);
+
+    const replay = await request(app)
+      .post('/auth/mfa/login-verify')
+      .send({ challengeToken, code: generateSync({ secret }) });
+    expect(replay.status).toBe(401);
+
+    await request(app)
+      .post('/auth/mfa/disable')
+      .set(auth(first.body.token))
+      .send({ password: 'Password123!' });
+  });
+
+  it('login-verify : un code faux ne consomme pas le challenge', async () => {
+    const setup = await request(app).post('/auth/mfa/setup').set(auth(fx.a.teacher.token));
+    expect(setup.status).toBe(200);
+    const secret = setup.body.secret as string;
+    const confirm = await request(app)
+      .post('/auth/mfa/confirm')
+      .set(auth(fx.a.teacher.token))
+      .send({ code: generateSync({ secret }) });
+    expect(confirm.status).toBe(200);
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({ email: fx.a.teacher.email, password: 'Password123!' });
+    const challengeToken = login.body.challengeToken as string;
+
+    const wrong = await request(app)
+      .post('/auth/mfa/login-verify')
+      .send({ challengeToken, code: '000000' });
+    expect(wrong.status).toBe(401);
+
+    const ok = await request(app)
+      .post('/auth/mfa/login-verify')
+      .send({ challengeToken, code: generateSync({ secret }) });
+    expect(ok.status).toBe(200);
+
+    await request(app)
+      .post('/auth/mfa/disable')
+      .set(auth(ok.body.token))
+      .send({ password: 'Password123!' });
+  });
+
+  it('impersonation : la cible sans MFA n’est pas bloquée (exit support)', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CADDYNOTE_TEST_MODE = 'false';
+
+    await prisma.strkProfile.update({
+      where: { id: fx.globalAdmin.id },
+      data: { mfaEnabled: true },
+    });
+    await prisma.strkProfile.update({
+      where: { id: fx.a.teacher.id },
+      data: { mfaEnabled: false, mustChangePassword: false, mfaGraceUntil: null },
+    });
+
+    const own = await request(app).get(`/courses/${fx.a.courseId}`).set(auth(fx.a.teacher.token));
+    expect(own.status).toBe(403);
+    expect(own.body.code).toBe('mfa_setup_required');
+
+    const start = await request(app)
+      .post('/admin/impersonate')
+      .set(auth(fx.globalAdmin.token))
+      .set('X-CaddyNote-Bearer', '1')
+      .send({
+        userId: fx.a.teacher.id,
+        durationMinutes: 15,
+        reason: 'Support ticket — vérifier accès sans MFA cible',
+      });
+    expect(start.status).toBe(200);
+    expect(start.body.token).toBeTruthy();
+
+    const asTeacher = await request(app)
+      .get(`/courses/${fx.a.courseId}`)
+      .set(auth(start.body.token));
+    expect(asTeacher.body.code).not.toBe('mfa_setup_required');
+    expect(asTeacher.status).not.toBe(401);
+
+    const exit = await request(app).post('/admin/impersonate/exit').set(auth(start.body.token));
+    expect(exit.status).toBe(200);
+    expect(exit.body.user.id).toBe(fx.globalAdmin.id);
   });
 });

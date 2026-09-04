@@ -1,6 +1,7 @@
 import { scheduleExclusiveCron } from './cronLock.js';
 import { prisma } from './prisma.js';
 import { sendEmail } from './email.js';
+import { escapeHtml } from './emailLayout.js';
 
 /**
  * Remplace l'edge function Supabase `check-expiring-subscriptions`. Tourne en
@@ -51,7 +52,7 @@ export const runSubscriptionExpirationCheck = async (): Promise<{ notified: numb
       const emailSent = await sendEmail({
         to: profile.email,
         subject: `Votre abonnement CaddyNote expire dans ${days} jour${days > 1 ? 's' : ''}`,
-        html: `<p>Bonjour ${profile.firstName ?? ''},</p><p>Votre abonnement${sub.plan_ ? ` « ${sub.plan_.name} »` : ''} expire le ${sub.expiresAt.toLocaleDateString('fr-FR')}. Pensez à le renouveler pour ne pas perdre l'accès à CaddyNote.</p>`,
+        html: `<p>Bonjour ${escapeHtml(profile.firstName ?? '')},</p><p>Votre abonnement${sub.plan_ ? ` « ${escapeHtml(sub.plan_.name)} »` : ''} expire le ${sub.expiresAt.toLocaleDateString('fr-FR')}. Pensez à le renouveler pour ne pas perdre l'accès à CaddyNote.</p>`,
       });
 
       const previousDays = Array.isArray(sub.expirationNotificationsSent) ? sub.expirationNotificationsSent : [];
@@ -79,7 +80,7 @@ export const runSubscriptionExpirationCheck = async (): Promise<{ notified: numb
       await sendEmail({
         to: profile.email,
         subject: `Votre essai gratuit CaddyNote se termine dans ${days} jour${days > 1 ? 's' : ''}`,
-        html: `<p>Bonjour ${profile.firstName ?? ''},</p><p>Votre période d'essai se termine le ${sub.trialEndsAt!.toLocaleDateString('fr-FR')}. Choisissez un plan pour continuer à utiliser CaddyNote sans interruption.</p>`,
+        html: `<p>Bonjour ${escapeHtml(profile.firstName ?? '')},</p><p>Votre période d'essai se termine le ${sub.trialEndsAt!.toLocaleDateString('fr-FR')}. Choisissez un plan pour continuer à utiliser CaddyNote sans interruption.</p>`,
       });
     }
   }

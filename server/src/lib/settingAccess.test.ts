@@ -32,7 +32,7 @@ describe('extractInstitutionIdFromSettingKey', () => {
 });
 
 describe('canReadSetting', () => {
-  it('refuse sso_pending et sso_adopt même à l’admin', () => {
+  it('refuse sso_pending, sso_adopt et mfa_challenge même à l’admin', () => {
     const admin = auth({ role: 'admin', institutionId: null });
     expect(
       canReadSetting(admin, {
@@ -45,6 +45,13 @@ describe('canReadSetting', () => {
       canReadSetting(admin, {
         category: 'sso_adopt',
         key: 'code-hash',
+        isPublic: true,
+      })
+    ).toBe(false);
+    expect(
+      canReadSetting(admin, {
+        category: 'mfa_challenge',
+        key: USER,
         isPublic: true,
       })
     ).toBe(false);
@@ -120,6 +127,7 @@ describe('canWriteSetting', () => {
     expect(canWriteSetting(director, 'sso_pending', 'state-1')).toBe(false);
     expect(canWriteSetting(auth({ role: 'admin', institutionId: null }), 'sso_pending', 'state-1')).toBe(false);
     expect(canWriteSetting(auth({ role: 'admin', institutionId: null }), 'sso_adopt', 'code-hash')).toBe(false);
+    expect(canWriteSetting(auth({ role: 'admin', institutionId: null }), 'mfa_challenge', USER)).toBe(false);
   });
 
   it('autorise l’admin sur les flags plateforme', () => {

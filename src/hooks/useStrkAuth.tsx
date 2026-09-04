@@ -51,7 +51,7 @@ interface StrkAuthContextType {
   logout: () => Promise<void>;
   hasRole: (role: StrkUserRole) => boolean;
   signup: (email: string, password: string, userData?: { first_name?: string; last_name?: string; role?: StrkUserRole; phone_number?: string; institution?: string }) => Promise<void>;
-  /** Après expiration de la grâce 7 j — dialog MFA non dismissible. */
+  /** MFA obligatoire (rôles sensibles) — dialog non dismissible. */
   mfaSetupRequired: boolean;
   mfaRecommended: boolean;
   /** ISO date fin de grâce MFA (bandeau). */

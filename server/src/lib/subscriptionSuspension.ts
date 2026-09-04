@@ -1,6 +1,7 @@
 import { scheduleExclusiveCron } from './cronLock.js';
 import { prisma } from './prisma.js';
 import { sendEmail } from './email.js';
+import { escapeHtml } from './emailLayout.js';
 
 /**
  * SAA-004 (Lot 10) — suspension graduée, jamais de destruction de données.
@@ -59,7 +60,7 @@ export const runSubscriptionSuspensionCheck = async (): Promise<SuspensionCheckR
       await sendEmail({
         to: profile.email,
         subject: 'Votre abonnement CaddyNote a expiré',
-        html: `<p>Bonjour ${profile.firstName ?? ''},</p><p>Votre abonnement a expiré le ${sub.expiresAt.toLocaleDateString('fr-FR')}. Vous conservez un accès complet pendant ${GRACE_DAYS} jours le temps de renouveler — passé ce délai, l'accès en écriture sera suspendu (vos données resteront toutefois intactes et consultables).</p><p><a href="${appUrl}/subscription">Renouveler / ouvrir le portail</a></p>`,
+        html: `<p>Bonjour ${escapeHtml(profile.firstName ?? '')},</p><p>Votre abonnement a expiré le ${sub.expiresAt.toLocaleDateString('fr-FR')}. Vous conservez un accès complet pendant ${GRACE_DAYS} jours le temps de renouveler — passé ce délai, l'accès en écriture sera suspendu (vos données resteront toutefois intactes et consultables).</p><p><a href="${appUrl}/subscription">Renouveler / ouvrir le portail</a></p>`,
       });
     }
   }
@@ -80,7 +81,7 @@ export const runSubscriptionSuspensionCheck = async (): Promise<SuspensionCheckR
       await sendEmail({
         to: profile.email,
         subject: 'Votre compte CaddyNote est en lecture seule',
-        html: `<p>Bonjour ${profile.firstName ?? ''},</p><p>Faute de renouvellement, votre établissement est passé en lecture seule : vos données restent entièrement accessibles et exportables, mais plus aucune modification n'est possible tant que l'abonnement n'est pas renouvelé.</p><p><a href="${appUrl}/subscription">Renouveler / ouvrir le portail</a></p>`,
+        html: `<p>Bonjour ${escapeHtml(profile.firstName ?? '')},</p><p>Faute de renouvellement, votre établissement est passé en lecture seule : vos données restent entièrement accessibles et exportables, mais plus aucune modification n'est possible tant que l'abonnement n'est pas renouvelé.</p><p><a href="${appUrl}/subscription">Renouveler / ouvrir le portail</a></p>`,
       });
     }
   }

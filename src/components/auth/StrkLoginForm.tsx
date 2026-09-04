@@ -91,7 +91,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     if (err) {
       toast({
         title: t('login.failedTitle'),
-        description: t('login.ssoError', { code: err }),
+        description: t('login.ssoError'),
         variant: 'destructive',
       });
       return;

@@ -72,7 +72,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
     req.auth = payload;
 
-    // Gates hors `/auth` : MDP provisoire, puis MFA après grâce 7 j.
+    // Gates hors `/auth` : MDP provisoire, puis MFA obligatoire (rôles sensibles).
+    // Impersonation : le JWT porte le rôle de la cible (souvent sans MFA) ;
+    // ne pas bloquer `/admin/impersonate/exit` ni le support.
     if (req.baseUrl !== '/auth') {
       const profile = await prisma.strkProfile.findUnique({
         where: { id: payload.sub },
@@ -95,6 +97,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         });
       }
       if (
+        !payload.impersonatorId &&
         shouldEnforceMfaSetup({
           nodeEnv: process.env.NODE_ENV,
           testMode: isTestMode(),

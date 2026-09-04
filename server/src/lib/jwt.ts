@@ -51,14 +51,15 @@ const MFA_CHALLENGE_TYPE = 'mfa_challenge';
 
 /** Jeton intermédiaire, courte durée de vie, émis après un mot de passe valide
  * quand le compte a la MFA activée. Ne donne accès à rien d'autre qu'à
- * `POST /auth/mfa/login-verify` (IAM-003). */
-export const signMfaChallengeToken = (sub: string): string =>
-  jwt.sign({ sub, type: MFA_CHALLENGE_TYPE }, getSecret(), { expiresIn: '5m' });
+ * `POST /auth/mfa/login-verify` (IAM-003). `jti` obligatoire : consommation
+ * unique côté `mfaChallenge.ts`. */
+export const signMfaChallengeToken = (sub: string, jti: string): string =>
+  jwt.sign({ sub, type: MFA_CHALLENGE_TYPE, jti }, getSecret(), { expiresIn: '5m' });
 
-export const verifyMfaChallengeToken = (token: string): { sub: string } => {
-  const payload = jwt.verify(token, getSecret()) as { sub: string; type?: string };
-  if (payload.type !== MFA_CHALLENGE_TYPE) {
+export const verifyMfaChallengeToken = (token: string): { sub: string; jti: string } => {
+  const payload = jwt.verify(token, getSecret()) as { sub: string; type?: string; jti?: string };
+  if (payload.type !== MFA_CHALLENGE_TYPE || !payload.jti) {
     throw new Error('Jeton de défi MFA invalide');
   }
-  return { sub: payload.sub };
+  return { sub: payload.sub, jti: payload.jti };
 };

@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { areExternalServicesDisabled } from './testMode.js';
 
 /**
@@ -23,6 +24,46 @@ import { areExternalServicesDisabled } from './testMode.js';
  */
 
 const CHECKOUT_BASE_URL = 'https://api-checkout.cinetpay.com/v2';
+
+export const CINETPAY_TRANS_ID_RE = /^[A-Za-z0-9_-]{8,80}$/;
+
+const timingSafeHexEqual = (a: string, b: string): boolean => {
+  try {
+    const left = Buffer.from(a, 'hex');
+    const right = Buffer.from(b, 'hex');
+    return left.length === right.length && left.length > 0 && timingSafeEqual(left, right);
+  } catch {
+    return false;
+  }
+};
+
+/** Corps notify_url : id borné, site_id aligné, HMAC si `CINETPAY_WEBHOOK_SECRET`. */
+export const parseCinetPayNotify = (
+  body: unknown
+): { ok: true; transactionId: string } | { ok: false; error: string } => {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'transaction_id manquant' };
+  const record = body as Record<string, unknown>;
+  const transactionId = String(record.cpm_trans_id ?? record.transaction_id ?? '').trim();
+  if (!CINETPAY_TRANS_ID_RE.test(transactionId)) return { ok: false, error: 'transaction_id manquant' };
+
+  const expectedSite = (process.env.CINETPAY_SITE_ID || '').trim();
+  const siteId = String(record.cpm_site_id ?? record.site_id ?? '').trim();
+  if (expectedSite && siteId && siteId !== expectedSite) {
+    return { ok: false, error: 'site_id invalide' };
+  }
+
+  const secret = (process.env.CINETPAY_WEBHOOK_SECRET || '').trim();
+  if (secret) {
+    const sig = String(record.cpm_signature ?? record.signature ?? '').trim().toLowerCase();
+    const payload = `${expectedSite || siteId}${transactionId}${String(record.cpm_trans_date ?? '')}${String(record.cpm_amount ?? '')}${String(record.cpm_currency ?? '')}`;
+    const expected = createHash('sha256').update(`${payload}${secret}`).digest('hex');
+    if (!timingSafeHexEqual(sig, expected)) {
+      return { ok: false, error: 'signature invalide' };
+    }
+  }
+
+  return { ok: true, transactionId };
+};
 
 export const isCinetPayConfigured = (): boolean =>
   !areExternalServicesDisabled() && !!(process.env.CINETPAY_API_KEY && process.env.CINETPAY_SITE_ID);

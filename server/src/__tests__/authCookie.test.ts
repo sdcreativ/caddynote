@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../index.js';
 import { ACCESS_COOKIE_NAME } from '../lib/accessCookie.js';
+import { issueAdoptCode } from '../lib/ssoAdopt.js';
+import { verifyAccessToken } from '../lib/jwt.js';
 import { registerActor, auth } from './fixtures.js';
 
 const cookieFrom = (res: request.Response): string | undefined => {
@@ -55,13 +57,24 @@ describe('Cookie HttpOnly d’accès', () => {
     expect(denied.body.code).toBe('csrf');
   });
 
-  it('POST /auth/adopt pose le cookie à partir d’un jeton valide', async () => {
+  it('POST /auth/adopt pose le cookie à partir d’un code unique', async () => {
+    const payload = verifyAccessToken(token);
+    const code = await issueAdoptCode({ kind: 'token', userId: payload.sub, sid: payload.sid });
+    const adopted = await request(app)
+      .post('/auth/adopt')
+      .set('Origin', 'http://localhost:8080')
+      .send({ code });
+    expect(adopted.status).toBe(200);
+    expect(cookieFrom(adopted)).toMatch(new RegExp(`^${ACCESS_COOKIE_NAME}=`));
+  });
+
+  it('POST /auth/adopt refuse un Bearer brut', async () => {
     const adopted = await request(app)
       .post('/auth/adopt')
       .set('Origin', 'http://localhost:8080')
       .send({ token });
-    expect(adopted.status).toBe(200);
-    expect(cookieFrom(adopted)).toMatch(new RegExp(`^${ACCESS_COOKIE_NAME}=`));
+    expect(adopted.status).toBe(400);
+    expect(cookieFrom(adopted)).toBeUndefined();
   });
 
   it('POST /auth/adopt refuse un code inconnu', async () => {
@@ -77,7 +90,7 @@ describe('Cookie HttpOnly d’accès', () => {
     const denied = await request(app)
       .post('/auth/adopt')
       .set('Origin', 'https://evil.example')
-      .send({ token });
+      .send({ code: 'abcdefghijklmnopqrstuvwxyz012345' });
     expect(denied.status).toBe(403);
     expect(denied.body.code).toBe('csrf');
     expect(cookieFrom(denied)).toBeUndefined();
