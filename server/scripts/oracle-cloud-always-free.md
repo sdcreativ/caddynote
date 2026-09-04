@@ -334,7 +334,7 @@ PARCOURS B (assistant instance)
 
 ## 8. Self-hosted runner (déploiement auto)
 
-Objectif : push sur `main` → CI GitHub-hosted (tests) → job `deploy_staging_self_hosted` sur la VM → `git pull` + `docker compose up --build`.
+Objectif : push sur `main` → CI GitHub-hosted (tests) → job `deploy_staging_self_hosted` sur la VM → `scripts/deploy-staging-rebuild.sh` (build puis bascule ; un build raté laisse l’ancienne stack).
 
 Pas besoin de Docker Hub ni de `STAGING_SSH_KEY` pour ce mode.
 
@@ -354,7 +354,7 @@ Vérifier que `.env` et `server/.env` sont bien présents sous `/home/ubuntu/cad
 
 ```bash
 cd /home/ubuntu/caddynote
-docker compose up -d --build caddynote-db caddynote-api caddynote-web
+bash scripts/deploy-staging-rebuild.sh
 curl -fsS http://127.0.0.1:4000/health
 ```
 

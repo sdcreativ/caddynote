@@ -25,6 +25,8 @@ ENV VITE_API_URL=$VITE_API_URL
 # Pas de Chromium dans l'image builder Alpine — le prerender Puppeteer
 # reste pour les builds locaux / CI dédiés (SKIP_PRERENDER=0).
 ENV SKIP_PRERENDER=1
+# Oracle A1 6 Go : Vite/tsc OOM (exit 2) si le heap Node reste au défaut.
+ENV NODE_OPTIONS=--max-old-space-size=1536
 
 # Construire l'application pour la production
 RUN npm run build

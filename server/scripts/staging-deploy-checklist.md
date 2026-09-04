@@ -2,7 +2,7 @@
 
 Objectif : exposer CaddyNote sur une VM (Oracle Always Free, OVH, Hetzner…) et déployer automatiquement au push `main`.
 
-**Mode recommandé (Oracle A1 / ARM64)** : self-hosted runner → `git pull` + `docker compose up --build`  
+**Mode recommandé (Oracle A1 / ARM64)** : self-hosted runner → `scripts/deploy-staging-rebuild.sh` (build puis bascule)  
 (détail : [`oracle-cloud-always-free.md`](./oracle-cloud-always-free.md) §8).
 
 **Mode optionnel** : Docker Hub + SSH ([`deploy-staging.yml`](../../.github/workflows/deploy-staging.yml), `workflow_dispatch`).

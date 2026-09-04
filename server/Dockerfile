@@ -22,6 +22,7 @@ RUN npx prisma generate
 
 COPY tsconfig.json ./
 COPY src ./src
+ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN npm run build
 
 # --- Étape 2 : production (dépendances de prod uniquement) ---
