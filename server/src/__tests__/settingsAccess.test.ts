@@ -59,6 +59,7 @@ describe('GET /settings — lecture filtrée + secrets masqués', () => {
           { category: 'institution', key: { in: [`sso:${fx.a.institutionId}`, `sso:${fx.b.institutionId}`] } },
           { category: 'sso_pending', key: 'pending-state' },
           { category: 'notifications', key: `${fx.a.teacher.id}:emailEnabled` },
+          { category: 'system', key: 'platformFlags' },
         ],
       },
     });
@@ -155,6 +156,7 @@ describe('PUT /settings — écriture bornée au tenant', () => {
         OR: [
           { category: 'institution', key: { in: [`sso:${fx.a.institutionId}`, `sso:${fx.b.institutionId}`] } },
           { category: 'attendance', key: `${fx.a.teacher.id}:autoMarkAbsent` },
+          { category: 'system', key: 'platformFlags' },
         ],
       },
     });

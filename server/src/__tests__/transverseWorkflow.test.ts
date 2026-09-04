@@ -13,6 +13,11 @@ describe('Transverse qualité produit — recette §7', () => {
 
   beforeAll(async () => {
     fx = await buildFixture();
+    // Les flags plateforme priment sur le tenant ; un test précédent
+    // (settingsAccess) peut laisser `finance: true` et masquer le 403 attendu.
+    await prisma.strkSetting.deleteMany({
+      where: { category: 'system', key: 'platformFlags' },
+    });
   }, 30000);
 
   afterAll(async () => {
@@ -33,6 +38,9 @@ describe('Transverse qualité produit — recette §7', () => {
     });
 
     it('finance / admissions / documents / lot9 bloqués quand flag off', async () => {
+      await prisma.strkSetting.deleteMany({
+        where: { category: 'system', key: 'platformFlags' },
+      });
       for (const key of ['finance', 'admissions', 'documents', 'lot9_services'] as const) {
         await request(app)
           .put(`/institutions/${fx.a.institutionId}/features/${key}`)

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 const post = vi.fn();
 vi.mock('@/lib/apiClient', () => ({
+  API_BASE_URL: '/api',
   apiClient: { post: (...args: unknown[]) => post(...args) },
   ApiError: class ApiError extends Error {},
 }));

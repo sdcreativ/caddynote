@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/lib/apiClient', () => ({
+  API_BASE_URL: '/api',
   apiClient: { post: vi.fn() },
 }));
 

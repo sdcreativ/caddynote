@@ -63,11 +63,13 @@ announcementPublicRouter.get('/announcement', async (_req, res) => {
   });
 });
 
-/** Route admin : lecture / écriture de l'annonce. */
+/** Route admin : lecture / écriture de l’annonce.
+ * Auth uniquement sur ces routes — pas de `router.use(requireRole('admin'))` :
+ * le routeur est monté sur `/admin` et laisserait sinon 403
+ * `POST /admin/impersonate/exit` (JWT de la cible, pas admin). */
 export const announcementAdminRouter = Router();
-announcementAdminRouter.use(requireAuth, requireRole('admin'));
 
-announcementAdminRouter.get('/announcement', async (_req, res) => {
+announcementAdminRouter.get('/announcement', requireAuth, requireRole('admin'), async (_req, res) => {
   const row = await prisma.strkSetting.findUnique({
     where: { category_key: { category: CATEGORY, key: KEY } },
     select: { value: true },
@@ -75,7 +77,7 @@ announcementAdminRouter.get('/announcement', async (_req, res) => {
   return res.json({ announcement: (row?.value as unknown as AnnouncementPayload) ?? DEFAULTS });
 });
 
-announcementAdminRouter.put('/announcement', async (req, res) => {
+announcementAdminRouter.put('/announcement', requireAuth, requireRole('admin'), async (req, res) => {
   const parsed = announcementSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides', details: parsed.error.flatten() });

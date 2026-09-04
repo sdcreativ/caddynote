@@ -46,6 +46,7 @@ import StrkNavbar from './StrkNavbar';
 import { SetupChecklist } from '@/components/dashboard/establishment/SetupChecklist';
 
 vi.mock('@/lib/apiClient', () => ({
+  API_BASE_URL: '/api',
   apiClient: {
     get: vi.fn(async (path: string) => {
       if (String(path).includes('/users')) {

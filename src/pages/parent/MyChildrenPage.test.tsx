@@ -59,6 +59,7 @@ vi.mock('@/services/strkAbsenceService', () => ({
 }));
 
 vi.mock('@/lib/apiClient', () => ({
+  API_BASE_URL: '/api',
   apiClient: {
     get: vi.fn().mockResolvedValue({ children: [] }),
     post: vi.fn(),

@@ -52,6 +52,7 @@ vi.mock('@/hooks/useStrkInstitutions', () => ({
 }));
 
 vi.mock('@/lib/apiClient', () => ({
+  API_BASE_URL: '/api',
   apiClient: { post: vi.fn(), get: vi.fn() },
   ApiError: class ApiError extends Error {},
 }));
