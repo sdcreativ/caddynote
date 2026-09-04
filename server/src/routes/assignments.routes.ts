@@ -2,13 +2,24 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { getCourseInstitutionId, isSameInstitution } from '../lib/authz.js';
-import { rejectUnlessCourseTenant, rejectUnlessResolvedTenant, rejectUnlessStudentAccess, sendForbidden } from '../lib/httpAuthz.js';
+import {
+  canManageAssignment,
+  canManageCourse,
+  getCourseInstitutionId,
+  isSameInstitution,
+  TEACHING_ROLES,
+} from '../lib/authz.js';
+import {
+  rejectUnlessCanReadAssignment,
+  rejectUnlessCourseTenant,
+  rejectUnlessResolvedTenant,
+  rejectUnlessStudentAccess,
+  sendForbidden,
+} from '../lib/httpAuthz.js';
 import { notifyAssignmentPublished, runAssignmentReminderCheck } from '../lib/assignmentReminders.js';
 import { buildAssignmentFollowUp } from '../lib/assignmentFollowUp.js';
 import { isOwnedObjectKey } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
-import { TEACHING_ROLES } from '../lib/authz.js';
 import { logAudit } from '../lib/audit.js';
 
 export const assignmentsRouter = Router();
@@ -27,6 +38,20 @@ assignmentsRouter.post('/reminder-check', requireRole('admin'), async (_req, res
 const getAssignmentInstitutionId = async (assignmentId: string): Promise<string | null> => {
   const assignment = await prisma.strkAssignment.findUnique({ where: { id: assignmentId }, select: { courseId: true } });
   return assignment ? getCourseInstitutionId(assignment.courseId) : null;
+};
+
+const loadAssignmentManageContext = async (assignmentId: string) => {
+  const assignment = await prisma.strkAssignment.findUnique({
+    where: { id: assignmentId },
+    select: { id: true, teacherId: true, courseId: true },
+  });
+  if (!assignment) return null;
+  const course = await prisma.strkCourse.findUnique({
+    where: { id: assignment.courseId },
+    select: { teacherId: true, institutionId: true },
+  });
+  if (!course) return null;
+  return { assignment, course };
 };
 
 const getSubmissionInstitutionId = async (submissionId: string): Promise<string | null> => {
@@ -98,10 +123,8 @@ assignmentsRouter.get('/:id', async (req, res) => {
   if (!assignment) {
     return res.status(404).json({ error: 'Devoir introuvable' });
   }
-  // ORG-004 : sans ce contrôle, un devoir était consultable par id par
-  // n'importe quel compte authentifié, tous établissements confondus.
-  const institutionId = await rejectUnlessCourseTenant(res, req.auth!, assignment.courseId);
-  if (!institutionId) return;
+  // Tenant + inscription : même règle que GET /courses/:id (pas tout le tenant).
+  if (await rejectUnlessCanReadAssignment(res, req.auth!, assignment.courseId)) return;
   res.json({ assignment });
 });
 
@@ -151,18 +174,31 @@ assignmentsRouter.post('/', requireRole('admin', 'school_admin', 'teacher'), asy
 });
 
 assignmentsRouter.patch('/:id', requireRole('admin', 'school_admin', 'teacher'), async (req, res) => {
-  const institutionId = await getAssignmentInstitutionId(req.params.id);
-  if (!institutionId || !isSameInstitution(req.auth!, institutionId)) {
+  const ctx = await loadAssignmentManageContext(req.params.id);
+  if (!ctx || !isSameInstitution(req.auth!, ctx.course.institutionId)) {
     return res.status(404).json({ error: 'Devoir introuvable' });
+  }
+  if (!canManageAssignment(req.auth!, ctx.assignment, ctx.course)) {
+    sendForbidden(res);
+    return;
   }
   const parsed = assignmentSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
-  // Empêche de "déplacer" un devoir vers le cours d'un autre établissement.
-  if (parsed.data.courseId) {
+  // Empêche de "déplacer" un devoir vers le cours d'un autre établissement
+  // ou d'un collègue dont on n'est pas titulaire.
+  if (parsed.data.courseId && parsed.data.courseId !== ctx.assignment.courseId) {
     const targetInstitutionId = await rejectUnlessCourseTenant(res, req.auth!, parsed.data.courseId);
     if (!targetInstitutionId) return;
+    const dest = await prisma.strkCourse.findUnique({
+      where: { id: parsed.data.courseId },
+      select: { teacherId: true },
+    });
+    if (!dest || !canManageCourse(req.auth!, dest)) {
+      sendForbidden(res);
+      return;
+    }
   }
   const { dueDate, ...rest } = parsed.data;
   const assignment = await prisma.strkAssignment.update({
@@ -173,10 +209,15 @@ assignmentsRouter.patch('/:id', requireRole('admin', 'school_admin', 'teacher'),
 });
 
 assignmentsRouter.delete('/:id', requireRole('admin', 'school_admin', 'teacher'), async (req, res) => {
-  const institutionId = await getAssignmentInstitutionId(req.params.id);
-  if (!institutionId || !isSameInstitution(req.auth!, institutionId)) {
+  const ctx = await loadAssignmentManageContext(req.params.id);
+  if (!ctx || !isSameInstitution(req.auth!, ctx.course.institutionId)) {
     return res.status(404).json({ error: 'Devoir introuvable' });
   }
+  if (!canManageAssignment(req.auth!, ctx.assignment, ctx.course)) {
+    sendForbidden(res);
+    return;
+  }
+  const institutionId = ctx.course.institutionId;
   await prisma.strkAssignment.delete({ where: { id: req.params.id } });
   await logAudit({
     institutionId,

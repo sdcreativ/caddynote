@@ -1,14 +1,20 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import crypto from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
-import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from '../lib/jwt.js';
+import { signAccessToken, signMfaChallengeToken, verifyAccessToken, verifyMfaChallengeToken } from '../lib/jwt.js';
+import {
+  accessTokenInBody,
+  clearAccessTokenCookie,
+  isCookieMutationOriginAllowed,
+  setAccessTokenCookie,
+} from '../lib/accessCookie.js';
+import { isSessionValid } from '../lib/sessions.js';
 import { requireAuth } from '../middleware/auth.js';
 import { PUBLIC_PROFILE_SELECT } from '../lib/profileSelect.js';
-import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, consumeBackupCode, looksLikeBackupCode, ensureMfaGraceStarted, isMfaGraceExpired, computeMfaGraceUntil } from '../lib/mfa.js';
+import { generateMfaSecret, buildOtpAuthUri, generateMfaQrCode, verifyMfaCode, isMfaRequiredRole, generateBackupCodes, hashBackupCodes, tryConsumeBackupCode, looksLikeBackupCode, ensureMfaGraceStarted, isMfaGraceExpired, computeMfaGraceUntil } from '../lib/mfa.js';
 import { isEmailConfigured, sendEmail } from '../lib/email.js';
 import { escapeHtml, wrapTransactionalEmail } from '../lib/emailLayout.js';
 import { createSession } from '../lib/sessions.js';
@@ -17,6 +23,13 @@ import { ensureRoleExtension } from '../lib/roleExtensions.js';
 import { isTestMode } from '../lib/testMode.js';
 import { canSelfAssignRole } from '../lib/publicRegister.js';
 import { requiredEmail } from '../lib/zodHelpers.js';
+import { consumeAdoptCode } from '../lib/ssoAdopt.js';
+import {
+  buildResetPasswordUrl,
+  hashPasswordResetToken,
+  isLegacyPlainResetToken,
+  issuePasswordResetSecret,
+} from '../lib/passwordReset.js';
 
 /** IAM-004 : crée la session servant de base au jeton, puis signe le jeton
  * avec son id (`sid`) — un point de passage unique pour les 3 endroits qui
@@ -24,6 +37,7 @@ import { requiredEmail } from '../lib/zodHelpers.js';
  * risquer d'en oublier un et laisser un jeton non révocable circuler. */
 const issueAccessToken = async (
   req: import('express').Request,
+  res: import('express').Response,
   profile: { id: string; role: import('@prisma/client').StrkUserRole; institutionId: string | null; groupId?: string | null }
 ): Promise<string> => {
   const session = await createSession({
@@ -31,17 +45,17 @@ const issueAccessToken = async (
     userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
     ipAddress: req.ip,
   });
-  return signAccessToken({ sub: profile.id, role: profile.role, institutionId: profile.institutionId, groupId: profile.groupId, sid: session.id });
+  const token = signAccessToken({ sub: profile.id, role: profile.role, institutionId: profile.institutionId, groupId: profile.groupId, sid: session.id });
+  setAccessTokenCookie(res, token);
+  return token;
 };
 
 export const authRouter = Router();
 
 // IAM-002 : limite les tentatives sur les seuls endpoints exposés au
 // bourrage d'identifiants (register, login, vérification MFA, mot de passe
-// oublié/réinitialisé) — jamais sur ce qui exige déjà une session valide
-// (/me, /logout, /sessions...), voir l'explication complète dans index.ts
-// à l'endroit d'où ce limiteur a été déplacé le 16/08/2026. Désactivé en
-// test pour les mêmes raisons qu'avant (fixtures créant >10 comptes).
+// oublié/réinitialisé, adopt SSO) — jamais sur ce qui exige déjà une session
+// valide (/me, /logout, /sessions...). Désactivé en test (fixtures >10 comptes).
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -102,8 +116,8 @@ authRouter.post('/register', authLimiter, async (req, res) => {
     // partout où l'app indexe sur StrkStudent/StrkTeacher plutôt que StrkProfile.
     await ensureRoleExtension(profile.id, profile.role, profile.institutionId);
 
-    const token = await issueAccessToken(req, profile);
-    res.status(201).json({ token, user: profile });
+    const token = await issueAccessToken(req, res, profile);
+    res.status(201).json({ ...accessTokenInBody(req, token), user: profile });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
@@ -171,7 +185,7 @@ authRouter.post('/login', authLimiter, async (req, res) => {
     mfaGraceUntil: profile.mfaGraceUntil,
   });
 
-  const token = await issueAccessToken(req, profile);
+  const token = await issueAccessToken(req, res, profile);
   await logAudit({ institutionId: profile.institutionId, actorId: profile.id, action: 'auth.login', ipAddress: req.ip });
   // Journal visible sur /super-admin « Activité récente » (StrkActivity ≠ audit technique).
   await prisma.strkActivity
@@ -187,7 +201,7 @@ authRouter.post('/login', authLimiter, async (req, res) => {
     .catch(() => undefined);
   const { passwordHash: _omit, mfaSecret: _omit2, passwordResetToken: _omit3, mfaBackupCodeHashes: _omit4, ...safeProfile } = profile;
   res.json({
-    token,
+    ...accessTokenInBody(req, token),
     user: { ...safeProfile, mfaGraceUntil },
   });
 });
@@ -216,6 +230,12 @@ authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Session MFA invalide' });
   }
 
+  // PER-005 : le compte a pu être désactivé entre l'émission du jeton de
+  // défi MFA et cette vérification — avant de consommer un code de secours.
+  if (!profile.isActive) {
+    return res.status(403).json({ error: 'Ce compte a été désactivé' });
+  }
+
   const rawCode = parsed.data.code.trim();
   let verified = false;
   let consumedBackup = false;
@@ -223,15 +243,8 @@ authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
   if (/^\d{6}$/.test(rawCode)) {
     verified = await verifyMfaCode(profile.mfaSecret, rawCode);
   } else if (looksLikeBackupCode(rawCode)) {
-    const consumed = consumeBackupCode(profile.mfaBackupCodeHashes ?? [], rawCode);
-    if (consumed.ok) {
-      verified = true;
-      consumedBackup = true;
-      await prisma.strkProfile.update({
-        where: { id: profile.id },
-        data: { mfaBackupCodeHashes: consumed.remaining },
-      });
-    }
+    verified = await tryConsumeBackupCode(profile.id, rawCode);
+    consumedBackup = verified;
   }
 
   if (!verified) {
@@ -246,15 +259,9 @@ authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Code de vérification incorrect' });
   }
 
-  // PER-005 : le compte a pu être désactivé entre l'émission du jeton de
-  // défi MFA et cette vérification.
-  if (!profile.isActive) {
-    return res.status(403).json({ error: 'Ce compte a été désactivé' });
-  }
-
   await prisma.strkProfile.update({ where: { id: profile.id }, data: { lastLoginAt: new Date() } });
 
-  const token = await issueAccessToken(req, profile);
+  const token = await issueAccessToken(req, res, profile);
   await logAudit({
     institutionId: profile.institutionId,
     actorId: profile.id,
@@ -280,7 +287,7 @@ authRouter.post('/mfa/login-verify', authLimiter, async (req, res) => {
     mfaBackupCodeHashes: _omit4,
     ...safeProfile
   } = profile;
-  res.json({ token, user: safeProfile });
+  res.json({ ...accessTokenInBody(req, token), user: safeProfile });
 });
 
 // --- MFA : activation/désactivation (IAM-003) ---
@@ -459,15 +466,15 @@ authRouter.post('/forgot-password', authLimiter, async (req, res) => {
   const profile = await prisma.strkProfile.findUnique({ where: { email: parsed.data.email } });
   // Réponse identique que le compte existe ou non (évite l'énumération de comptes).
   if (profile) {
-    const token = crypto.randomBytes(32).toString('hex');
+    const { raw, hash } = issuePasswordResetSecret();
     await prisma.strkProfile.update({
       where: { id: profile.id },
       data: {
-        passwordResetToken: token,
+        passwordResetToken: hash,
         passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000), // 1h
       },
     });
-    const resetUrl = `${process.env.APP_URL || 'http://localhost:8080'}/reset-password?token=${token}`;
+    const resetUrl = buildResetPasswordUrl(process.env.APP_URL || 'http://localhost:8080', raw);
     const first = escapeHtml(profile.firstName ?? '');
     const html = wrapTransactionalEmail({
       preheader: 'Réinitialisez votre mot de passe CaddyNote (lien valable 1 heure)',
@@ -490,16 +497,15 @@ authRouter.post('/forgot-password', authLimiter, async (req, res) => {
       text: `Bonjour${profile.firstName ? ` ${profile.firstName}` : ''},\n\nRéinitialisez votre mot de passe (valable 1 h) :\n${resetUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
     });
     if (!sent) {
-      // SMTP non configuré sur cette instance : le jeton reste journalisé
-      // pour ne pas bloquer les tests/développement sans fournisseur e-mail.
-      console.log(`🔑 [e-mail non envoyé] Jeton de réinitialisation pour ${profile.email} : ${token}`);
+      // Jamais le jeton ni l’URL dans les journaux — secret d’accès au compte.
+      console.warn('[auth] forgot-password : e-mail non envoyé');
     }
   }
   res.json({ success: true, message: 'Si ce compte existe, un e-mail de réinitialisation a été envoyé.' });
 });
 
 const resetPasswordSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().min(16).max(128),
   newPassword: z.string().min(8),
 });
 
@@ -509,12 +515,23 @@ authRouter.post('/reset-password', authLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Données invalides' });
   }
 
-  const profile = await prisma.strkProfile.findFirst({
+  const now = new Date();
+  const hashed = hashPasswordResetToken(parsed.data.token);
+  let profile = await prisma.strkProfile.findFirst({
     where: {
-      passwordResetToken: parsed.data.token,
-      passwordResetExpires: { gt: new Date() },
+      passwordResetToken: hashed,
+      passwordResetExpires: { gt: now },
     },
   });
+  // Fenêtre 1 h : e-mails déjà partis avec jeton en clair / en query.
+  if (!profile && isLegacyPlainResetToken(parsed.data.token)) {
+    profile = await prisma.strkProfile.findFirst({
+      where: {
+        passwordResetToken: parsed.data.token,
+        passwordResetExpires: { gt: now },
+      },
+    });
+  }
   if (!profile) {
     return res.status(400).json({ error: 'Jeton invalide ou expiré' });
   }
@@ -583,5 +600,47 @@ authRouter.delete('/sessions', requireAuth, async (req, res) => {
 
 authRouter.post('/logout', requireAuth, async (req, res) => {
   await prisma.strkSession.update({ where: { id: req.auth!.sid }, data: { revokedAt: new Date() } });
+  clearAccessTokenCookie(res);
   res.json({ success: true });
+});
+
+/** Échange un code SSO (usage unique) ou un jeton de test contre le cookie HttpOnly. */
+authRouter.post('/adopt', authLimiter, async (req, res) => {
+  if (!isCookieMutationOriginAllowed(req)) {
+    return res.status(403).json({ error: 'Origine de la requête refusée', code: 'csrf' });
+  }
+  const parsed = z
+    .object({
+      code: z.string().min(16).max(128).optional(),
+      token: z.string().min(20).max(4000).optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success || (!parsed.data.code && !parsed.data.token)) {
+    return res.status(400).json({ error: 'Jeton manquant' });
+  }
+
+  const setCookieFromAccessToken = async (token: string) => {
+    const payload = verifyAccessToken(token);
+    if (!(await isSessionValid(payload.sid))) {
+      return res.status(401).json({ error: 'Session révoquée ou expirée, reconnectez-vous' });
+    }
+    setAccessTokenCookie(res, token);
+    return res.json({ ok: true });
+  };
+
+  try {
+    if (parsed.data.code) {
+      const adopted = await consumeAdoptCode(parsed.data.code);
+      if (!adopted) {
+        return res.status(401).json({ error: 'Code invalide ou expiré' });
+      }
+      if (adopted.kind === 'mfa') {
+        return res.json({ ok: true, mfaRequired: true, challengeToken: adopted.token });
+      }
+      return await setCookieFromAccessToken(adopted.token);
+    }
+    return await setCookieFromAccessToken(parsed.data.token!);
+  } catch {
+    return res.status(401).json({ error: 'Jeton invalide ou expiré' });
+  }
 });

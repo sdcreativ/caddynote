@@ -1,6 +1,4 @@
-import { apiClient, getToken } from '@/lib/apiClient';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiClient, authorizedFetch } from '@/lib/apiClient';
 
 /**
  * DOC-001 à 005 — le module Documents (certificat, reçu, bulletin, relevé,
@@ -178,10 +176,7 @@ export const revokeDocument = async (id: string): Promise<boolean> => {
  * Hors de `apiClient` volontairement : celui-ci ne parse que du JSON.
  */
 export const downloadDocument = async (id: string, filename: string): Promise<void> => {
-  const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/documents/${id}/download`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const response = await authorizedFetch(`/documents/${id}/download`);
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.error || `Erreur ${response.status} lors du téléchargement`);

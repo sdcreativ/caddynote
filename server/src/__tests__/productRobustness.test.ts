@@ -3,6 +3,8 @@ import request from 'supertest';
 import { app } from '../index.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 import { prisma } from '../lib/prisma.js';
+import { hashPasswordResetToken } from '../lib/passwordReset.js';
+import { withCapturedResetEmail } from './captureResetEmail.js';
 
 describe('Priorité moyenne — robustesse produit', () => {
   let fx: Fixture;
@@ -41,14 +43,18 @@ describe('Priorité moyenne — robustesse produit', () => {
 
   it('Forgot / reset password bout en bout', async () => {
     const email = fx.a.teacher.email;
-    const forgot = await request(app).post('/auth/forgot-password').send({ email });
+    const { result: forgot, rawToken } = await withCapturedResetEmail(() =>
+      request(app).post('/auth/forgot-password').send({ email })
+    );
     expect(forgot.status).toBe(200);
+    expect(rawToken).toBeTruthy();
 
     const profile = await prisma.strkProfile.findUnique({ where: { email } });
-    expect(profile?.passwordResetToken).toBeTruthy();
+    expect(profile?.passwordResetToken).toBe(hashPasswordResetToken(rawToken!));
+    expect(profile?.passwordResetToken).not.toBe(rawToken);
 
     const reset = await request(app).post('/auth/reset-password').send({
-      token: profile!.passwordResetToken,
+      token: rawToken,
       newPassword: 'NewPassword123!',
     });
     expect(reset.status).toBe(200);

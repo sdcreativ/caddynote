@@ -3,7 +3,20 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { isSameInstitution, TEACHING_ROLES, SECRETARIAT_ROLES } from '../lib/authz.js';
+import {
+  isSameInstitution,
+  listClassIdsForStudents,
+  canManageCourse,
+  TEACHING_ROLES,
+  SECRETARIAT_ROLES,
+} from '../lib/authz.js';
+import {
+  rejectUnlessCanReadCourse,
+  rejectUnlessListScope,
+  rejectUnlessStudentAccess,
+  rejectUnlessTenantOrGuardian,
+  sendForbidden,
+} from '../lib/httpAuthz.js';
 import { isS3Configured } from '../lib/s3.js';
 import { STORAGE_FOLDER } from '../lib/storageFolders.js';
 import { ensureRoleExtension } from '../lib/roleExtensions.js';
@@ -24,6 +37,23 @@ coursesRouter.get('/', async (req, res) => {
   const { teacherId, institutionId, classId, studentId } = req.query;
 
   if (typeof teacherId === 'string') {
+    // Même principe que schedules / grades : un enseignant consulte ses
+    // propres cours ; ceux d’un tiers seulement si même établissement.
+    if (teacherId !== req.auth!.sub) {
+      const teacher = await prisma.strkProfile.findUnique({
+        where: { id: teacherId },
+        select: { institutionId: true },
+      });
+      if (!teacher || !isSameInstitution(req.auth!, teacher.institutionId)) {
+        return res.status(403).json({ error: 'Permissions insuffisantes' });
+      }
+      const scope = await rejectUnlessListScope(res, req.auth!);
+      if (!scope) return;
+      if (scope.kind !== 'all') {
+        sendForbidden(res);
+        return;
+      }
+    }
     const courses = await prisma.strkCourse.findMany({
       where: { teacherId, status: 'active' },
       include: COURSE_INCLUDE,
@@ -45,10 +75,8 @@ coursesRouter.get('/', async (req, res) => {
     if (!isSameInstitution(req.auth!, student.institutionId)) {
       return res.status(403).json({ error: 'Permissions insuffisantes' });
     }
-    // Un élève ne peut lister que ses propres cours (sauf personnel).
-    if (req.auth!.role === 'student' && req.auth!.sub !== studentId) {
-      return res.status(403).json({ error: 'Permissions insuffisantes' });
-    }
+    const access = await rejectUnlessStudentAccess(res, req.auth!, studentId);
+    if (!access) return;
     resolvedClassId = student.classId;
   }
 
@@ -60,8 +88,15 @@ coursesRouter.get('/', async (req, res) => {
     if (!klass) {
       return res.status(404).json({ error: 'Classe introuvable' });
     }
-    if (!isSameInstitution(req.auth!, klass.institutionId)) {
-      return res.status(403).json({ error: 'Permissions insuffisantes' });
+    if (await rejectUnlessTenantOrGuardian(res, req.auth!, klass.institutionId)) return;
+    const scope = await rejectUnlessListScope(res, req.auth!);
+    if (!scope) return;
+    if (scope.kind === 'ids') {
+      const ownClassIds = await listClassIdsForStudents(scope.ids);
+      if (!ownClassIds.includes(resolvedClassId)) {
+        sendForbidden(res);
+        return;
+      }
     }
     const courses = await prisma.strkCourse.findMany({
       where: { classId: resolvedClassId, status: 'active' },
@@ -72,8 +107,24 @@ coursesRouter.get('/', async (req, res) => {
   }
 
   if (typeof institutionId === 'string') {
-    if (!isSameInstitution(req.auth!, institutionId)) {
-      return res.status(403).json({ error: 'Permissions insuffisantes' });
+    if (await rejectUnlessTenantOrGuardian(res, req.auth!, institutionId)) return;
+    const scope = await rejectUnlessListScope(res, req.auth!);
+    if (!scope) return;
+    if (scope.kind === 'ids') {
+      const classIds = await listClassIdsForStudents(scope.ids);
+      const courses = await prisma.strkCourse.findMany({
+        where: {
+          institutionId,
+          status: 'active',
+          OR: [
+            ...(classIds.length > 0 ? [{ classId: { in: classIds } }] : []),
+            { courseStudents: { some: { studentId: { in: scope.ids } } } },
+          ],
+        },
+        include: COURSE_INCLUDE,
+        orderBy: { name: 'asc' },
+      });
+      return res.json({ courses });
     }
     const courses = await prisma.strkCourse.findMany({
       where: { institutionId, status: 'active' },
@@ -91,25 +142,17 @@ coursesRouter.get('/:id', async (req, res) => {
   if (!course) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!isSameInstitution(req.auth!, course.institutionId)) {
-    return res.status(403).json({ error: 'Permissions insuffisantes' });
-  }
+  if (await rejectUnlessCanReadCourse(res, req.auth!, course)) return;
   res.json({ course });
 });
 
-const canManageCourseMaterials = (auth: { sub: string; role: string }, course: { teacherId: string | null }): boolean => {
-  if (auth.role === 'admin' || auth.role === 'school_admin' || auth.role === 'head_teacher') return true;
-  return !!course.teacherId && course.teacherId === auth.sub;
-};
 
 coursesRouter.get('/:id/materials', async (req, res) => {
   const course = await prisma.strkCourse.findUnique({ where: { id: req.params.id } });
   if (!course) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!isSameInstitution(req.auth!, course.institutionId)) {
-    return res.status(403).json({ error: 'Permissions insuffisantes' });
-  }
+  if (await rejectUnlessCanReadCourse(res, req.auth!, course)) return;
   const materials = await prisma.strkCourseMaterial.findMany({
     where: { courseId: course.id },
     orderBy: { createdAt: 'desc' },
@@ -131,9 +174,7 @@ coursesRouter.get('/:id/lessons', async (req, res) => {
   if (!course) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!isSameInstitution(req.auth!, course.institutionId)) {
-    return res.status(403).json({ error: 'Permissions insuffisantes' });
-  }
+  if (await rejectUnlessCanReadCourse(res, req.auth!, course)) return;
   const lessons = await prisma.strkLessonEntry.findMany({
     where: { courseId: course.id },
     orderBy: { lessonDate: 'desc' },
@@ -146,7 +187,7 @@ coursesRouter.post('/:id/lessons', requireRole(...TEACHING_ROLES), async (req, r
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!canManageCourseMaterials(req.auth!, course)) {
+  if (!canManageCourse(req.auth!, course)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const parsed = lessonSchema.safeParse(req.body);
@@ -172,7 +213,7 @@ coursesRouter.patch('/:id/lessons/:lessonId', requireRole(...TEACHING_ROLES), as
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!canManageCourseMaterials(req.auth!, course)) {
+  if (!canManageCourse(req.auth!, course)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const existing = await prisma.strkLessonEntry.findUnique({ where: { id: req.params.lessonId } });
@@ -200,7 +241,7 @@ coursesRouter.delete('/:id/lessons/:lessonId', requireRole(...TEACHING_ROLES), a
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!canManageCourseMaterials(req.auth!, course)) {
+  if (!canManageCourse(req.auth!, course)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const existing = await prisma.strkLessonEntry.findUnique({ where: { id: req.params.lessonId } });
@@ -224,7 +265,7 @@ coursesRouter.post('/:id/materials', requireRole(...TEACHING_ROLES), async (req,
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!canManageCourseMaterials(req.auth!, course)) {
+  if (!canManageCourse(req.auth!, course)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const parsed = materialSchema.safeParse(req.body);
@@ -260,7 +301,7 @@ coursesRouter.delete('/:id/materials/:materialId', requireRole(...TEACHING_ROLES
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
   }
-  if (!canManageCourseMaterials(req.auth!, course)) {
+  if (!canManageCourse(req.auth!, course)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const material = await prisma.strkCourseMaterial.findUnique({ where: { id: req.params.materialId } });
@@ -404,6 +445,9 @@ coursesRouter.patch('/:id', requireRole(...TEACHING_ROLES), async (req, res) => 
   const course = await prisma.strkCourse.findUnique({ where: { id: req.params.id } });
   if (!course || !isSameInstitution(req.auth!, course.institutionId)) {
     return res.status(404).json({ error: 'Cours introuvable' });
+  }
+  if (!canManageCourse(req.auth!, course)) {
+    return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
   const parsed = updateCourseSchema.safeParse(req.body);
   if (!parsed.success) {

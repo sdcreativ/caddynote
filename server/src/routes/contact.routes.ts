@@ -9,6 +9,22 @@ import {
   notifyPlatformAdminsOfContact,
 } from '../lib/contactDemo.js';
 import { requiredEmail } from '../lib/zodHelpers.js';
+import { escapeHtml } from '../lib/emailLayout.js';
+
+/** CR/LF et séparateurs Unicode — injection d’en-tête SMTP si interpolés dans `subject`. */
+export const sanitizeContactSubject = (raw: string): string =>
+  raw.replace(/[\r\n\u2028\u2029]+/g, ' ').replace(/[ \t]+/g, ' ').trim();
+
+export const buildContactEmailHtml = (input: {
+  name: string;
+  email: string;
+  message: string;
+}): string => {
+  const name = escapeHtml(input.name);
+  const email = escapeHtml(input.email);
+  const message = escapeHtml(input.message).replace(/\n/g, '<br/>');
+  return `<p><strong>De :</strong> ${name} &lt;${email}&gt;</p><p>${message}</p><p><a href="/super-admin/support-ops">Ouvrir Support ops</a></p>`;
+};
 
 /**
  * Formulaire contact public — plus de simulation côté front : persistance
@@ -28,7 +44,11 @@ const contactLimiter = rateLimit({
 const contactSchema = z.object({
   name: z.string().min(1).max(200),
   email: requiredEmail,
-  subject: z.string().min(1).max(300),
+  subject: z
+    .string()
+    .max(300)
+    .transform(sanitizeContactSubject)
+    .pipe(z.string().min(1).max(300)),
   message: z.string().min(10).max(5000),
 });
 
@@ -51,7 +71,7 @@ contactPublicRouter.post('/', contactLimiter, async (req, res) => {
       subject: isDemo
         ? `[Démo CaddyNote] ${parsed.data.subject}`
         : `[Contact CaddyNote] ${parsed.data.subject}`,
-      html: `<p><strong>De :</strong> ${parsed.data.name} &lt;${parsed.data.email}&gt;</p><p>${parsed.data.message.replace(/\n/g, '<br/>')}</p><p><a href="/super-admin/support-ops">Ouvrir Support ops</a></p>`,
+      html: buildContactEmailHtml(parsed.data),
       text: `${parsed.data.name} <${parsed.data.email}>\n\n${parsed.data.message}\n\n→ Support ops : /super-admin/support-ops`,
     });
   } else {

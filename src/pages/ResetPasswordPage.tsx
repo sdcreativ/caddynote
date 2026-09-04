@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,16 +8,21 @@ import { PublicShell } from '@/components/public/PublicShell';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import { useTranslation } from 'react-i18next';
+import { readResetPasswordToken, relocateResetTokenOutOfQuery } from '@/lib/resetPasswordToken';
 
 const ResetPasswordPage = () => {
   const { t } = useTranslation('auth');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const token = params.get('token') || '';
+  const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    relocateResetTokenOutOfQuery();
+    setToken(readResetPasswordToken());
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

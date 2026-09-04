@@ -1,12 +1,17 @@
 import type { Response } from 'express';
 import type { JwtPayload } from './jwt.js';
+import { prisma } from './prisma.js';
 import {
   getCourseInstitutionId,
   getStudentAccess,
+  isGuardianOfInstitution,
   isSameInstitution,
   isStudentAccessDenied,
+  listAccessibleStudentIds,
+  listClassIdsForStudents,
   type GuardianPermission,
   type StudentAccess,
+  type StudentListScope,
 } from './authz.js';
 
 /** Réponse 403 unique — ne pas recoder le libellé dans chaque routeur. */
@@ -26,6 +31,21 @@ export const rejectUnlessSameInstitution = (
   institutionId: string | null | undefined
 ): boolean => {
   if (isSameInstitution(auth, institutionId ?? null)) return false;
+  sendForbidden(res);
+  return true;
+};
+
+/**
+ * Lecture : personnel du tenant, ou parent lié à un enfant de l’établissement.
+ * Ne pas utiliser pour une écriture.
+ */
+export const rejectUnlessTenantOrGuardian = async (
+  res: Response,
+  auth: JwtPayload,
+  institutionId: string | null | undefined
+): Promise<boolean> => {
+  if (isSameInstitution(auth, institutionId ?? null)) return false;
+  if (await isGuardianOfInstitution(auth, institutionId)) return false;
   sendForbidden(res);
   return true;
 };
@@ -68,9 +88,22 @@ export const rejectUnlessResolvedTenant = (
 };
 
 /**
- * Tenant d’un cours : id manquant (cours introuvable) ou autre
- * établissement → 403. Même règle que notes/devoirs.
+ * Portée de liste : staff → tout le tenant ; élève/parent → leurs ids.
+ * @returns null si 403 déjà envoyé.
  */
+export const rejectUnlessListScope = async (
+  res: Response,
+  auth: JwtPayload,
+  guardianPermission?: GuardianPermission
+): Promise<Extract<StudentListScope, { kind: 'all' } | { kind: 'ids' }> | null> => {
+  const scope = await listAccessibleStudentIds(auth, guardianPermission);
+  if (scope.kind === 'none') {
+    sendForbidden(res);
+    return null;
+  }
+  return scope;
+};
+
 export const rejectUnlessCourseTenant = async (
   res: Response,
   auth: JwtPayload,
@@ -78,4 +111,57 @@ export const rejectUnlessCourseTenant = async (
 ): Promise<string | null> => {
   const institutionId = await getCourseInstitutionId(courseId);
   return rejectUnlessResolvedTenant(res, auth, institutionId);
+};
+
+export const rejectUnlessCourseTenantOrGuardian = async (
+  res: Response,
+  auth: JwtPayload,
+  courseId: string
+): Promise<string | null> => {
+  const institutionId = await getCourseInstitutionId(courseId);
+  if (!institutionId) {
+    sendForbidden(res);
+    return null;
+  }
+  if (await rejectUnlessTenantOrGuardian(res, auth, institutionId)) return null;
+  return institutionId;
+};
+
+export type CourseReadTarget = { id: string; institutionId: string; classId: string | null };
+
+/** Staff du tenant, ou élève/parent inscrit (classe ou courseStudents). */
+export const rejectUnlessCanReadCourse = async (
+  res: Response,
+  auth: JwtPayload,
+  course: CourseReadTarget
+): Promise<boolean> => {
+  if (await rejectUnlessTenantOrGuardian(res, auth, course.institutionId)) return true;
+  const scope = await rejectUnlessListScope(res, auth);
+  if (!scope) return true;
+  if (scope.kind === 'all') return false;
+  const classIds = await listClassIdsForStudents(scope.ids);
+  if (course.classId && classIds.includes(course.classId)) return false;
+  const linked = await prisma.strkCourseStudent.findFirst({
+    where: { courseId: course.id, studentId: { in: scope.ids } },
+    select: { id: true },
+  });
+  if (linked) return false;
+  sendForbidden(res);
+  return true;
+};
+
+export const rejectUnlessCanReadAssignment = async (
+  res: Response,
+  auth: JwtPayload,
+  courseId: string
+): Promise<boolean> => {
+  const course = await prisma.strkCourse.findUnique({
+    where: { id: courseId },
+    select: { id: true, institutionId: true, classId: true },
+  });
+  if (!course) {
+    sendForbidden(res);
+    return true;
+  }
+  return rejectUnlessCanReadCourse(res, auth, course);
 };

@@ -76,3 +76,12 @@ export const isSessionValid = async (sessionId: string): Promise<boolean> => {
   prisma.strkSession.update({ where: { id: sessionId }, data: { lastSeenAt: new Date() } }).catch(() => {});
   return true;
 };
+
+/** Invalide tous les JWT encore en circulation (claim `sid`). */
+export const revokeActiveSessions = async (userId: string): Promise<number> => {
+  const result = await prisma.strkSession.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return result.count;
+};

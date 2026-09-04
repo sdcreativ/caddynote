@@ -3,8 +3,20 @@ import { z } from 'zod';
 import { Prisma, type StrkAbsence } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { isSameInstitution, SUPERVISION_ROLES, DIRECTION_ROLES, getStudentAccess } from '../lib/authz.js';
-import { rejectUnlessSameInstitution, rejectUnlessStudentAccess, sendForbidden } from '../lib/httpAuthz.js';
+import {
+  isSameInstitution,
+  SUPERVISION_ROLES,
+  DIRECTION_ROLES,
+  INSTITUTION_STAFF_ROLES,
+  getStudentAccess,
+} from '../lib/authz.js';
+import {
+  rejectUnlessListScope,
+  rejectUnlessSameInstitution,
+  rejectUnlessTenantOrGuardian,
+  rejectUnlessStudentAccess,
+  sendForbidden,
+} from '../lib/httpAuthz.js';
 import { notifyGuardiansOfAbsence, runAbsenceAlertCheck } from '../lib/absenceAlertCron.js';
 import { runAttendanceThresholdCheck } from '../lib/attendanceThresholds.js';
 import { logAudit } from '../lib/audit.js';
@@ -299,9 +311,15 @@ absencesRouter.get('/', async (req, res) => {
       sendForbidden(res);
       return;
     }
-    if (rejectUnlessSameInstitution(res, req.auth!, course.institutionId)) return;
+    if (await rejectUnlessTenantOrGuardian(res, req.auth!, course.institutionId)) return;
+    const scope = await rejectUnlessListScope(res, req.auth!, 'canViewAttendance');
+    if (!scope) return;
     const absences = await prisma.strkAbsence.findMany({
-      where: { courseId, ...(dateFilter ? { date: dateFilter } : {}) },
+      where: {
+        courseId,
+        ...(scope.kind === 'ids' ? { studentId: { in: scope.ids } } : {}),
+        ...(dateFilter ? { date: dateFilter } : {}),
+      },
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ absences: await enrichAbsences(absences) });
@@ -317,7 +335,9 @@ absencesRouter.get('/', async (req, res) => {
       sendForbidden(res);
       return;
     }
-    if (rejectUnlessSameInstitution(res, req.auth!, cls.institutionId)) return;
+    if (await rejectUnlessTenantOrGuardian(res, req.auth!, cls.institutionId)) return;
+    const scope = await rejectUnlessListScope(res, req.auth!, 'canViewAttendance');
+    if (!scope) return;
     const enrollments = await prisma.strkClassStudent.findMany({
       where: { classId, isActive: true },
       select: { studentId: true },
@@ -327,9 +347,11 @@ absencesRouter.get('/', async (req, res) => {
       where: { classId },
       select: { id: true },
     });
-    const studentIds = [
+    const rosterIds = [
       ...new Set([...enrollments.map((e) => e.studentId), ...legacyStudents.map((s) => s.id)]),
     ];
+    const studentIds =
+      scope.kind === 'all' ? rosterIds : rosterIds.filter((id) => scope.ids.includes(id));
     if (studentIds.length === 0) {
       return res.json({ absences: [] });
     }
@@ -347,7 +369,15 @@ absencesRouter.get('/', async (req, res) => {
 
   if (typeof institutionId === 'string') {
     if (rejectUnlessSameInstitution(res, req.auth!, institutionId)) return;
-    const absences = await prisma.strkAbsence.findMany({ where: { institutionId }, orderBy: { date: 'desc' } });
+    if (!INSTITUTION_STAFF_ROLES.includes(req.auth!.role)) {
+      sendForbidden(res);
+      return;
+    }
+    const absences = await prisma.strkAbsence.findMany({
+      where: { institutionId },
+      orderBy: { date: 'desc' },
+      take: 500,
+    });
     return res.json({ absences: await enrichAbsences(absences) });
   }
 

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  canManageAssignment,
+  canManageCourse,
   isSameInstitution,
   isStudentAccessDenied,
   tenantWhere,
@@ -34,6 +36,23 @@ describe('Helpers d’autorisation partagés (plus de copies dans les routeurs)'
     expect(tenantWhere(auth({ role: 'admin', institutionId: null }))).toEqual({});
     expect(tenantWhere(auth())).toEqual({ institutionId: 'inst-a' });
     expect(tenantWhere(auth({ institutionId: null }))).toEqual({ institutionId: '__none__' });
+  });
+
+  it('canManageCourse / canManageAssignment : titulaire ou direction, pas un collègue', () => {
+    const teacher = auth({ sub: 't1', role: 'teacher' });
+    const peer = auth({ sub: 't2', role: 'teacher' });
+    const direction = auth({ sub: 'dir', role: 'school_admin' });
+    const course = { teacherId: 't1' };
+
+    expect(canManageCourse(teacher, course)).toBe(true);
+    expect(canManageCourse(peer, course)).toBe(false);
+    expect(canManageCourse(direction, course)).toBe(true);
+    expect(canManageCourse(teacher, { teacherId: null })).toBe(false);
+
+    expect(canManageAssignment(teacher, { teacherId: 't1' }, course)).toBe(true);
+    expect(canManageAssignment(peer, { teacherId: 't2' }, course)).toBe(true);
+    expect(canManageAssignment(peer, { teacherId: 't1' }, course)).toBe(false);
+    expect(canManageAssignment(direction, { teacherId: 't1' }, course)).toBe(true);
   });
 
   it('isSameInstitution : admin global toujours, sinon égalité stricte d’établissement', () => {

@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { verifyAccessToken } from '../lib/jwt.js';
+import { readAccessToken } from '../lib/accessCookie.js';
 
 type Cache = { enabled: boolean; checkedAt: number };
 
@@ -45,9 +46,20 @@ export const invalidateMaintenanceCache = () => {
   cache = null;
 };
 
+/** Admin plateforme : Bearer ou cookie HttpOnly (même source que `requireAuth`). */
+export const isAdminMaintenanceBypass = (req: Request): boolean => {
+  const extracted = readAccessToken(req);
+  if (!extracted) return false;
+  try {
+    return verifyAccessToken(extracted.token).role === 'admin';
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Mode maintenance plateforme : 503 pour tout le monde sauf
- * health/metrics/webhook/auth et les JWT rôle admin.
+ * health/metrics/webhook/auth et les JWT rôle admin (Bearer ou cookie).
  */
 export const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const enabled = await readMaintenanceEnabled();
@@ -58,15 +70,7 @@ export const maintenanceMiddleware = async (req: Request, res: Response, next: N
     return next();
   }
 
-  const header = req.headers.authorization;
-  if (header?.startsWith('Bearer ')) {
-    try {
-      const payload = verifyAccessToken(header.slice('Bearer '.length));
-      if (payload.role === 'admin') return next();
-    } catch {
-      // ignore — treated as unauthenticated
-    }
-  }
+  if (isAdminMaintenanceBypass(req)) return next();
 
   res.setHeader('Retry-After', '300');
   return res.status(503).json({

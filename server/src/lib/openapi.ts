@@ -11,7 +11,16 @@
  * surface (méthode, chemin, auth, rôle), pas un SDK typé champ par champ.
  * Une dérive catalogue ↔ code se voit dans `openapi.test.ts` (plancher
  * d'opérations + chemins critiques réellement servis).
+ *
+ * `/openapi.json` et `/docs` ne sont pas servis en staging/production
+ * (`isHardenedRuntime`), sauf opt-in `OPENAPI_DOCS=true`.
  */
+import { isHardenedRuntime } from './deployment.js';
+
+export const isOpenApiExposed = (): boolean => {
+  if (process.env.OPENAPI_DOCS === 'true') return true;
+  return !isHardenedRuntime();
+};
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -30,14 +39,14 @@ const direction = ['admin', 'school_admin'] as const;
 const finance = ['admin', 'school_admin', 'accountant'] as const;
 
 export const OPENAPI_CATALOG: CatalogOp[] = [
-  { method: 'get', path: '/health', tag: 'Système', summary: 'Sonde de disponibilité (Postgres, rôle du process, cible host:port/db)', auth: 'public' },
-  { method: 'get', path: '/metrics', tag: 'Système', summary: 'Métriques process (jeton optionnel METRICS_TOKEN)', auth: 'public', statuses: [401] },
+  { method: 'get', path: '/health', tag: 'Système', summary: 'Sonde de disponibilité (Postgres, rôle du process)', auth: 'public' },
+  { method: 'get', path: '/metrics', tag: 'Système', summary: 'Métriques process (Bearer METRICS_TOKEN obligatoire hors test)', auth: 'bearer', statuses: [401] },
   { method: 'get', path: '/status', tag: 'Système', summary: 'Page status publique (snapshot SLO léger)', auth: 'public' },
   { method: 'get', path: '/diagnostics', tag: 'Système', summary: 'Diagnostics ops plateforme', auth: 'bearer', roles: ['admin'] },
   { method: 'get', path: '/admin/bootstrap/status', tag: 'Ops admin', summary: 'Statut bootstrap super-admin (sans secrets)', auth: 'bearer', roles: ['admin'] },
   { method: 'post', path: '/admin/bootstrap/retire', tag: 'Ops admin', summary: 'Désactiver le compte bootstrap après vrai admin', auth: 'bearer', roles: ['admin'], statuses: [200, 409] },
-  { method: 'get', path: '/openapi.json', tag: 'Système', summary: 'Spécification OpenAPI 3.0 de cette API', auth: 'public' },
-  { method: 'get', path: '/docs', tag: 'Système', summary: 'Interface Swagger UI (lit /openapi.json)', auth: 'public' },
+  { method: 'get', path: '/openapi.json', tag: 'Système', summary: 'Spécification OpenAPI 3.0 (interne : masquée en staging/prod)', auth: 'public', statuses: [200, 404] },
+  { method: 'get', path: '/docs', tag: 'Système', summary: 'Swagger UI interne (masquée en staging/prod)', auth: 'public', statuses: [200, 404] },
 
   { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Créer un compte (désactivé en public — fixtures/bootstrap uniquement)', auth: 'public', statuses: [201, 400, 403, 429] },
   { method: 'post', path: '/auth/login', tag: 'Auth', summary: 'Connexion (peut renvoyer mfaRequired)', auth: 'public', statuses: [200, 401, 429] },
@@ -57,6 +66,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'delete', path: '/auth/sessions/:id', tag: 'Auth', summary: 'Révoquer une session précise', auth: 'bearer' },
   { method: 'delete', path: '/auth/sessions', tag: 'Auth', summary: 'Révoquer toutes les autres sessions', auth: 'bearer' },
   { method: 'post', path: '/auth/logout', tag: 'Auth', summary: 'Déconnexion (révoque la session courante)', auth: 'bearer' },
+  { method: 'post', path: '/auth/adopt', tag: 'Auth', summary: 'Échanger un code SSO (usage unique) contre le cookie HttpOnly', auth: 'public', statuses: [200, 400, 401, 403, 429] },
 
   { method: 'get', path: '/institutions', tag: 'Établissements', summary: 'Lister (scopé au tenant, sauf admin global)', auth: 'bearer' },
   { method: 'get', path: '/institutions/:id', tag: 'Établissements', summary: 'Lire un établissement', auth: 'bearer' },
@@ -261,7 +271,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/subscriptions/webhook', tag: 'Abonnement', summary: 'Webhook Stripe (corps brut, signature)', auth: 'public', statuses: [200, 400, 501] },
 
   { method: 'post', path: '/activity', tag: 'Activité', summary: 'Journal d’activité client (complémentaire, falsifiable — voir /audit-log)', auth: 'bearer', statuses: [201] },
-  { method: 'get', path: '/activity', tag: 'Activité', summary: 'Lister l’activité (scopée établissement)', auth: 'bearer' },
+  { method: 'get', path: '/activity', tag: 'Activité', summary: 'Lister l’activité établissement (personnel)', auth: 'bearer' },
   { method: 'get', path: '/activity/by-user/:userId', tag: 'Activité', summary: 'Activité d’un utilisateur', auth: 'bearer' },
 
   { method: 'get', path: '/analytics/dashboard-metrics', tag: 'Analytics', summary: 'Métriques du tableau de bord (personnel)', auth: 'bearer', roles: [...staff] },
@@ -344,7 +354,7 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/finance/invoices/:id/payments/cinetpay/initiate', tag: 'Finance', summary: 'Paiement Mobile Money (501 si non configuré)', auth: 'bearer', statuses: [200, 501] },
   { method: 'post', path: '/finance/invoices/:id/payments/stripe/initiate', tag: 'Finance', summary: 'Paiement carte (501 si non configuré)', auth: 'bearer', statuses: [200, 501] },
   { method: 'post', path: '/finance/invoices/:id/payments/manual', tag: 'Finance', summary: 'Enregistrer un virement/espèces', auth: 'bearer', roles: [...finance], statuses: [201] },
-  { method: 'post', path: '/finance/webhooks/cinetpay', tag: 'Finance', summary: 'Webhook CinetPay (public ; confirmation via check serveur FIN-005)', auth: 'public', statuses: [200, 400, 500] },
+  { method: 'post', path: '/finance/webhooks/cinetpay', tag: 'Finance', summary: 'Webhook CinetPay (public ; quota ; confirmation via check serveur FIN-005)', auth: 'public', statuses: [200, 400, 429, 500] },
   { method: 'post', path: '/finance/payments/:id/refund', tag: 'Finance', summary: 'Rembourser sans supprimer le paiement', auth: 'bearer', roles: [...finance] },
   { method: 'post', path: '/finance/bank-statement/import', tag: 'Finance', summary: 'Importer un relevé bancaire', auth: 'bearer', roles: [...finance] },
   { method: 'get', path: '/finance/bank-statement/lines', tag: 'Finance', summary: 'Lignes de relevé', auth: 'bearer', roles: [...finance] },

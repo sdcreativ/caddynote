@@ -47,6 +47,7 @@ import { teacherAvailabilityRouter } from './routes/teacherAvailability.routes.j
 import { messagesRouter } from './routes/messages.routes.js';
 import { notificationsRouter } from './routes/notifications.routes.js';
 import { settingsRouter } from './routes/settings.routes.js';
+import { announcementPublicRouter, announcementAdminRouter } from './routes/announcement.routes.js';
 import { guardiansRouter } from './routes/guardians.routes.js';
 import { subscriptionsRouter } from './routes/subscriptions.routes.js';
 import { activityRouter } from './routes/activity.routes.js';
@@ -71,18 +72,19 @@ import { adminOpsRouter } from './routes/adminOps.routes.js';
 import { statusRouter } from './routes/status.routes.js';
 import { stripeWebhookHandler } from './routes/stripeWebhook.routes.js';
 import { metricsMiddleware, syncProcessRoleMetrics } from './lib/metrics.js';
-import { buildOpenApiDocument, OPENAPI_DOCS_HTML } from './lib/openapi.js';
+import { buildOpenApiDocument, isOpenApiExposed, OPENAPI_DOCS_HTML } from './lib/openapi.js';
 import { healthHandler, metricsHandler, startWorkerProbe } from './lib/health.js';
 import { getProcessRole, shouldRunJobs, shouldServeHttp } from './lib/processRole.js';
 import { startBackgroundJobs } from './lib/jobs.js';
 import { logDatabaseTarget } from './lib/databaseTarget.js';
 import { maintenanceMiddleware } from './middleware/maintenance.js';
+import { assertCorsOriginReady, resolveCorsOrigin } from './lib/corsOrigin.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? true, credentials: true }));
+app.use(cors({ origin: resolveCorsOrigin(), credentials: true }));
 
 // NFR-002/003 : mesure chaque requête (durée, méthode, route, statut) avant
 // tout routeur, pour couvrir aussi les réponses d'erreur précoces (CORS,
@@ -133,6 +135,8 @@ app.use('/assignments', assignmentsRouter);
 app.use('/teacher-availability', teacherAvailabilityRouter);
 app.use('/messages', messagesRouter);
 app.use('/notifications', notificationsRouter);
+app.use('/public', announcementPublicRouter);
+app.use('/admin', announcementAdminRouter);
 app.use('/settings', settingsRouter);
 app.use('/guardians', guardiansRouter);
 app.use('/subscriptions', subscriptionsRouter);
@@ -170,13 +174,18 @@ app.use(diagnosticsRouter);
 app.use('/admin', adminOpsRouter);
 app.use('/status', statusRouter);
 
-// Chap. 22.2 / Lot 12 : catalogue OpenAPI de la surface réelle, servi par
-// l'API elle-même (pas un fichier mort dans docs/). Public : documenter
-// l'API n'est pas une donnée d'établissement. /docs charge Swagger UI.
+// Chap. 22.2 / Lot 12 : catalogue OpenAPI. Local / test seulement ;
+// staging/production → 404 sauf OPENAPI_DOCS=true (réseau interne).
 app.get('/openapi.json', (_req, res) => {
+  if (!isOpenApiExposed()) {
+    return res.status(404).json({ error: 'Introuvable' });
+  }
   res.json(buildOpenApiDocument());
 });
 app.get('/docs', (_req, res) => {
+  if (!isOpenApiExposed()) {
+    return res.status(404).type('html').send('Introuvable');
+  }
   res.type('html').send(OPENAPI_DOCS_HTML);
 });
 
@@ -190,10 +199,8 @@ app.get('/health', healthHandler);
 // (que des compteurs par route/méthode/statut), mais route/méthode
 // exposeraient la structure interne de l'API à un sondage anonyme si le
 // port était ouvert au public — protégé par un jeton porteur (Bearer)
-// optionnel, même principe de dégradation explicite que les intégrations
-// gated (Stripe/CinetPay/S3/ClamAV/Anthropic) : si `METRICS_TOKEN` n'est
-// pas configuré, l'accès reste ouvert (pratique en développement/derrière
-// un réseau Docker interne non exposé), sinon le jeton est exigé (Bearer).
+// obligatoire hors NODE_ENV=test : si `METRICS_TOKEN` n'est pas défini,
+// l'accès est refusé (401). En test, l'absence de jeton reste ouverte.
 app.get('/metrics', metricsHandler);
 
 // Middleware d'erreur global (Express reconnaît une fonction à 4 paramètres
@@ -254,6 +261,7 @@ if (process.env.NODE_ENV !== 'test') {
   }
 
   try {
+    assertCorsOriginReady();
     assertFileEncryptionReady();
     assertAntivirusReady();
   } catch (err) {

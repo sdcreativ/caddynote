@@ -16,6 +16,7 @@ import { optionalEmail, optionalString, requiredEmail } from '../lib/zodHelpers.
 import { importTeachersFromCsv } from '../lib/teacherImport.js';
 import { parseCsvWithHeader } from '../lib/csvImport.js';
 import { computeMfaGraceUntil } from '../lib/mfa.js';
+import { revokeActiveSessions } from '../lib/sessions.js';
 
 export const usersRouter = Router();
 
@@ -282,6 +283,7 @@ usersRouter.patch('/:id', async (req, res) => {
       // d'extension, sans quoi il resterait tout aussi inutilisable qu'un
       // compte créé directement avec ce rôle.
       await ensureRoleExtension(target.id, data.role, user.institutionId);
+      await revokeActiveSessions(target.id);
       await logAudit({
         institutionId: target.institutionId,
         actorId: req.auth!.sub,
@@ -308,12 +310,23 @@ usersRouter.patch('/:id/institution', requireRole('admin'), async (req, res) => 
     return res.status(400).json({ error: 'Données invalides' });
   }
 
+  const target = await prisma.strkProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, institutionId: true },
+  });
+  if (!target) {
+    return res.status(404).json({ error: 'Utilisateur introuvable' });
+  }
+
   try {
     const user = await prisma.strkProfile.update({
-      where: { id: req.params.id },
+      where: { id: target.id },
       data: { institutionId: parsed.data.institutionId },
       select: PUBLIC_PROFILE_SELECT,
     });
+    if (target.institutionId !== parsed.data.institutionId) {
+      await revokeActiveSessions(target.id);
+    }
     res.json({ user });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -332,12 +345,23 @@ usersRouter.patch('/:id/group', requireRole('admin'), async (req, res) => {
     return res.status(400).json({ error: 'Données invalides' });
   }
 
+  const target = await prisma.strkProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, groupId: true },
+  });
+  if (!target) {
+    return res.status(404).json({ error: 'Utilisateur introuvable' });
+  }
+
   try {
     const user = await prisma.strkProfile.update({
-      where: { id: req.params.id },
+      where: { id: target.id },
       data: { groupId: parsed.data.groupId },
       select: PUBLIC_PROFILE_SELECT,
     });
+    if (target.groupId !== parsed.data.groupId) {
+      await revokeActiveSessions(target.id);
+    }
     res.json({ user });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

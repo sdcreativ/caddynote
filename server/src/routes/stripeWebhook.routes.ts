@@ -6,6 +6,12 @@ import { getStripeClient, isStripeConfigured, isStripeWebhookConfigured } from '
 import { logAudit } from '../lib/audit.js';
 import { markAdmissionFeePaidByProviderRef } from './admissions.routes.js';
 import { ensureSingleAllocation, recomputeInvoiceStatus } from '../lib/paymentAllocations.js';
+import {
+  isStripeEventAlreadyProcessed,
+  markStripeEventProcessed,
+  recordPaidStripeInvoice,
+  upsertPremiumFromCheckout,
+} from '../lib/stripeWebhookApply.js';
 
 /**
  * Remplace l'edge function Supabase `webhook-stripe`. FIN-005 / bonnes
@@ -36,6 +42,10 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
   }
 
   try {
+    if (await isStripeEventAlreadyProcessed(event.id)) {
+      return res.json({ received: true });
+    }
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -89,20 +99,15 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
         const plan = planId ? await prisma.subscriptionPlan.findUnique({ where: { id: planId } }) : null;
         const expiresAt = new Date(stripeSub.items.data[0]?.current_period_end * 1000 || Date.now());
 
-        await prisma.premiumSubscription.create({
-          data: {
-            userId,
-            institutionId,
-            planId: plan?.id,
-            plan: plan?.name ?? 'stripe',
-            status: 'active',
-            billingCycle,
-            expiresAt,
-            stripeCustomerId: session.customer,
-            stripeSubscriptionId: session.subscription,
-            lastPaymentDate: new Date(),
-            nextBillingDate: expiresAt,
-          },
+        await upsertPremiumFromCheckout({
+          userId,
+          institutionId,
+          planId: plan?.id,
+          planName: plan?.name ?? 'stripe',
+          billingCycle,
+          expiresAt,
+          stripeCustomerId: session.customer,
+          stripeSubscriptionId: session.subscription,
         });
         break;
       }
@@ -135,19 +140,15 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice;
         const subId = (invoice as unknown as { subscription?: string }).subscription;
-        if (!subId) break;
+        if (!subId || !invoice.id) break;
         const local = await prisma.premiumSubscription.findFirst({ where: { stripeSubscriptionId: subId } });
         if (!local) break;
-        await prisma.billingHistory.create({
-          data: {
-            subscriptionId: local.id,
-            stripeInvoiceId: invoice.id,
-            amount: (invoice.amount_paid ?? 0) / 100,
-            currency: invoice.currency?.toUpperCase() ?? 'EUR',
-            status: 'paid',
-            paymentDate: new Date(),
-            invoiceUrl: invoice.hosted_invoice_url ?? undefined,
-          },
+        await recordPaidStripeInvoice({
+          subscriptionId: local.id,
+          stripeInvoiceId: invoice.id,
+          amount: (invoice.amount_paid ?? 0) / 100,
+          currency: invoice.currency?.toUpperCase() ?? 'EUR',
+          invoiceUrl: invoice.hosted_invoice_url,
         });
         break;
       }
@@ -155,6 +156,7 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
       default:
         break;
     }
+    await markStripeEventProcessed(event.id, event.type);
     res.json({ received: true });
   } catch (error) {
     console.error('Erreur traitement webhook Stripe:', error);

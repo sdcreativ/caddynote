@@ -7,6 +7,7 @@ import { registry } from '../lib/metrics.js';
 import { isQueueStarted } from '../lib/queue.js';
 import { getProcessRole, shouldRunJobs, shouldServeHttp } from '../lib/processRole.js';
 import { optionalEmail } from '../lib/zodHelpers.js';
+import { accessTokenInBody, setAccessTokenCookie } from '../lib/accessCookie.js';
 
 /**
  * Recherche globale + métriques ops + RoPA pour la console super-admin.
@@ -65,6 +66,7 @@ adminOpsRouter.post('/impersonate/exit', requireAuth, async (req, res) => {
     groupId: admin.groupId,
     sid: session.id,
   });
+  setAccessTokenCookie(res, token);
 
   await logAudit({
     institutionId: req.auth!.institutionId,
@@ -75,7 +77,7 @@ adminOpsRouter.post('/impersonate/exit', requireAuth, async (req, res) => {
     ipAddress: req.ip,
   });
 
-  res.json({ token, user: admin });
+  res.json({ ...accessTokenInBody(req, token), user: admin });
 });
 
 adminOpsRouter.use(requireAuth, requireRole('admin'));
@@ -583,6 +585,7 @@ adminOpsRouter.post('/impersonate', requirePlatformPerm('support'), async (req, 
     },
     expiresIn
   );
+  setAccessTokenCookie(res, token, expiresIn);
 
   await logAudit({
     institutionId: target.institutionId,
@@ -600,7 +603,7 @@ adminOpsRouter.post('/impersonate', requirePlatformPerm('support'), async (req, 
   });
 
   res.json({
-    token,
+    ...accessTokenInBody(req, token),
     expiresInMinutes: minutes,
     expiresAt: session.expiresAt.toISOString(),
     user: target,

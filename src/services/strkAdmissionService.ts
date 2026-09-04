@@ -1,4 +1,4 @@
-import { apiClient, ApiError, getToken } from '@/lib/apiClient';
+import { apiClient, ApiError, authorizedFetch } from '@/lib/apiClient';
 import { inferUploadContentType } from '@/lib/s3Upload';
 
 export interface AdmissionInstitution {
@@ -274,15 +274,13 @@ export const reviewAdmissionPacketItem = (
 export const reuseAdmissionPacket = (applicationId: string) =>
   apiClient.post<{ reused: number; packet: AdmissionPacket }>(`/admissions/${applicationId}/packet/reuse`, {});
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-
 const uploadAdmissionBinary = async (
   key: string,
   uploadPath: string,
   file: File,
   contentType: string
 ): Promise<string> => {
-  const uploaded = await fetch(`${API_BASE}${uploadPath}`, {
+  const uploaded = await authorizedFetch(uploadPath, {
     method: 'PUT',
     headers: { 'Content-Type': contentType, 'X-Object-Key': key },
     body: file,
@@ -480,11 +478,7 @@ export const fetchAdmissionRejectionReasons = () =>
   );
 
 export const downloadAdmissionPacketItem = async (applicationId: string, itemId: string) => {
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  const token = getToken();
-  const res = await fetch(`${API_BASE}/admissions/${applicationId}/packet/items/${itemId}/download`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authorizedFetch(`/admissions/${applicationId}/packet/items/${itemId}/download`);
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new ApiError(body?.error || 'Téléchargement impossible', res.status);

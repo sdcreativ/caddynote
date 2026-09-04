@@ -11,6 +11,7 @@ import {
   type SsoConfigStored,
 } from './ssoConfig.js';
 import { isTestMode } from './testMode.js';
+import { assertSafeOutboundUrl, UnsafeSsoUrlError } from './safeOutboundUrl.js';
 
 const PENDING_CATEGORY = 'sso_pending';
 const PENDING_TTL_MS = 10 * 60 * 1000;
@@ -56,14 +57,27 @@ export const getSsoRedirectUri = () => {
 
 export const getAppUrl = () => (process.env.APP_URL || 'http://localhost:8080').replace(/\/$/, '');
 
+const outboundFetch = async (url: string, init: RequestInit): Promise<Response> => {
+  await assertSafeOutboundUrl(url);
+  return fetch(url, { ...init, redirect: 'error' });
+};
+
 export const fetchDiscovery = async (issuerUrl: string): Promise<OidcDiscovery> => {
+  await assertSafeOutboundUrl(issuerUrl);
   const url = `${issuerUrl.replace(/\/$/, '')}/.well-known/openid-configuration`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  const res = await outboundFetch(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`Discovery OIDC échouée (${res.status})`);
-  const body = (await res.json()) as OidcDiscovery;
+  const text = await res.text();
+  if (text.length > 64_000) throw new UnsafeSsoUrlError();
+  const body = JSON.parse(text) as OidcDiscovery;
   if (!body.authorization_endpoint || !body.token_endpoint || !body.jwks_uri || !body.issuer) {
     throw new Error('Discovery OIDC incomplète');
   }
+  await Promise.all([
+    assertSafeOutboundUrl(body.authorization_endpoint),
+    assertSafeOutboundUrl(body.token_endpoint),
+    assertSafeOutboundUrl(body.jwks_uri),
+  ]);
   return body;
 };
 
@@ -178,7 +192,7 @@ export const exchangeCodeForClaims = async (opts: {
     code_verifier: pending.codeVerifier,
   });
 
-  const tokenRes = await fetch(discovery.token_endpoint, {
+  const tokenRes = await outboundFetch(discovery.token_endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,

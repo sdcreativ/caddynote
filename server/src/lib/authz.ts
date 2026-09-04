@@ -44,10 +44,39 @@ const STAFF_ROLES = INSTITUTION_STAFF_ROLES;
 
 export const isGlobalAdmin = (auth: JwtPayload): boolean => auth.role === 'admin';
 
+/** Titulaire du cours, ou direction / prof principal. */
+export const canManageCourse = (
+  auth: Pick<JwtPayload, 'sub' | 'role'>,
+  course: { teacherId: string | null }
+): boolean => {
+  if (auth.role === 'admin' || auth.role === 'school_admin' || auth.role === 'head_teacher') return true;
+  return Boolean(course.teacherId && course.teacherId === auth.sub);
+};
+
+/** Titulaire du devoir, titulaire du cours, ou direction / prof principal. */
+export const canManageAssignment = (
+  auth: Pick<JwtPayload, 'sub' | 'role'>,
+  assignment: { teacherId: string },
+  course: { teacherId: string | null }
+): boolean => canManageCourse(auth, course) || assignment.teacherId === auth.sub;
+
 /** Un utilisateur peut-il agir au nom de cet établissement ? (ORG-004) */
 export const isSameInstitution = (auth: JwtPayload, institutionId: string | null): boolean => {
   if (isGlobalAdmin(auth)) return true;
   return !!institutionId && auth.institutionId === institutionId;
+};
+
+/** Parent lié à un élève de cet établissement (souvent sans institutionId JWT). */
+export const isGuardianOfInstitution = async (
+  auth: JwtPayload,
+  institutionId: string | null | undefined
+): Promise<boolean> => {
+  if (auth.role !== 'parent' || !institutionId) return false;
+  const link = await prisma.strkStudentGuardian.findFirst({
+    where: { guardianId: auth.sub, institutionId, status: 'active' },
+    select: { id: true },
+  });
+  return Boolean(link);
 };
 
 /**
@@ -161,6 +190,65 @@ export const isStudentAccessDenied = (
   if (options?.denyGuardian) return true;
   if (options?.guardianPermission) return !access.permissions[options.guardianPermission];
   return false;
+};
+
+export type StudentListScope = { kind: 'all' } | { kind: 'ids'; ids: string[] } | { kind: 'none' };
+
+/**
+ * Portée d’une liste (notes / absences / cours) : le personnel voit tout le
+ * tenant ; un élève ou un parent seulement soi / ses enfants (droit tutelle).
+ */
+export const listAccessibleStudentIds = async (
+  auth: JwtPayload,
+  guardianPermission?: GuardianPermission
+): Promise<StudentListScope> => {
+  if (isGlobalAdmin(auth) || (STAFF_ROLES as readonly string[]).includes(auth.role)) {
+    return { kind: 'all' };
+  }
+  if (auth.role === 'student') {
+    return { kind: 'ids', ids: [auth.sub] };
+  }
+  if (auth.role === 'parent') {
+    const links = await prisma.strkStudentGuardian.findMany({
+      where: { guardianId: auth.sub, status: 'active' },
+      select: {
+        studentId: true,
+        canViewGrades: true,
+        canViewAttendance: true,
+        canViewBilling: true,
+        canMakePayments: true,
+        canViewDiscipline: true,
+        canViewHealth: true,
+      },
+    });
+    const ids = links
+      .filter((link) => !guardianPermission || link[guardianPermission])
+      .map((link) => link.studentId);
+    return ids.length > 0 ? { kind: 'ids', ids } : { kind: 'none' };
+  }
+  return { kind: 'none' };
+};
+
+/** Classes actuelles d’élèves (classId legacy + inscriptions actives). */
+export const listClassIdsForStudents = async (studentIds: string[]): Promise<string[]> => {
+  if (studentIds.length === 0) return [];
+  const [students, enrollments] = await Promise.all([
+    prisma.strkStudent.findMany({
+      where: { id: { in: studentIds } },
+      select: { classId: true },
+    }),
+    prisma.strkClassStudent.findMany({
+      where: { studentId: { in: studentIds }, isActive: true },
+      select: { classId: true },
+    }),
+  ]);
+  return [
+    ...new Set(
+      [...students.map((row) => row.classId), ...enrollments.map((row) => row.classId)].filter(
+        (id): id is string => typeof id === 'string' && id.length > 0
+      )
+    ),
+  ];
 };
 
 /**

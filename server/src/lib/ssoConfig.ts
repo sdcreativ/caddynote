@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { prisma } from './prisma.js';
+import { assertSafeOutboundUrl, isSafeSsoUrlShape, UnsafeSsoUrlError } from './safeOutboundUrl.js';
 
 export const ssoConfigSchema = z
   .object({
@@ -12,7 +13,12 @@ export const ssoConfigSchema = z
     displayName: z.string().max(80).optional(),
     /** Azure AD tenant id (GUID ou `organizations`). Ignoré si issuerUrl est fourni. */
     azureTenantId: z.string().max(80).optional(),
-    issuerUrl: z.string().url().max(500).optional().or(z.literal('')),
+    issuerUrl: z
+      .string()
+      .max(500)
+      .optional()
+      .or(z.literal(''))
+      .refine((value) => !value || isSafeSsoUrlShape(value), { message: 'issuerUrl HTTPS public requis' }),
     clientId: z.string().max(200).optional().default(''),
     /** Omise pour conserver le secret existant à l’update. */
     clientSecret: z.string().max(500).optional(),
@@ -55,7 +61,7 @@ export const loadSsoConfig = async (institutionId: string): Promise<SsoConfigSto
   return { ...(raw as SsoConfigStored), hasClientSecret };
 };
 
-/** Vue admin : secret masqué. */
+/** Vue admin / GET /settings : secret masqué (jamais en clair). */
 export const redactSsoConfig = (cfg: SsoConfigStored | null, institutionId?: string) => {
   if (!cfg) {
     return {
@@ -69,11 +75,16 @@ export const redactSsoConfig = (cfg: SsoConfigStored | null, institutionId?: str
       note: institutionId ? undefined : undefined,
     };
   }
-  const { clientSecret: _omit, ...rest } = cfg as SsoConfigStored & { clientSecret?: string };
+  const { clientSecret: omittedSecret, ...rest } = cfg as SsoConfigStored & { clientSecret?: string };
+  const hasClientSecret = !!(
+    rest.hasClientSecret ||
+    cfg.hasClientSecret ||
+    (typeof omittedSecret === 'string' && omittedSecret.length > 0)
+  );
   return {
     ...rest,
-    clientSecret: rest.hasClientSecret || cfg.hasClientSecret ? '********' : '',
-    hasClientSecret: !!(rest.hasClientSecret || cfg.hasClientSecret),
+    clientSecret: hasClientSecret ? '********' : '',
+    hasClientSecret,
     displayName: rest.displayName || (rest.provider === 'azure_ad' ? 'Microsoft' : 'SSO'),
   };
 };
@@ -107,6 +118,17 @@ export const saveSsoConfig = async (
   if (input.enabled && input.provider === 'azure_ad' && !input.issuerUrl && !input.azureTenantId) {
     throw new Error('azureTenantId ou issuerUrl requis pour Azure AD');
   }
+  if (input.azureTenantId && /[/\\@: ]/.test(input.azureTenantId)) {
+    throw new Error('azureTenantId invalide');
+  }
+  if (input.issuerUrl) {
+    try {
+      await assertSafeOutboundUrl(input.issuerUrl);
+    } catch (error) {
+      if (error instanceof UnsafeSsoUrlError) throw new Error('issuerUrl non autorisée');
+      throw error;
+    }
+  }
 
   const value: SsoConfigStored & { clientSecret?: string } = {
     enabled: input.enabled,
@@ -133,6 +155,17 @@ export const saveSsoConfig = async (
   });
 
   return { ...value, hasClientSecret: !!clientSecret };
+};
+
+/** PUT /settings institution:sso:* — même garde que saveSsoConfig. */
+export const assertSsoSettingValueSafe = async (value: unknown): Promise<void> => {
+  if (!value || typeof value !== 'object') return;
+  const raw = value as { issuerUrl?: unknown; azureTenantId?: unknown };
+  if (typeof raw.azureTenantId === 'string' && /[/\\@: ]/.test(raw.azureTenantId)) {
+    throw new Error('azureTenantId invalide');
+  }
+  if (typeof raw.issuerUrl !== 'string' || raw.issuerUrl.length === 0) return;
+  await assertSafeOutboundUrl(raw.issuerUrl);
 };
 
 export const findSsoInstitutionByEmail = async (

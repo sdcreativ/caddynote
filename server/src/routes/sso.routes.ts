@@ -11,6 +11,8 @@ import {
   getAppUrl,
 } from '../lib/ssoOidc.js';
 import { completeSsoLogin } from '../lib/ssoLogin.js';
+import { issueAdoptCode } from '../lib/ssoAdopt.js';
+import { UnsafeSsoUrlError } from '../lib/safeOutboundUrl.js';
 
 export const ssoRouter = Router();
 
@@ -67,12 +69,12 @@ ssoRouter.get('/start', ssoLimiter, async (req, res) => {
     const url = await buildAuthorizeRedirect({ institutionId, stubEmail });
     return res.redirect(302, url);
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'SSO indisponible';
+    const message = e instanceof UnsafeSsoUrlError ? 'sso_issuer_invalide' : e instanceof Error ? e.message : 'SSO indisponible';
     return res.redirect(302, frontendRedirect({ sso_error: message.slice(0, 180) }));
   }
 });
 
-/** Callback OIDC — redirige vers le frontend avec token ou défi MFA (fragment). */
+/** Callback OIDC — redirige vers le frontend avec un code adopt (jamais de JWT). */
 ssoRouter.get('/callback', ssoLimiter, async (req, res) => {
   const err = typeof req.query.error === 'string' ? req.query.error : '';
   if (err) {
@@ -118,9 +120,11 @@ ssoRouter.get('/callback', ssoLimiter, async (req, res) => {
       return res.redirect(302, frontendRedirect({ sso_error: result.code }));
     }
     if (result.kind === 'mfa') {
-      return res.redirect(302, frontendRedirect({ sso_mfa: result.challengeToken }));
+      const adoptCode = await issueAdoptCode({ kind: 'mfa', token: result.challengeToken });
+      return res.redirect(302, frontendRedirect({ sso_code: adoptCode }));
     }
-    return res.redirect(302, frontendRedirect({ sso_token: result.token }));
+    const adoptCode = await issueAdoptCode({ kind: 'token', token: result.token });
+    return res.redirect(302, frontendRedirect({ sso_code: adoptCode }));
   } catch (e) {
     console.error('SSO callback error:', e instanceof Error ? e.message : e);
     return res.redirect(302, frontendRedirect({ sso_error: 'sso_exchange_failed' }));

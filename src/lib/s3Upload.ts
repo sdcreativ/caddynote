@@ -1,6 +1,4 @@
-import { apiClient, getToken, ApiError } from '@/lib/apiClient';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiClient, authorizedFetch, ApiError } from '@/lib/apiClient';
 
 const EXT_MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -25,13 +23,11 @@ const uploadViaDirectApi = async (
   file: File,
   contentType: string
 ): Promise<string> => {
-  const token = getToken();
-  const uploaded = await fetch(`${API_BASE_URL}${uploadPath}`, {
+  const uploaded = await authorizedFetch(uploadPath, {
     method: 'PUT',
     headers: {
       'Content-Type': contentType,
       'X-Object-Key': key,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: file,
   });

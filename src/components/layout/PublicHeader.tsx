@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { handleAnchorClick } from '@/lib/smoothScroll';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useTranslation } from 'react-i18next';
+import { currentSchoolYear } from '@/lib/schoolYear';
+import { API_BASE_URL } from '@/lib/apiClient';
+import { sanitizeCtaUrl } from '@/lib/internalCtaPath';
 
 const BLUE = '#1D70D8';
 const ANNOUNCE_BG = '#0B1F3A';
@@ -64,11 +67,64 @@ function DesktopNavLink({
   );
 }
 
+interface Announcement {
+  text: string;
+  shortText: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  showYear: boolean;
+  enabled: boolean;
+}
+
+function AnnounceBanner({
+  announce,
+  fallbackT,
+}: {
+  announce: Announcement | null;
+  fallbackT: (key: string) => string;
+}) {
+  const year = currentSchoolYear();
+
+  // Determine texts: API data if available, else i18n fallback
+  const text = announce?.text || fallbackT('announce');
+  const shortText = announce?.shortText || fallbackT('announceShort');
+  const ctaLabel = announce?.ctaLabel || fallbackT('announceCta');
+  const ctaUrl = sanitizeCtaUrl(
+    announce?.ctaUrl,
+    '/contact?subject=Demande%20de%20pr%C3%A9sentation'
+  );
+  const showYear = announce?.showYear ?? true;
+
+  // If API returned but disabled, hide the banner entirely
+  if (announce && !announce.enabled) return null;
+
+  const suffix = showYear ? ` ${year}` : '';
+
+  return (
+    <div className="text-white" style={{ backgroundColor: ANNOUNCE_BG }}>
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 px-4 py-2 text-center text-xs sm:flex-row sm:gap-5 sm:px-6 sm:text-[13px]">
+        <p className="line-clamp-2 font-medium text-white/90 sm:line-clamp-none">
+          <span className="sm:hidden">{shortText}{suffix}</span>
+          <span className="hidden sm:inline">{text}{suffix}</span>
+        </p>
+        <Link
+          to={ctaUrl}
+          className="inline-flex items-center gap-1 font-semibold text-[#7EB6FF] transition hover:text-white"
+        >
+          {ctaLabel}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function PublicHeader() {
   const { t } = useTranslation('publicHeader');
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [activeHash, setActiveHash] = useState(() => location.hash.replace('#', '') || '');
+  const [announce, setAnnounce] = useState<Announcement | null>(null);
 
   const navItems = [
     { key: 'features', label: t('nav.features'), href: '/#features', hash: 'features' },
@@ -77,6 +133,13 @@ export function PublicHeader() {
     { key: 'admissions', label: t('nav.admissions'), to: '/admissions' },
     { key: 'about', label: t('nav.about'), to: '/about' },
   ] as const;
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/public/announcement`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.announcement) setAnnounce(d.announcement); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -115,22 +178,8 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Annonce */}
-      <div className="text-white" style={{ backgroundColor: ANNOUNCE_BG }}>
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 px-4 py-2 text-center text-xs sm:flex-row sm:gap-5 sm:px-6 sm:text-[13px]">
-          <p className="line-clamp-2 font-medium text-white/90 sm:line-clamp-none">
-            <span className="sm:hidden">{t('announceShort')}</span>
-            <span className="hidden sm:inline">{t('announce')}</span>
-          </p>
-          <Link
-            to="/contact?subject=Demande%20de%20pr%C3%A9sentation"
-            className="inline-flex items-center gap-1 font-semibold text-[#7EB6FF] transition hover:text-white"
-          >
-            {t('announceCta')}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
-        </div>
-      </div>
+      {/* Annonce dynamique */}
+      <AnnounceBanner announce={announce} fallbackT={t} />
 
       {/* Nav */}
       <div

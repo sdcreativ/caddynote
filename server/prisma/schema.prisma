@@ -1879,7 +1879,7 @@ model PremiumSubscription {
   trialEndsAt                 DateTime? @map("trial_ends_at")
   autoRenew                   Boolean?  @default(true) @map("auto_renew")
   stripeCustomerId            String?   @map("stripe_customer_id")
-  stripeSubscriptionId        String?   @map("stripe_subscription_id")
+  stripeSubscriptionId        String?   @unique @map("stripe_subscription_id")
   paymentMethodId             String?   @map("payment_method_id")
   lastPaymentDate             DateTime? @map("last_payment_date")
   nextBillingDate             DateTime? @map("next_billing_date")
@@ -1901,10 +1901,19 @@ model PremiumSubscription {
   @@map("premium_subscriptions")
 }
 
+/** Événements Stripe déjà traités — rejeu `event.id` → no-op. */
+model StripeWebhookEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_webhook_events")
+}
+
 model BillingHistory {
   id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subscriptionId     String    @map("subscription_id") @db.Uuid
-  stripeInvoiceId    String?   @map("stripe_invoice_id")
+  stripeInvoiceId    String?   @unique @map("stripe_invoice_id")
   amount             Decimal
   currency           String?   @default("EUR")
   status             String

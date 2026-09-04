@@ -5,6 +5,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isGlobalAdmin, isSameInstitution, TEACHING_ROLES, DIRECTION_ROLES } from '../lib/authz.js';
 import {
   rejectUnlessCourseTenant,
+  rejectUnlessCourseTenantOrGuardian,
+  rejectUnlessListScope,
   rejectUnlessSameInstitution,
   rejectUnlessStudentAccess,
   sendForbidden,
@@ -81,16 +83,32 @@ gradesRouter.get('/', async (req, res) => {
   if (typeof courseId === 'string') {
     // ORG-004 : sans ce contrôle, un courseId seul suffisait à lister les
     // notes (et noms d'élèves) d'un cours de n'importe quel établissement.
-    const institutionId = await rejectUnlessCourseTenant(res, req.auth!, courseId);
+    const institutionId = await rejectUnlessCourseTenantOrGuardian(res, req.auth!, courseId);
     if (!institutionId) return;
-    const grades = await prisma.strkGrade.findMany({ where: { courseId }, orderBy: { date: 'desc' } });
+    const scope = await rejectUnlessListScope(res, req.auth!, 'canViewGrades');
+    if (!scope) return;
+    const grades = await prisma.strkGrade.findMany({
+      where: {
+        courseId,
+        ...(scope.kind === 'ids' ? { studentId: { in: scope.ids } } : {}),
+      },
+      orderBy: { date: 'desc' },
+    });
     return res.json({ grades: await enrichGrades(applyVisibility(grades, req.auth!.role)) });
   }
 
   if (typeof teacherId === 'string') {
-    // Un enseignant ne consulte que ses propres notes saisies ; le personnel
-    // de direction, celles de son établissement.
+    // Carnet d’un tiers : direction / chef d’établissement / vie scolaire.
+    // Un enseignant ne voit que ses propres saisies ; élève / parent : 403.
     if (teacherId !== req.auth!.sub) {
+      const canReadPeerBook =
+        DIRECTION_ROLES.includes(req.auth!.role) ||
+        req.auth!.role === 'head_teacher' ||
+        req.auth!.role === 'supervisor';
+      if (!canReadPeerBook) {
+        sendForbidden(res);
+        return;
+      }
       const teacher = await prisma.strkProfile.findUnique({ where: { id: teacherId }, select: { institutionId: true } });
       if (!teacher) {
         sendForbidden(res);

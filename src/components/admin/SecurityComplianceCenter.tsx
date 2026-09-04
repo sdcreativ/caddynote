@@ -623,7 +623,7 @@ const SecurityComplianceCenter = () => {
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4" /> Sessions actives (votre compte)
           </CardTitle>
-          <CardDescription>GET/DELETE /auth/sessions — révocation serveur (IAM-004). MFA obligatoire pour rôles sensibles côté API.</CardDescription>
+          <CardDescription>GET/DELETE /auth/sessions — révocation serveur (IAM-004). MFA obligatoire pour le personnel (pas élèves/parents).</CardDescription>
             </CardHeader>
             <CardContent>
           {sessions.length === 0 ? (

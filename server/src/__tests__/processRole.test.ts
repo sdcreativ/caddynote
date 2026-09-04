@@ -38,15 +38,7 @@ describe('Rôle du process (HTTP vs jobs)', () => {
     expect(res.body.processRole).toBe('api');
     expect(res.body.http).toBe(true);
     expect(res.body.jobs).toBe(false);
-    expect(res.body.databaseTarget).toEqual(
-      expect.objectContaining({
-        host: expect.any(String),
-        port: expect.any(Number),
-        database: expect.any(String),
-        profile: expect.any(String),
-      })
-    );
-    expect(res.body.databaseTarget).not.toHaveProperty('password');
+    expect(res.body).not.toHaveProperty('databaseTarget');
   });
 
   it('GET /metrics publie les jauges de rôle après /health', async () => {

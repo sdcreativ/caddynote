@@ -3,24 +3,39 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { invalidateMaintenanceCache } from '../middleware/maintenance.js';
+import {
+  canWriteSetting,
+  isAllowlistedPublicSetting,
+  presentSettingValue,
+  redactSettingValue,
+} from '../lib/settingAccess.js';
 
 export const settingsRouter = Router();
 settingsRouter.use(requireAuth);
 
-settingsRouter.get('/', async (_req, res) => {
-  const settings = await prisma.strkSetting.findMany({ select: { category: true, key: true, value: true } });
+settingsRouter.get('/', async (req, res) => {
+  const rows = await prisma.strkSetting.findMany({
+    select: { category: true, key: true, value: true, isPublic: true },
+  });
   const grouped: Record<string, Record<string, unknown>> = {};
-  for (const s of settings) {
-    grouped[s.category] ??= {};
-    grouped[s.category][s.key] = s.value;
+  for (const row of rows) {
+    const value = presentSettingValue(req.auth!, row);
+    if (value === undefined) continue;
+    grouped[row.category] ??= {};
+    grouped[row.category][row.key] = value;
   }
   res.json({ settings: grouped });
 });
 
 settingsRouter.get('/:category', async (req, res) => {
-  const settings = await prisma.strkSetting.findMany({
+  const rows = await prisma.strkSetting.findMany({
     where: { category: req.params.category },
-    select: { key: true, value: true },
+    select: { category: true, key: true, value: true, isPublic: true },
+  });
+  const settings = rows.flatMap((row) => {
+    const value = presentSettingValue(req.auth!, row);
+    if (value === undefined) return [];
+    return [{ key: row.key, value }];
   });
   res.json({ settings });
 });
@@ -28,9 +43,13 @@ settingsRouter.get('/:category', async (req, res) => {
 settingsRouter.get('/:category/:key', async (req, res) => {
   const setting = await prisma.strkSetting.findUnique({
     where: { category_key: { category: req.params.category, key: req.params.key } },
-    select: { value: true },
+    select: { category: true, key: true, value: true, isPublic: true },
   });
-  res.json({ value: setting?.value ?? null });
+  if (!setting) {
+    return res.json({ value: null });
+  }
+  const value = presentSettingValue(req.auth!, setting);
+  res.json({ value: value === undefined ? null : value });
 });
 
 const upsertSchema = z.object({
@@ -40,15 +59,8 @@ const upsertSchema = z.object({
 });
 
 settingsRouter.put('/:category/:key', async (req, res) => {
-  const isOwnKey = req.params.key.startsWith(`${req.auth!.sub}:`);
-  const isSystemKey = req.params.category === 'system';
-  const isPlatformMaintenance =
-    isSystemKey && req.params.key === 'maintenanceMode';
-
-  if (isSystemKey && req.auth!.role !== 'admin') {
-    return res.status(403).json({ error: 'Seul l’admin plateforme peut modifier les réglages système' });
-  }
-  if (!isOwnKey && !isSystemKey && !['admin', 'school_admin'].includes(req.auth!.role)) {
+  const { category, key } = req.params;
+  if (!canWriteSetting(req.auth!, category, key)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
 
@@ -56,37 +68,53 @@ settingsRouter.put('/:category/:key', async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: 'Données invalides' });
   }
+
+  if (category === 'institution' && key.startsWith('sso:')) {
+    try {
+      const { assertSsoSettingValueSafe } = await import('../lib/ssoConfig.js');
+      await assertSsoSettingValueSafe(parsed.data.value);
+    } catch (error) {
+      return res.status(400).json({
+        error: error instanceof Error && error.message === 'azureTenantId invalide' ? error.message : 'issuerUrl non autorisée',
+      });
+    }
+  }
+
+  const wantsPublic = req.auth!.role === 'admin' && parsed.data.isPublic === true;
+  const isPublic = wantsPublic && isAllowlistedPublicSetting(category, key);
   const setting = await prisma.strkSetting.upsert({
-    where: { category_key: { category: req.params.category, key: req.params.key } },
+    where: { category_key: { category, key } },
     create: {
-      category: req.params.category,
-      key: req.params.key,
+      category,
+      key,
       value: parsed.data.value as any,
       description: parsed.data.description,
-      isPublic: parsed.data.isPublic ?? false,
+      isPublic,
     },
     update: {
       value: parsed.data.value as any,
       description: parsed.data.description,
-      isPublic: parsed.data.isPublic ?? false,
+      isPublic,
     },
   });
-  if (isPlatformMaintenance) {
+  if (category === 'system' && key === 'maintenanceMode') {
     invalidateMaintenanceCache();
   }
-  res.json({ setting });
+  res.json({
+    setting: {
+      ...setting,
+      value: redactSettingValue(setting.category, setting.key, setting.value),
+    },
+  });
 });
 
 settingsRouter.delete('/:category/:key', async (req, res) => {
-  const isOwnKey = req.params.key.startsWith(`${req.auth!.sub}:`);
-  if (req.params.category === 'system' && req.auth!.role !== 'admin') {
-    return res.status(403).json({ error: 'Seul l’admin plateforme peut supprimer les réglages système' });
-  }
-  if (!isOwnKey && req.params.category !== 'system' && !['admin', 'school_admin'].includes(req.auth!.role)) {
+  const { category, key } = req.params;
+  if (!canWriteSetting(req.auth!, category, key)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
-  await prisma.strkSetting.deleteMany({ where: { category: req.params.category, key: req.params.key } });
-  if (req.params.category === 'system' && req.params.key === 'maintenanceMode') {
+  await prisma.strkSetting.deleteMany({ where: { category, key } });
+  if (category === 'system' && key === 'maintenanceMode') {
     invalidateMaintenanceCache();
   }
   res.json({ success: true });

@@ -1,7 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import { prisma } from './prisma.js';
 import { getProcessRole, shouldRunJobs, shouldServeHttp } from './processRole.js';
-import { getDatabaseTarget } from './databaseTarget.js';
 import { registry, syncProcessRoleMetrics } from './metrics.js';
 
 const syncRoleMetrics = (): void => {
@@ -24,7 +23,6 @@ export const buildHealthBody = async () => {
       processRole,
       http,
       jobs,
-      databaseTarget: getDatabaseTarget(),
     };
   } catch (error) {
     console.error('Health check failed:', error);
@@ -35,7 +33,6 @@ export const buildHealthBody = async () => {
       processRole,
       http,
       jobs,
-      databaseTarget: getDatabaseTarget(),
     };
   }
 };
@@ -46,10 +43,19 @@ export const healthHandler = async (_req: Request, res: Response): Promise<void>
   res.status(body.status === 'ok' ? 200 : 503).json(body);
 };
 
+/** Hors NODE_ENV=test, METRICS_TOKEN est obligatoire (pas d’exposition anonyme). */
+export const isMetricsAccessAllowed = (
+  authorization: string | undefined,
+  token = process.env.METRICS_TOKEN,
+  nodeEnv = process.env.NODE_ENV
+): boolean => {
+  if (!token) return nodeEnv === 'test';
+  return authorization === `Bearer ${token}`;
+};
+
 export const metricsHandler = async (req: Request, res: Response): Promise<void> => {
   syncRoleMetrics();
-  const expectedToken = process.env.METRICS_TOKEN;
-  if (expectedToken && req.headers.authorization !== `Bearer ${expectedToken}`) {
+  if (!isMetricsAccessAllowed(req.headers.authorization)) {
     res.status(401).json({ error: 'Jeton de métriques invalide ou absent' });
     return;
   }

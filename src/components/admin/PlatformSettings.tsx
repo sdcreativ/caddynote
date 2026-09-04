@@ -26,7 +26,9 @@ import {
 } from '@/services/strkOpsService';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Settings, Wrench, Ban, Flag } from 'lucide-react';
+import { Settings, Wrench, Ban, Flag, Megaphone } from 'lucide-react';
+import { currentSchoolYear } from '@/lib/schoolYear';
+import { Textarea } from '@/components/ui/textarea';
 
 const DEFAULT_PLATFORM_KEYS = [
   'finance',
@@ -159,6 +161,8 @@ const PlatformSettings = () => {
           Maintenance, kill-switch canaux, flags globaux, puis quotas par établissement.
         </p>
       </div>
+
+      <AnnouncementPanel />
 
       <Card>
         <CardHeader>
@@ -296,6 +300,153 @@ const PlatformSettings = () => {
 
       <SaaSOpsControls />
     </div>
+  );
+};
+
+/** Bandeau d'annonce publique (flash info). */
+interface AnnouncementData {
+  text: string;
+  shortText: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  showYear: boolean;
+  enabled: boolean;
+}
+
+const ANNOUNCE_DEFAULTS: AnnouncementData = {
+  text: '',
+  shortText: '',
+  ctaLabel: '',
+  ctaUrl: '',
+  showYear: true,
+  enabled: false,
+};
+
+const AnnouncementPanel = () => {
+  const { toast } = useToast();
+  const [data, setData] = useState<AnnouncementData>(ANNOUNCE_DEFAULTS);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await apiClient.get<{ announcement: AnnouncementData }>('/admin/announcement');
+        setData(res.announcement ?? ANNOUNCE_DEFAULTS);
+      } catch { /* first time: no data yet */ }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await apiClient.put('/admin/announcement', data);
+      toast({ title: 'Bandeau enregistré' });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const year = currentSchoolYear();
+  const preview = `${data.text}${data.showYear ? ` ${year}` : ''}`;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Megaphone className="h-4 w-4" /> Bandeau d'annonce (flash info)
+        </CardTitle>
+        <CardDescription>
+          Texte affiché sur la barre bleu nuit du site public. L'année scolaire ({year}) est ajoutée automatiquement si activée.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <Label>Bandeau actif</Label>
+          <Switch
+            checked={data.enabled}
+            disabled={!loaded || busy}
+            onCheckedChange={(v) => setData((d) => ({ ...d, enabled: v }))}
+            aria-label="Activer le bandeau"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Texte (desktop)</Label>
+          <Textarea
+            value={data.text}
+            onChange={(e) => setData((d) => ({ ...d, text: e.target.value }))}
+            placeholder="CaddyNote accompagne la rentrée scolaire"
+            maxLength={300}
+            rows={2}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Texte court (mobile)</Label>
+          <Input
+            value={data.shortText}
+            onChange={(e) => setData((d) => ({ ...d, shortText: e.target.value }))}
+            placeholder="Rentrée — présentation sur demande"
+            maxLength={200}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <Label>Ajouter l'année scolaire ({year})</Label>
+          <Switch
+            checked={data.showYear}
+            disabled={busy}
+            onCheckedChange={(v) => setData((d) => ({ ...d, showYear: v }))}
+            aria-label="Afficher l'année scolaire"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Bouton (label)</Label>
+            <Input
+              value={data.ctaLabel}
+              onChange={(e) => setData((d) => ({ ...d, ctaLabel: e.target.value }))}
+              placeholder="Demander une présentation"
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Bouton (URL)</Label>
+            <Input
+              value={data.ctaUrl}
+              onChange={(e) => setData((d) => ({ ...d, ctaUrl: e.target.value }))}
+              placeholder="/contact?subject=..."
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground">
+              Chemin interne uniquement (/contact). Pas d’URL externe.
+            </p>
+          </div>
+        </div>
+
+        {data.text && (
+          <div className="rounded-md px-4 py-2 text-center text-xs text-white" style={{ backgroundColor: '#0B1F3A' }}>
+            <span className="font-medium text-white/90">{preview}</span>
+            {data.ctaLabel && (
+              <span className="ml-3 font-semibold text-[#7EB6FF]">{data.ctaLabel} →</span>
+            )}
+          </div>
+        )}
+
+        <Button onClick={() => void save()} disabled={busy || !loaded}>
+          Enregistrer le bandeau
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

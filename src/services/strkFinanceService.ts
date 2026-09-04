@@ -678,12 +678,9 @@ export const downloadFinanceBalancesExport = async (
   asOf: string,
   format: 'csv' | 'xlsx' = 'csv'
 ): Promise<void> => {
-  const { getToken } = await import('@/lib/apiClient');
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  const token = getToken();
-  const res = await fetch(
-    `${API_BASE_URL}/finance/balances/export?asOf=${encodeURIComponent(asOf)}&format=${format}`,
-    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  const { authorizedFetch } = await import('@/lib/apiClient');
+  const res = await authorizedFetch(
+    `/finance/balances/export?asOf=${encodeURIComponent(asOf)}&format=${format}`
   );
   if (!res.ok) {
     const data = await res.json().catch(() => null);

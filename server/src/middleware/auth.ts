@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import type { StrkUserRole } from '@prisma/client';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { isSessionValid } from '../lib/sessions.js';
+import { isCookieMutationOriginAllowed, readAccessToken } from '../lib/accessCookie.js';
 import { isInstitutionSuspended } from '../lib/subscriptionSuspension.js';
 import {
   shouldEnforcePasswordChange,
@@ -26,7 +27,7 @@ const isSuspensionExempt = (req: Request): boolean => {
 };
 
 /**
- * Vérifie le JWT (en-tête `Authorization: Bearer <token>`) et attache son
+ * Vérifie le JWT (Bearer ou cookie HttpOnly `caddynote_at`) et attache son
  * contenu décodé à `req.auth`. Base de la couche d'autorisation applicative
  * qui remplace les RLS Supabase (cf. audit §5.2/§4.1).
  *
@@ -38,13 +39,19 @@ const isSuspensionExempt = (req: Request): boolean => {
  * jusqu'à son expiration naturelle quoi qu'il arrive.
  */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const extracted = readAccessToken(req);
+  if (!extracted) {
     return res.status(401).json({ error: 'Authentification requise' });
+  }
+  if (extracted.via === 'cookie' && !isCookieMutationOriginAllowed(req)) {
+    return res.status(403).json({ error: 'Origine de la requête refusée', code: 'csrf' });
   }
 
   try {
-    const payload = verifyAccessToken(header.slice('Bearer '.length));
+    const payload = verifyAccessToken(extracted.token);
+    // `role` / `institutionId` du JWT ne sont fiables que si `sid` est encore
+    // valide. Un PATCH rôle / école / groupe doit révoquer (users.routes),
+    // comme la désactivation — sinon les anciens claims survivent 12–24 h.
     if (!(await isSessionValid(payload.sid))) {
       return res.status(401).json({ error: 'Session révoquée ou expirée, reconnectez-vous' });
     }

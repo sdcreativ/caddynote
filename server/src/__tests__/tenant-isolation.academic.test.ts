@@ -4,11 +4,9 @@ import { app } from '../index.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
 // ORG-004 — couvre les correctifs apportés à absences/grades/assignments/
-// signatures/exercises/guardians : ces routes vérifiaient l'établissement à
-// la création et sur les listes filtrées par institutionId, mais pas sur les
-// accès par id (fiche, modification, suppression) ni sur les filtres
-// courseId/teacherId — un compte de l'établissement B pouvait lire ou altérer
-// des notes, devoirs, absences ou signatures de l'établissement A.
+// signatures/exercises/guardians/courses/classes : ces routes vérifiaient
+// l'établissement à la création et sur les listes filtrées par institutionId,
+// mais pas sur les accès par id ni sur les filtres courseId/teacherId.
 describe('Isolation multi-tenant — vie scolaire', () => {
   let fx: Fixture;
 
@@ -50,6 +48,29 @@ describe('Isolation multi-tenant — vie scolaire', () => {
     it('refuse la liste des notes saisies par l’enseignant de A à l’enseignant de B', async () => {
       const res = await request(app).get(`/grades?teacherId=${fx.a.teacher.id}`).set(auth(fx.b.teacher.token));
       expect(res.status).toBe(403);
+    });
+    it('refuse le carnet d’un enseignant à un élève ou un parent du même établissement', async () => {
+      const student = await request(app)
+        .get(`/grades?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.student.token));
+      expect(student.status).toBe(403);
+      expect(student.body.grades).toBeUndefined();
+
+      const parent = await request(app)
+        .get(`/grades?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.parentA.token));
+      expect(parent.status).toBe(403);
+    });
+    it('l’enseignant liste son propre carnet ; la direction peut lire celui d’un collègue', async () => {
+      const own = await request(app)
+        .get(`/grades?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.teacher.token));
+      expect(own.status).toBe(200);
+
+      const direction = await request(app)
+        .get(`/grades?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.schoolAdmin.token));
+      expect(direction.status).toBe(200);
     });
     it('refuse la création d’une note pour un cours de A par l’enseignant de B', async () => {
       const res = await request(app).post('/grades').set(auth(fx.b.teacher.token)).send({
@@ -317,6 +338,63 @@ describe('Isolation multi-tenant — vie scolaire', () => {
     it('un parent de A ne peut pas consulter les notes d’un élève de B', async () => {
       const res = await request(app).get(`/grades?studentId=${fx.b.student.id}`).set(auth(fx.parentA.token));
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('courses', () => {
+    it('refuse la liste des cours de l’enseignant de A à un enseignant de B', async () => {
+      const res = await request(app)
+        .get(`/courses?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.b.teacher.token));
+      expect(res.status).toBe(403);
+    });
+
+    it('l’enseignant de A liste ses propres cours', async () => {
+      const res = await request(app)
+        .get(`/courses?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.teacher.token));
+      expect(res.status).toBe(200);
+      expect(res.body.courses.some((c: { id: string }) => c.id === fx.a.courseId)).toBe(true);
+    });
+
+    it('la direction de A liste les cours de son enseignant', async () => {
+      const res = await request(app)
+        .get(`/courses?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.schoolAdmin.token));
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('classes', () => {
+    it('refuse la liste des classes de l’enseignant de A à un enseignant de B', async () => {
+      const res = await request(app)
+        .get(`/classes?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.b.teacher.token));
+      expect(res.status).toBe(403);
+      expect(res.body.classes).toBeUndefined();
+    });
+
+    it('l’enseignant de A liste ses propres classes sans données de B', async () => {
+      const res = await request(app)
+        .get(`/classes?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.teacher.token));
+      expect(res.status).toBe(200);
+      const ids = (res.body.classes as { id: string; institution?: { id: string } }[]).map((c) => c.id);
+      expect(ids).toContain(fx.a.classId);
+      expect(ids).not.toContain(fx.b.classId);
+      expect(
+        (res.body.classes as { institution?: { id: string } }[]).every(
+          (c) => c.institution?.id === fx.a.institutionId
+        )
+      ).toBe(true);
+    });
+
+    it('la direction de A liste les classes de son enseignant', async () => {
+      const res = await request(app)
+        .get(`/classes?teacherId=${fx.a.teacher.id}`)
+        .set(auth(fx.a.schoolAdmin.token));
+      expect(res.status).toBe(200);
+      expect(res.body.classes.some((c: { id: string }) => c.id === fx.a.classId)).toBe(true);
     });
   });
 });

@@ -24,39 +24,35 @@ describe('apiClient', () => {
     vi.unstubAllGlobals();
   });
 
-  describe('stockage du jeton', () => {
-    it('renvoie null tant qu’aucun jeton n’est stocké', () => {
-      expect(getToken()).toBeNull();
-    });
-
-    it('stocke puis efface le jeton', () => {
+  describe('jeton', () => {
+    it('ne stocke plus le jeton en localStorage', () => {
+      window.localStorage.setItem('caddynote_token', 'legacy');
       setToken('abc.def.ghi');
-      expect(getToken()).toBe('abc.def.ghi');
-      clearToken();
       expect(getToken()).toBeNull();
+      expect(window.localStorage.getItem('caddynote_token')).toBeNull();
     });
   });
 
   describe('requêtes', () => {
-    it('envoie le jeton en en-tête Authorization quand il est présent', async () => {
-      setToken('my-token');
+    it('envoie credentials include et pas d’Authorization', async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
       vi.stubGlobal('fetch', fetchMock);
 
       await apiClient.get('/me');
 
       const [, init] = fetchMock.mock.calls[0];
-      expect((init.headers as Record<string, string>).Authorization).toBe('Bearer my-token');
+      expect(init.credentials).toBe('include');
+      expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
     });
 
-    it('omet l’en-tête Authorization quand skipAuth est demandé', async () => {
-      setToken('my-token');
+    it('omet Authorization même si skipAuth', async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
       vi.stubGlobal('fetch', fetchMock);
 
       await apiClient.post('/auth/login', { email: 'a@b.c' }, { skipAuth: true });
 
       const [, init] = fetchMock.mock.calls[0];
+      expect(init.credentials).toBe('include');
       expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
     });
 

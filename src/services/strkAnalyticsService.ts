@@ -1,6 +1,4 @@
-import { apiClient, getToken } from '@/lib/apiClient';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiClient, authorizedFetch } from '@/lib/apiClient';
 
 export interface DashboardMetrics {
   totalInstitutions: number;
@@ -113,10 +111,7 @@ export class StrkAnalyticsService {
   ): Promise<void> {
     const params = new URLSearchParams({ format, days: String(days) });
     if (institutionId) params.set('institutionId', institutionId);
-    const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/analytics/export?${params.toString()}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await authorizedFetch(`/analytics/export?${params.toString()}`);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       throw new Error(body?.error || `Erreur ${response.status} lors de l'export analytics`);

@@ -2,8 +2,15 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { isSameInstitution, isGlobalAdmin, SECRETARIAT_ROLES } from '../lib/authz.js';
-import { rejectUnlessSameInstitution } from '../lib/httpAuthz.js';
+import {
+  isSameInstitution,
+  isGlobalAdmin,
+  SECRETARIAT_ROLES,
+  INSTITUTION_STAFF_ROLES,
+  listAccessibleStudentIds,
+  listClassIdsForStudents,
+} from '../lib/authz.js';
+import { rejectUnlessSameInstitution, rejectUnlessTenantOrGuardian } from '../lib/httpAuthz.js';
 import { importClassesFromCsv } from '../lib/classImport.js';
 import { logAudit } from '../lib/audit.js';
 
@@ -93,8 +100,24 @@ classesRouter.get('/', async (req, res) => {
   const { institutionId, teacherId } = req.query;
 
   if (typeof teacherId === 'string') {
+    // Même principe que courses / schedules : un enseignant consulte ses
+    // propres classes ; celles d’un tiers seulement si même établissement.
+    if (teacherId !== req.auth!.sub) {
+      const teacher = await prisma.strkProfile.findUnique({
+        where: { id: teacherId },
+        select: { institutionId: true },
+      });
+      if (!teacher || !isSameInstitution(req.auth!, teacher.institutionId)) {
+        return res.status(403).json({ error: 'Permissions insuffisantes' });
+      }
+    }
+    // Borne aussi la requête : l’enrichissement assiduité ne voit jamais
+    // d’identifiants d’un autre établissement (sauf admin plateforme).
+    const institutionScope = isGlobalAdmin(req.auth!)
+      ? {}
+      : { institutionId: req.auth!.institutionId ?? '__none__' };
     const classes = await prisma.strkClass.findMany({
-      where: { teacherId, isActive: true },
+      where: { teacherId, isActive: true, ...institutionScope },
       include: CLASS_INCLUDE,
       orderBy: { name: 'asc' },
     });
@@ -265,11 +288,41 @@ const currentAcademicYear = () => {
   return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 };
 
+const STAFF_ROSTER_PROFILE = {
+  firstName: true,
+  lastName: true,
+  email: true,
+  phoneNumber: true,
+  profileImage: true,
+} as const;
+
+const FAMILY_ROSTER_PROFILE = {
+  firstName: true,
+  lastName: true,
+  profileImage: true,
+} as const;
+
 // Élèves d'une classe (relation StrkStudent.classId + inscriptions actives).
+// Personnel : roster + contact. Élève / parent : uniquement leur classe, sans e-mail / téléphone.
 classesRouter.get('/:id/students', async (req, res) => {
   const klass = await prisma.strkClass.findUnique({ where: { id: req.params.id } });
-  if (!klass || !isSameInstitution(req.auth!, klass.institutionId)) {
+  if (!klass) {
     return res.status(404).json({ error: 'Classe introuvable' });
+  }
+  if (await rejectUnlessTenantOrGuardian(res, req.auth!, klass.institutionId)) return;
+
+  const staff = INSTITUTION_STAFF_ROLES.includes(
+    req.auth!.role as (typeof INSTITUTION_STAFF_ROLES)[number]
+  );
+  if (!staff) {
+    const scope = await listAccessibleStudentIds(req.auth!);
+    if (scope.kind !== 'ids') {
+      return res.status(404).json({ error: 'Classe introuvable' });
+    }
+    const ownClassIds = await listClassIdsForStudents(scope.ids);
+    if (!ownClassIds.includes(klass.id)) {
+      return res.status(404).json({ error: 'Classe introuvable' });
+    }
   }
 
   const enrollmentRows = await prisma.strkClassStudent.findMany({
@@ -287,15 +340,7 @@ classesRouter.get('/:id/students', async (req, res) => {
       ],
     },
     include: {
-      profile: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
-          phoneNumber: true,
-          profileImage: true,
-        },
-      },
+      profile: { select: staff ? STAFF_ROSTER_PROFILE : FAMILY_ROSTER_PROFILE },
     },
     orderBy: { createdAt: 'desc' },
   });

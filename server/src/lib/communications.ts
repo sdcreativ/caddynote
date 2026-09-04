@@ -1,5 +1,6 @@
 import { prisma } from './prisma.js';
 import { isEmailConfigured, sendEmail } from './email.js';
+import { escapeHtml, wrapTransactionalEmail } from './emailLayout.js';
 import { isSmsConfigured, isWhatsAppConfigured, sendSms, sendWhatsApp } from './sms.js';
 import { resolveTemplate, renderTemplate } from './templates.js';
 import { enqueueCommunicationDispatch } from './queue.js';
@@ -72,6 +73,24 @@ export const getCommsKillSwitch = async (): Promise<{
     sms: !!v.sms,
     whatsapp: !!v.whatsapp,
   };
+};
+
+/** Sujet SMTP : jamais de CR/LF (injection d’en-tête). */
+export const sanitizeCommunicationSubject = (raw: string): string =>
+  raw.replace(/[\r\n\u2028\u2029]+/g, ' ').replace(/[ \t]+/g, ' ').trim() || '(sans objet)';
+
+/** Corps e-mail : texte échappé, pas de HTML brut. */
+export const communicationBodyToHtml = (body: string): string =>
+  escapeHtml(body).replace(/\n/g, '<br/>');
+
+export const buildCommunicationEmail = (log: { subject: string | null; body: string }) => {
+  const subject = sanitizeCommunicationSubject(log.subject ?? '(sans objet)');
+  const html = wrapTransactionalEmail({
+    preheader: subject.slice(0, 140),
+    title: subject,
+    bodyHtml: `<p style="margin:0;">${communicationBodyToHtml(log.body)}</p>`,
+  });
+  return { subject, html, text: log.body };
 };
 
 const isChannelKilled = async (channel: StrkCommChannel): Promise<boolean> => {
@@ -240,7 +259,13 @@ const dispatchCommunication = async (log: StrkCommunicationLog): Promise<StrkCom
       // ignorait cette valeur de retour et marquait 'sent' même en cas
       // d'échec réel de connexion/authentification SMTP — une panne du
       // fournisseur se traduisait silencieusement par un journal 'sent'.
-      const delivered = await sendEmail({ to: log.toAddress, subject: log.subject ?? '(sans objet)', html: log.body });
+      const email = buildCommunicationEmail(log);
+      const delivered = await sendEmail({
+        to: log.toAddress,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      });
       if (!delivered) {
         return prisma.strkCommunicationLog.update({
           where: { id: log.id },

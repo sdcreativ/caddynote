@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../index.js';
-import { buildOpenApiDocument, OPENAPI_CATALOG, OPENAPI_OPERATION_COUNT } from '../lib/openapi.js';
+import { buildOpenApiDocument, isOpenApiExposed, OPENAPI_CATALOG, OPENAPI_OPERATION_COUNT } from '../lib/openapi.js';
 
 /**
  * Lot 12 / chap. 22.2 — le catalogue OpenAPI doit coller à l'API réelle
@@ -59,6 +59,24 @@ describe('OpenAPI (chap. 22.2)', () => {
       Object.keys(methods as object).map((m) => `${m} ${path}`)
     );
     expect(documented.length).toBe(OPENAPI_OPERATION_COUNT);
+  });
+
+  it('masque le catalogue en staging/production (sauf OPENAPI_DOCS=true)', () => {
+    const prevDeploy = process.env.CADDYNOTE_DEPLOYMENT;
+    const prevTest = process.env.CADDYNOTE_TEST_MODE;
+    const prevDocs = process.env.OPENAPI_DOCS;
+    process.env.CADDYNOTE_DEPLOYMENT = 'production';
+    delete process.env.CADDYNOTE_TEST_MODE;
+    delete process.env.OPENAPI_DOCS;
+    expect(isOpenApiExposed()).toBe(false);
+    process.env.OPENAPI_DOCS = 'true';
+    expect(isOpenApiExposed()).toBe(true);
+    if (prevDeploy === undefined) delete process.env.CADDYNOTE_DEPLOYMENT;
+    else process.env.CADDYNOTE_DEPLOYMENT = prevDeploy;
+    if (prevTest === undefined) delete process.env.CADDYNOTE_TEST_MODE;
+    else process.env.CADDYNOTE_TEST_MODE = prevTest;
+    if (prevDocs === undefined) delete process.env.OPENAPI_DOCS;
+    else process.env.OPENAPI_DOCS = prevDocs;
   });
 
   it('GET /docs sert l’UI qui pointe vers /openapi.json', async () => {

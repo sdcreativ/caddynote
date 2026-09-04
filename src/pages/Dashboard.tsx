@@ -88,7 +88,7 @@ const Dashboard = () => {
       if (user.role === 'admin') {
         setMetricsState('loading');
         try {
-          await loadInstitutions();
+        await loadInstitutions();
           const m = await StrkAnalyticsService.getDashboardMetrics();
           setMetrics(m);
           setMetricsState('ready');

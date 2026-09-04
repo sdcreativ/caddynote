@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { app } from '../index.js';
 import { prisma } from '../lib/prisma.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
+import { withCapturedResetEmail } from './captureResetEmail.js';
 
 /**
  * IAM-004 (sessions) et IAM-005 (journal d'audit).
@@ -126,13 +127,14 @@ describe('Sessions et journal d’audit (IAM-004/005)', () => {
         .send({ email, password: 'Password123!', firstName: 'Forgot', lastName: 'Pwd', role: 'teacher', institutionId: fx.a.institutionId });
       const loginA = await login(email);
 
-      await request(app).post('/auth/forgot-password').send({ email });
-      const profile = await prisma.strkProfile.findUniqueOrThrow({ where: { email } });
-      expect(profile.passwordResetToken).toBeTruthy();
+      const { rawToken } = await withCapturedResetEmail(() =>
+        request(app).post('/auth/forgot-password').send({ email })
+      );
+      expect(rawToken).toBeTruthy();
 
       const resetRes = await request(app)
         .post('/auth/reset-password')
-        .send({ token: profile.passwordResetToken, newPassword: 'AnotherPassword789!' });
+        .send({ token: rawToken, newPassword: 'AnotherPassword789!' });
       expect(resetRes.status).toBe(200);
 
       const afterReset = await request(app).get('/auth/me').set(auth(loginA.body.token));

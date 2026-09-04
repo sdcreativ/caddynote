@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import crypto from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
+import { isTestMode } from '../lib/testMode.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireFeature } from '../middleware/requireFeature.js';
 import { getStudentAccess, isSameInstitution, FINANCE_ROLES } from '../lib/authz.js';
@@ -1164,9 +1166,29 @@ financeRouter.patch('/payment-plans/:id/cancel', requireRole(...FINANCE_ROLES), 
 
 export const financePublicRouter = Router();
 
+/** 60 POST / min / IP — chaque notify déclenche un check CinetPay sortant. */
+export const CINETPAY_WEBHOOK_WINDOW_MS = 60 * 1000;
+export const CINETPAY_WEBHOOK_LIMIT = 60;
+
+export const createCinetPayWebhookLimiter = (overrides?: {
+  windowMs?: number;
+  limit?: number;
+  skip?: () => boolean;
+}) =>
+  rateLimit({
+    windowMs: overrides?.windowMs ?? CINETPAY_WEBHOOK_WINDOW_MS,
+    limit: overrides?.limit ?? CINETPAY_WEBHOOK_LIMIT,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Trop de notifications, réessayez plus tard.' },
+    skip: overrides?.skip ?? (() => process.env.NODE_ENV === 'test' || isTestMode()),
+  });
+
+const cinetPayWebhookLimiter = createCinetPayWebhookLimiter();
+
 // CinetPay POST notify_url : le corps n'est jamais interprété comme preuve de
 // paiement, uniquement comme déclencheur d'un appel de contrôle serveur.
-financePublicRouter.post('/webhooks/cinetpay', async (req, res) => {
+financePublicRouter.post('/webhooks/cinetpay', cinetPayWebhookLimiter, async (req, res) => {
   const transactionId =
     (req.body?.cpm_trans_id as string | undefined) ?? (req.body?.transaction_id as string | undefined);
   if (!transactionId) {

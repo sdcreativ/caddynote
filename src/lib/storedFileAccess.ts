@@ -1,9 +1,7 @@
 /**
  * Ouverture d’un fichier stocké (S3 signé ou contenu authentifié / déchiffré).
  */
-import { apiClient, getToken, ApiError } from '@/lib/apiClient';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiClient, authorizedFetch, ApiError } from '@/lib/apiClient';
 
 export type StoredFileDownloadMeta = {
   mode?: 's3' | 'local';
@@ -19,7 +17,7 @@ export const requestStoredFileDownload = async (key: string): Promise<StoredFile
 /**
  * Ouvre le fichier dans un nouvel onglet.
  * - S3 sans chiffrement applicatif : URL signée
- * - Local / chiffrement : fetch Bearer puis blob URL
+ * - Local / chiffrement : fetch cookie HttpOnly puis blob URL
  */
 export const openStoredFile = async (meta: StoredFileDownloadMeta): Promise<void> => {
   if (meta.downloadUrl) {
@@ -30,10 +28,7 @@ export const openStoredFile = async (meta: StoredFileDownloadMeta): Promise<void
     throw new Error('Réponse de téléchargement invalide');
   }
 
-  const token = getToken();
-  const res = await fetch(`${API_BASE}${meta.downloadPath}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authorizedFetch(meta.downloadPath);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new ApiError(
@@ -53,10 +48,7 @@ export const resolveStoredFileDisplayUrl = async (key: string): Promise<string> 
   if (meta.downloadUrl) return meta.downloadUrl;
   if (!meta.downloadPath) throw new Error('Réponse de téléchargement invalide');
 
-  const token = getToken();
-  const res = await fetch(`${API_BASE}${meta.downloadPath}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authorizedFetch(meta.downloadPath);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new ApiError(

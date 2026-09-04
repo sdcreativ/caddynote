@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
+import { isGlobalAdmin, isSameInstitution, INSTITUTION_STAFF_ROLES } from '../lib/authz.js';
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -62,6 +62,12 @@ activityRouter.get('/', async (req, res) => {
 
   if (institutionId) {
     if (!isSameInstitution(req.auth!, institutionId)) {
+      return res.status(403).json({ error: 'Permissions insuffisantes' });
+    }
+    const staff = INSTITUTION_STAFF_ROLES.includes(
+      req.auth!.role as (typeof INSTITUTION_STAFF_ROLES)[number]
+    );
+    if (!staff) {
       return res.status(403).json({ error: 'Permissions insuffisantes' });
     }
   } else if (!isGlobalAdmin(req.auth!)) {

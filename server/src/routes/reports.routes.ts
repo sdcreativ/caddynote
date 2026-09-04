@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireFeature } from '../middleware/requireFeature.js';
-import { EXPORT_ROLES, isSameInstitution } from '../lib/authz.js';
+import { EXPORT_ROLES, isGlobalAdmin, isSameInstitution } from '../lib/authz.js';
 import { toCsv } from '../lib/csvExport.js';
 import { toXlsx } from '../lib/xlsxExport.js';
 import { renderTablePdf } from '../lib/reportPdf.js';
@@ -167,9 +167,15 @@ reportsRouter.get('/', requireFeature('advancedReports'), async (req, res) => {
   if (institutionId && !isSameInstitution(req.auth!, institutionId)) {
     return res.status(403).json({ error: 'Permissions insuffisantes' });
   }
+  // Admin plateforme : filtre optionnel. Direction : toujours le tenant JWT
+  // (jamais `where: {}` — sinon fuite cross-tenant).
+  const scope = isGlobalAdmin(req.auth!)
+    ? institutionId
+    : institutionId || req.auth!.institutionId || '__none__';
   const reports = await prisma.strkReport.findMany({
-    where: institutionId ? { institutionId } : {},
+    where: scope ? { institutionId: scope } : {},
     orderBy: { createdAt: 'desc' },
+    take: 200,
   });
   res.json({ reports });
 });

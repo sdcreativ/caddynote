@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient, API_BASE_URL } from '@/lib/apiClient';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,8 +14,6 @@ import { useTranslation } from 'react-i18next';
 import { homePathForRole } from '@/lib/homePath';
 
 const BLUE = '#1D70D8';
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-
 const fieldClass =
   'h-11 rounded-xl border-slate-200/90 bg-slate-50/80 shadow-none transition placeholder:text-slate-400 focus-visible:border-[#1D70D8]/50 focus-visible:bg-white focus-visible:ring-[#1D70D8]/25';
 
@@ -37,8 +35,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     login,
     verifyMfaCode,
     cancelMfaChallenge,
-    acceptSsoToken,
-    beginSsoMfaChallenge,
+    acceptSsoCode,
     user,
     isLoading: authLoading,
     authError,
@@ -79,16 +76,15 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     [navigate, user?.role]
   );
 
-  // Callback SSO : fragment #sso_token= / #sso_mfa= / #sso_error=
+  // Callback SSO : fragment #sso_code= / #sso_error= (jamais de JWT)
   useEffect(() => {
     if (ssoHandled.current || typeof window === 'undefined') return;
     const hash = window.location.hash.replace(/^#/, '');
     if (!hash) return;
     const params = new URLSearchParams(hash);
-    const token = params.get('sso_token');
-    const mfa = params.get('sso_mfa');
+    const code = params.get('sso_code');
     const err = params.get('sso_error');
-    if (!token && !mfa && !err) return;
+    if (!code && !err) return;
     ssoHandled.current = true;
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
@@ -100,18 +96,17 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
       });
       return;
     }
-    if (mfa) {
-      beginSsoMfaChallenge(mfa);
-      setMfaStep(true);
-      toast({ title: t('login.mfaTitle'), description: t('login.mfaDescription') });
-      return;
-    }
-    if (token) {
+    if (code) {
       setIsLoading(true);
-      acceptSsoToken(token)
-        .then(({ role }) => {
+      acceptSsoCode(code)
+        .then((result) => {
+          if (result.mfaRequired) {
+            setMfaStep(true);
+            toast({ title: t('login.mfaTitle'), description: t('login.mfaDescription') });
+            return;
+          }
           toast({ title: t('login.successTitle'), description: t('login.redirecting') });
-          setTimeout(() => handleManualRedirect(role), 400);
+          setTimeout(() => handleManualRedirect(result.role), 400);
         })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : t('login.invalidCredentials');
@@ -119,7 +114,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [acceptSsoToken, beginSsoMfaChallenge, handleManualRedirect, t, toast]);
+  }, [acceptSsoCode, handleManualRedirect, t, toast]);
 
   // Config SSO via ?institutionId= ou découverte par domaine e-mail
   useEffect(() => {
@@ -181,7 +176,7 @@ export function StrkLoginForm({ embedded = false }: StrkLoginFormProps) {
     if (!institutionId) return;
     const qs = new URLSearchParams({ institutionId });
     if (email.includes('@')) qs.set('email', email.trim().toLowerCase());
-    window.location.href = `${API_BASE.replace(/\/$/, '')}/auth/sso/start?${qs.toString()}`;
+    window.location.href = `${API_BASE_URL.replace(/\/$/, '')}/auth/sso/start?${qs.toString()}`;
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

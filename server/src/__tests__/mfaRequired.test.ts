@@ -15,17 +15,30 @@ import {
   generateBackupCodes,
   hashBackupCodes,
   consumeBackupCode,
+  tryConsumeBackupCode,
+  hashBackupCode,
   looksLikeBackupCode,
 } from '../lib/mfa.js';
 import { buildFixture, auth, type Fixture } from './fixtures.js';
 
 describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
-  it('couvre direction, secrétariat et comptabilité, pas les enseignants', () => {
-    expect(MFA_REQUIRED_ROLES).toEqual(['admin', 'school_admin', 'secretary', 'accountant']);
+  it('couvre le personnel à données sensibles, pas les familles', () => {
+    expect(MFA_REQUIRED_ROLES).toEqual([
+      'admin',
+      'school_admin',
+      'secretary',
+      'accountant',
+      'teacher',
+      'head_teacher',
+      'supervisor',
+      'group_owner',
+    ]);
     expect(MFA_GRACE_DAYS).toBe(7);
     expect(isMfaRequiredRole('admin')).toBe(true);
-    expect(isMfaRequiredRole('teacher')).toBe(false);
-    expect(isMfaRequiredRole('supervisor')).toBe(false);
+    expect(isMfaRequiredRole('teacher')).toBe(true);
+    expect(isMfaRequiredRole('supervisor')).toBe(true);
+    expect(isMfaRequiredRole('student')).toBe(false);
+    expect(isMfaRequiredRole('parent')).toBe(false);
   });
 
   it('exempte uniquement le routeur /auth', () => {
@@ -62,6 +75,26 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
         mfaGraceUntil: expired,
       })
     ).toBe(true);
+    expect(
+      shouldEnforceMfaSetup({
+        nodeEnv: 'production',
+        testMode: false,
+        role: 'teacher',
+        mfaEnabled: false,
+        routeBaseUrl: '/grades',
+        mfaGraceUntil: expired,
+      })
+    ).toBe(true);
+    expect(
+      shouldEnforceMfaSetup({
+        nodeEnv: 'production',
+        testMode: false,
+        role: 'parent',
+        mfaEnabled: false,
+        routeBaseUrl: '/messages',
+        mfaGraceUntil: expired,
+      })
+    ).toBe(false);
   });
 
   it('shouldEnforceMfaSetup : null = pas encore démarré → ne bloque pas', () => {
@@ -103,6 +136,39 @@ describe('IAM-003 — MFA grâce 7 j (rôles sensibles)', () => {
     }
     expect(looksLikeBackupCode(codes[0])).toBe(true);
     expect(looksLikeBackupCode('123456')).toBe(false);
+  });
+});
+
+describe('tryConsumeBackupCode — consommation atomique', () => {
+  let fx: Fixture;
+
+  beforeAll(async () => {
+    fx = await buildFixture();
+  }, 30_000);
+
+  it('deux appels parallèles : un seul succès, un hash retiré', async () => {
+    const codes = generateBackupCodes(2);
+    await prisma.strkProfile.update({
+      where: { id: fx.a.teacher.id },
+      data: { mfaBackupCodeHashes: hashBackupCodes(codes) },
+    });
+
+    const [first, second] = await Promise.all([
+      tryConsumeBackupCode(fx.a.teacher.id, codes[0]),
+      tryConsumeBackupCode(fx.a.teacher.id, codes[0]),
+    ]);
+    expect([first, second].filter(Boolean)).toHaveLength(1);
+
+    const row = await prisma.strkProfile.findUniqueOrThrow({
+      where: { id: fx.a.teacher.id },
+      select: { mfaBackupCodeHashes: true },
+    });
+    expect(row.mfaBackupCodeHashes).toEqual(hashBackupCodes([codes[1]]));
+
+    await prisma.strkProfile.update({
+      where: { id: fx.a.teacher.id },
+      data: { mfaBackupCodeHashes: [] },
+    });
   });
 });
 
@@ -252,6 +318,44 @@ describe('IAM-003 — MFA soft + mot de passe provisoire', () => {
     await request(app)
       .post('/auth/mfa/disable')
       .set(auth(first.body.token))
+      .send({ password: 'Password123!' });
+  });
+
+  it('login-verify : un seul des deux POST concurrents consomme le code', async () => {
+    const setup = await request(app).post('/auth/mfa/setup').set(auth(fx.a.teacher.token));
+    expect(setup.status).toBe(200);
+    const totp = generateSync({ secret: setup.body.secret as string });
+    const confirm = await request(app)
+      .post('/auth/mfa/confirm')
+      .set(auth(fx.a.teacher.token))
+      .send({ code: totp });
+    expect(confirm.status).toBe(200);
+    const backup = confirm.body.backupCodes[0] as string;
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({ email: fx.a.teacher.email, password: 'Password123!' });
+    expect(login.body.mfaRequired).toBe(true);
+    const challengeToken = login.body.challengeToken as string;
+
+    const [a, b] = await Promise.all([
+      request(app).post('/auth/mfa/login-verify').send({ challengeToken, code: backup }),
+      request(app).post('/auth/mfa/login-verify').send({ challengeToken, code: backup }),
+    ]);
+    const statuses = [a.status, b.status].sort((x, y) => x - y);
+    expect(statuses).toEqual([200, 401]);
+
+    const winner = a.status === 200 ? a : b;
+    const after = await prisma.strkProfile.findUniqueOrThrow({
+      where: { id: fx.a.teacher.id },
+      select: { mfaBackupCodeHashes: true },
+    });
+    expect(after.mfaBackupCodeHashes).toHaveLength(9);
+    expect(after.mfaBackupCodeHashes).not.toContain(hashBackupCode(backup));
+
+    await request(app)
+      .post('/auth/mfa/disable')
+      .set(auth(winner.body.token))
       .send({ password: 'Password123!' });
   });
 });

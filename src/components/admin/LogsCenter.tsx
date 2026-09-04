@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient, getToken } from '@/lib/apiClient';
+import { apiClient, authorizedFetch } from '@/lib/apiClient';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 
@@ -66,12 +66,7 @@ const LogsCenter = () => {
 
   const exportCsv = async () => {
     try {
-      const token = getToken();
-      const base = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      const url = `${base}/audit-log?${buildQs({ format: 'csv', limit: '2000' }).toString()}`;
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await authorizedFetch(`/audit-log?${buildQs({ format: 'csv', limit: '2000' }).toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const a = document.createElement('a');

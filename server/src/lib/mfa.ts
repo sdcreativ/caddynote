@@ -7,8 +7,13 @@ import { prisma } from './prisma.js';
  * MFA TOTP pour CaddyNote (IAM-003). Compatible Google Authenticator / Authy / 1Password
  * via otplib (RFC 6238). Codes de secours à usage unique (hashes SHA-256).
  *
- * Rôles sensibles : grâce de 7 jours après la 1ʳᵉ connexion sans MFA (bandeau),
- * puis obligation API + dialog bloquant. Challenge TOTP au login si déjà activée.
+ * Rôles à données sensibles : grâce de 7 jours après la 1ʳᵉ connexion sans MFA
+ * (bandeau), puis obligation API + dialog bloquant. Challenge TOTP au login
+ * si déjà activée.
+ *
+ * Personnel avec accès notes / dossiers / finance / multi-établissements :
+ * inclus. Élèves et parents : MFA optionnelle (appareils souvent partagés) —
+ * écart documenté, pas une obligation produit.
  */
 
 const ISSUER = 'CaddyNote';
@@ -33,7 +38,19 @@ export const verifyMfaCode = async (secret: string, code: string): Promise<boole
   return result.valid;
 };
 
-export const MFA_REQUIRED_ROLES = ['admin', 'school_admin', 'secretary', 'accountant'] as const;
+export const MFA_REQUIRED_ROLES = [
+  'admin',
+  'school_admin',
+  'secretary',
+  'accountant',
+  'teacher',
+  'head_teacher',
+  'supervisor',
+  'group_owner',
+] as const;
+
+/** Rôles volontairement hors obligation (MFA possible, jamais forcée). */
+export const MFA_OPTIONAL_ROLES = ['student', 'parent'] as const;
 
 export const isMfaRequiredRole = (role: string): boolean =>
   (MFA_REQUIRED_ROLES as readonly string[]).includes(role);
@@ -84,6 +101,21 @@ export const consumeBackupCode = (
   const idx = hashes.indexOf(candidate);
   if (idx === -1) return { ok: false };
   return { ok: true, remaining: [...hashes.slice(0, idx), ...hashes.slice(idx + 1)] };
+};
+
+/**
+ * Consomme un code de secours en une seule instruction SQL.
+ * Deux POST simultanés : une seule ligne mise à jour (pas de double spend).
+ */
+export const tryConsumeBackupCode = async (userId: string, code: string): Promise<boolean> => {
+  const candidate = hashBackupCode(code);
+  const updated = await prisma.$executeRaw`
+    UPDATE strk_profiles
+    SET mfa_backup_code_hashes = array_remove(mfa_backup_code_hashes, ${candidate})
+    WHERE id = ${userId}::uuid
+      AND ${candidate} = ANY (mfa_backup_code_hashes)
+  `;
+  return Number(updated) === 1;
 };
 
 /** True si la chaîne ressemble à un code de secours (pas un TOTP à 6 chiffres). */

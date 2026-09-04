@@ -1,6 +1,4 @@
-import { apiClient, getToken } from '@/lib/apiClient';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { apiClient, authorizedFetch } from '@/lib/apiClient';
 
 export interface StrkReport {
   id: string;
@@ -115,10 +113,7 @@ export const downloadReportExport = async (
   if (filters?.classId) params.set('classId', filters.classId);
   if (filters?.subjectId) params.set('subjectId', filters.subjectId);
 
-  const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/reports/export?${params.toString()}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const response = await authorizedFetch(`/reports/export?${params.toString()}`);
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.error || `Erreur ${response.status} lors de l'export`);
@@ -169,10 +164,7 @@ export const listScheduledExports = async (institutionId?: string): Promise<Sche
 };
 
 export const downloadScheduledReport = async (reportId: string): Promise<void> => {
-  const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/reports/${reportId}/download`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const response = await authorizedFetch(`/reports/${reportId}/download`);
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.error || `Erreur ${response.status}`);

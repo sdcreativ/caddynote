@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { User as StrkUser, StrkUserRole } from '@/types/strk';
-import { apiClient, ApiError, getToken, setToken, clearToken, setUnauthorizedHandler } from '@/lib/apiClient';
+import { apiClient, ApiError, clearToken, setUnauthorizedHandler } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { homePathForRole } from '@/lib/homePath';
 
@@ -44,9 +44,9 @@ interface StrkAuthContextType {
   ) => Promise<{ mfaRequired: boolean; role?: StrkUserRole }>;
   verifyMfaCode: (code: string) => Promise<{ role: StrkUserRole }>;
   cancelMfaChallenge: () => void;
-  /** Applique un jeton issu du callback SSO (fragment URL). */
-  acceptSsoToken: (token: string) => Promise<{ role: StrkUserRole }>;
-  /** Démarre l’étape MFA après SSO (challenge dans le fragment). */
+  /** Échange le code SSO (fragment) contre le cookie, ou démarre le MFA. */
+  acceptSsoCode: (code: string) => Promise<{ role?: StrkUserRole; mfaRequired?: boolean }>;
+  /** Démarre l’étape MFA après SSO (challenge renvoyé par /auth/adopt). */
   beginSsoMfaChallenge: (challengeToken: string) => void;
   logout: () => Promise<void>;
   hasRole: (role: StrkUserRole) => boolean;
@@ -100,6 +100,11 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const logout = useCallback(async () => {
+    try {
+      await apiClient.post('/auth/logout', {});
+    } catch {
+      /* session déjà invalide */
+    }
     clearToken();
     setUser(null);
     setMfaSetupRequired(false);
@@ -141,16 +146,9 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
   }, [applyMfaFlags]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
+    clearToken();
     refreshMe()
-      .catch((error) => {
-        console.error('Session invalide :', error);
-        clearToken();
+      .catch(() => {
         setUser(null);
         setImpersonation({ active: false });
       })
@@ -173,7 +171,6 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
         return { mfaRequired: true };
       }
 
-      setToken(response.token);
       setUser(mapApiProfileToUser(response.user));
       try {
         await refreshMe();
@@ -195,12 +192,11 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setAuthError(null);
       try {
-        const { token, user: profile } = await apiClient.post<{ token: string; user: ApiProfile }>(
+        const { user: profile } = await apiClient.post<{ token: string; user: ApiProfile }>(
           '/auth/mfa/login-verify',
           { challengeToken: mfaChallengeToken, code },
           { skipAuth: true }
         );
-        setToken(token);
         setUser(mapApiProfileToUser(profile));
         setMfaChallengeToken(null);
         await refreshMe().catch(() => undefined);
@@ -219,10 +215,18 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthError(null);
   }, []);
 
-  const acceptSsoToken = useCallback(
-    async (token: string): Promise<{ role: StrkUserRole }> => {
+  const acceptSsoCode = useCallback(
+    async (code: string): Promise<{ role?: StrkUserRole; mfaRequired?: boolean }> => {
       setAuthError(null);
-      setToken(token);
+      const adopted = await apiClient.post<{
+        ok?: boolean;
+        mfaRequired?: boolean;
+        challengeToken?: string;
+      }>('/auth/adopt', { code }, { skipAuth: true });
+      if (adopted.mfaRequired && adopted.challengeToken) {
+        setMfaChallengeToken(adopted.challengeToken);
+        return { mfaRequired: true };
+      }
       const me = await refreshMe();
       return { role: me.user.role };
     },
@@ -242,7 +246,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     ) => {
       setIsLoading(true);
       try {
-        const { token, user: profile } = await apiClient.post<{ token: string; user: ApiProfile }>(
+        const { user: profile } = await apiClient.post<{ token: string; user: ApiProfile }>(
           '/auth/register',
           {
             email,
@@ -254,7 +258,6 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
           },
           { skipAuth: true }
         );
-        setToken(token);
         setUser(mapApiProfileToUser(profile));
         toast({ title: 'Compte créé', description: 'Bienvenue sur CaddyNote' });
       } catch (error) {
@@ -287,7 +290,6 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
         reason: reason.trim(),
         supportTicketId: options?.supportTicketId,
       });
-      setToken(res.token);
       setUser(mapApiProfileToUser(res.user));
       setImpersonation({
         active: true,
@@ -305,7 +307,6 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const exitImpersonation = useCallback(async () => {
     const res = await apiClient.post<{ token: string; user: ApiProfile }>('/admin/impersonate/exit', {});
-    setToken(res.token);
     setUser(mapApiProfileToUser(res.user));
     setImpersonation({ active: false });
     toast({ title: 'Retour console admin' });
@@ -345,7 +346,7 @@ export const StrkAuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     verifyMfaCode,
     cancelMfaChallenge,
-    acceptSsoToken,
+    acceptSsoCode,
     beginSsoMfaChallenge,
     logout,
     hasRole,

@@ -177,6 +177,29 @@ describe('Isolation multi-tenant — communication, supervision, fichiers', () =
       const deleteRes = await request(app).delete(`/reports/${reportId}`).set(auth(fx.b.schoolAdmin.token));
       expect(deleteRes.status).toBe(404);
     });
+
+    it('GET /reports sans institutionId ne liste pas les rapports d’un autre établissement', async () => {
+      const created = await request(app)
+        .post('/reports')
+        .set(auth(fx.a.schoolAdmin.token))
+        .send({ title: 'Rapport A isolé', reportType: 'attendance', institutionId: fx.a.institutionId });
+      expect(created.status).toBe(201);
+      const idA = created.body.report.id as string;
+
+      const fromB = await request(app).get('/reports').set(auth(fx.b.schoolAdmin.token));
+      expect(fromB.status).toBe(200);
+      const idsB = (fromB.body.reports as { id: string }[]).map((r) => r.id);
+      expect(idsB).not.toContain(idA);
+
+      const fromA = await request(app).get('/reports').set(auth(fx.a.schoolAdmin.token));
+      expect(fromA.status).toBe(200);
+      expect((fromA.body.reports as { id: string }[]).map((r) => r.id)).toContain(idA);
+
+      const cross = await request(app)
+        .get(`/reports?institutionId=${fx.a.institutionId}`)
+        .set(auth(fx.b.schoolAdmin.token));
+      expect(cross.status).toBe(403);
+    });
   });
 
   describe('analytics', () => {

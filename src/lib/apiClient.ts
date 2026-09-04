@@ -1,6 +1,10 @@
-// Client HTTP vers l'API CaddyNote (server/), remplace @supabase/supabase-js.
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-const TOKEN_STORAGE_KEY = 'caddynote_token';
+// Client HTTP vers l’API CaddyNote. Le jeton vit dans un cookie HttpOnly
+// (anti-XSS) : le JS ne le lit plus. `credentials: 'include'` l’envoie.
+const configuredApi = (import.meta.env.VITE_API_URL || '').trim();
+const isLocalApiHost = /^https?:\/\/(localhost|127\.0\.0\.1):4000\/?$/i.test(configuredApi);
+/** Same-origin `/api` en local (proxy Vite) pour que le cookie HttpOnly parte. */
+export const API_BASE_URL = !configuredApi || isLocalApiHost ? '/api' : configuredApi;
+const LEGACY_TOKEN_KEY = 'caddynote_token';
 
 export class ApiError extends Error {
   status: number;
@@ -16,21 +20,26 @@ export class ApiError extends Error {
   }
 }
 
-export const getToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+const dropLegacyToken = (): void => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(LEGACY_TOKEN_KEY);
 };
 
-export const setToken = (token: string): void => {
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+/** Plus de jeton en JS — conservé pour ne pas casser les imports existants. */
+export const getToken = (): string | null => {
+  dropLegacyToken();
+  return null;
+};
+
+export const setToken = (_token: string): void => {
+  dropLegacyToken();
 };
 
 export const clearToken = (): void => {
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  dropLegacyToken();
 };
 
-/** Déclenché quand le serveur renvoie 401 (jeton absent/expiré) : permet à
- * useStrkAuth de déconnecter proprement l'utilisateur sans dépendance circulaire. */
+/** Déclenché quand le serveur renvoie 401 (session absente/expirée). */
 type UnauthorizedHandler = () => void;
 let onUnauthorized: UnauthorizedHandler | null = null;
 export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null) => {
@@ -42,15 +51,22 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   skipAuth?: boolean;
 }
 
+export const authorizedFetch = (path: string, init: RequestInit = {}): Promise<Response> => {
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  return fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: init.headers,
+  });
+};
+
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { body, skipAuth, headers, ...rest } = options;
-  const token = skipAuth ? null : getToken();
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await authorizedFetch(path, {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -14,11 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient, ApiError, getToken } from '@/lib/apiClient';
+import { apiClient, ApiError, authorizedFetch } from '@/lib/apiClient';
 import type { StrkDocumentType } from '@/services/strkDocumentService';
 import { DOCUMENT_TYPE_LABELS } from '@/services/strkDocumentService';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 type Template = {
   accentColor?: string | null;
@@ -83,13 +81,9 @@ export function DocumentTemplatesPanel() {
 
   const preview = async () => {
     try {
-      const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/documents/templates/${type}/preview`, {
+      const response = await authorizedFetch(`/documents/templates/${type}/preview`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       if (!response.ok) {
