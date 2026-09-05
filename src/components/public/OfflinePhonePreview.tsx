@@ -8,11 +8,6 @@ export function OfflinePhonePreview() {
 
   return (
     <div className="relative mx-auto flex w-full max-w-[300px] justify-center sm:max-w-[340px]">
-      <div
-        className="absolute bottom-6 left-1/2 h-16 w-48 -translate-x-1/2 rounded-[100%] bg-slate-500/20 blur-2xl"
-        aria-hidden
-      />
-
       <motion.div
         className="relative z-10 w-full"
         initial={reduce ? false : { opacity: 0, y: 24 }}
