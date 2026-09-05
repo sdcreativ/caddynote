@@ -51,9 +51,11 @@ export const clearPublicVitrineCache = () => {
 export const loadPublicVitrine = async (): Promise<PublicVitrine> => {
   if (cache) return cache;
   if (inflight) return inflight;
-  inflight = apiClient
-    .get<PublicVitrine>('/public/vitrine', { skipAuth: true })
-    .then((data) => {
+
+  const fetchVitrine = async (): Promise<PublicVitrine> => {
+    try {
+      if (typeof apiClient.get !== 'function') return EMPTY_VITRINE;
+      const data = await apiClient.get<PublicVitrine>('/public/vitrine', { skipAuth: true });
       cache = {
         testimonials: Array.isArray(data.testimonials) ? data.testimonials : [],
         contact: {
@@ -68,11 +70,14 @@ export const loadPublicVitrine = async (): Promise<PublicVitrine> => {
         faq: Array.isArray(data.faq) ? data.faq : [],
       };
       return cache;
-    })
-    .catch(() => EMPTY_VITRINE)
-    .finally(() => {
+    } catch {
+      return EMPTY_VITRINE;
+    } finally {
       inflight = null;
-    });
+    }
+  };
+
+  inflight = fetchVitrine();
   return inflight;
 };
 
@@ -95,9 +100,13 @@ export const usePublicVitrine = (): PublicVitrine => {
 
   useEffect(() => {
     let cancelled = false;
-    void loadPublicVitrine().then((next) => {
-      if (!cancelled) setData(next);
-    });
+    void loadPublicVitrine()
+      .then((next) => {
+        if (!cancelled) setData(next);
+      })
+      .catch(() => {
+        if (!cancelled) setData(EMPTY_VITRINE);
+      });
     return () => {
       cancelled = true;
     };
