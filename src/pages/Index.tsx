@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
@@ -72,7 +72,10 @@ const Index = () => {
   const { user, isLoading } = useStrkAuth();
   const reduceMotion = useReducedMotion();
   const [showFallbackButton, setShowFallbackButton] = useState(false);
-  const [role, setRole] = useState<(typeof roleTabs)[number]['id']>('directions');
+  const [roleIndex, setRoleIndex] = useState(0);
+  const [rolePaused, setRolePaused] = useState(false);
+  const roleAutoDir = useRef(1);
+  const roleSwipeX = useRef<number | null>(null);
   const [videoOpen, setVideoOpen] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PublicPlanCard[]>([]);
   const [partnerNames, setPartnerNames] = useState<string[]>([]);
@@ -82,7 +85,43 @@ const Index = () => {
     stats.schools != null ? { label: t('publicStats.schools'), value: stats.schools } : null,
     stats.students != null ? { label: t('publicStats.students'), value: stats.students } : null,
   ].filter((item): item is { label: string; value: number } => item != null);
-  const activeRole = roleTabs.find((r) => r.id === role) ?? roleTabs[0];
+  useEffect(() => {
+    if (reduceMotion || rolePaused) return;
+    const id = window.setInterval(() => {
+      setRoleIndex((current) => {
+        let dir = roleAutoDir.current;
+        let next = current + dir;
+        if (next >= roleTabs.length) {
+          dir = -1;
+          next = current - 1;
+        } else if (next < 0) {
+          dir = 1;
+          next = current + 1;
+        }
+        roleAutoDir.current = dir;
+        return next;
+      });
+    }, 6500);
+    return () => window.clearInterval(id);
+  }, [reduceMotion, rolePaused]);
+
+  const selectRole = (nextIndex: number) => {
+    if (nextIndex === roleIndex || nextIndex < 0 || nextIndex >= roleTabs.length) return;
+    roleAutoDir.current = nextIndex > roleIndex ? 1 : -1;
+    setRoleIndex(nextIndex);
+  };
+
+  const onRoleSwipeStart = (clientX: number) => {
+    roleSwipeX.current = clientX;
+  };
+
+  const onRoleSwipeEnd = (clientX: number) => {
+    if (roleSwipeX.current == null) return;
+    const delta = clientX - roleSwipeX.current;
+    roleSwipeX.current = null;
+    if (delta <= -48) selectRole(roleIndex + 1);
+    if (delta >= 48) selectRole(roleIndex - 1);
+  };
   const featureCards = FEATURES.map((f) => {
     const loc = localizeFeature(f);
     return {
@@ -405,16 +444,26 @@ const Index = () => {
               className="-mx-4 mt-10 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 pb-1 sm:mx-auto sm:mt-10 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
               role="tablist"
               aria-label={t('roles.tablist')}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowRight') {
+                  e.preventDefault();
+                  selectRole(roleIndex + 1);
+                }
+                if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  selectRole(roleIndex - 1);
+                }
+              }}
             >
-              {roleTabs.map((tab) => {
-                const active = role === tab.id;
+              {roleTabs.map((tab, index) => {
+                const active = roleIndex === index;
                 return (
                   <button
                     key={tab.id}
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    onClick={() => setRole(tab.id)}
+                    onClick={() => selectRole(index)}
                     className={cn(
                       'inline-flex shrink-0 snap-start items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors',
                       active
@@ -429,124 +478,155 @@ const Index = () => {
               })}
             </div>
 
-            <motion.div
-              key={activeRole.id}
-              role="tabpanel"
-              initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            <div
               className="mt-10 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-[#132A4A] via-[#0F2340] to-[#0B1F3A]"
+              onMouseEnter={() => setRolePaused(true)}
+              onMouseLeave={() => setRolePaused(false)}
+              onTouchStart={(e) => onRoleSwipeStart(e.changedTouches[0]?.clientX ?? 0)}
+              onTouchEnd={(e) => onRoleSwipeEnd(e.changedTouches[0]?.clientX ?? 0)}
+              onPointerDown={(e) => {
+                if (e.pointerType === 'touch') return;
+                onRoleSwipeStart(e.clientX);
+              }}
+              onPointerUp={(e) => {
+                if (e.pointerType === 'touch') return;
+                onRoleSwipeEnd(e.clientX);
+              }}
             >
-              <div className="grid items-center gap-8 p-6 sm:gap-10 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:p-12">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7EB6FF]">
-                    {t(`roles.${activeRole.id}.label`)}
-                  </p>
-                  <h3 className="mt-3 font-display text-2xl font-bold tracking-tight text-white sm:text-[1.85rem] sm:leading-snug">
-                    {t(`roles.${activeRole.id}.title`)}
-                  </h3>
-                  <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70">
-                    {t(`roles.${activeRole.id}.body`)}
-                  </p>
-                  <Link
-                    to={activeRole.href}
-                    className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-[#7EB6FF] transition-colors hover:text-white"
-                  >
-                    {t('roles.cta')}
-                    <ArrowRight className="h-4 w-4" aria-hidden />
-                  </Link>
-                </div>
+              <motion.div
+                className="flex w-full"
+                animate={{ x: `${-roleIndex * 100}%` }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
+                }
+              >
+                {roleTabs.map((tab, index) => {
+                  const active = roleIndex === index;
+                  return (
+                    <div
+                      key={tab.id}
+                      role="tabpanel"
+                      aria-hidden={!active}
+                      {...(!active ? { inert: '' } : {})}
+                      className="min-w-full"
+                    >
+                      <div className="grid items-center gap-8 p-6 sm:gap-10 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:p-12">
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7EB6FF]">
+                            {t(`roles.${tab.id}.label`)}
+                          </p>
+                          <h3 className="mt-3 font-display text-2xl font-bold tracking-tight text-white sm:text-[1.85rem] sm:leading-snug">
+                            {t(`roles.${tab.id}.title`)}
+                          </h3>
+                          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70">
+                            {t(`roles.${tab.id}.body`)}
+                          </p>
+                          <Link
+                            to={tab.href}
+                            tabIndex={active ? 0 : -1}
+                            className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-[#7EB6FF] transition-colors hover:text-white"
+                          >
+                            {t('roles.cta')}
+                            <ArrowRight className="h-4 w-4" aria-hidden />
+                          </Link>
+                        </div>
 
-                <div className="relative flex min-h-[220px] items-center justify-center">
-                  {activeRole.visual === 'toasts' ? (
-                    <div className="relative w-full max-w-xs space-y-4">
-                      <motion.div
-                        className="rounded-2xl border border-emerald-400/20 bg-white p-3.5 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)]"
-                        initial={reduceMotion ? false : { opacity: 0, x: -12 }}
-                        animate={
-                          reduceMotion
-                            ? { opacity: 1 }
-                            : { opacity: 1, x: 0, y: [0, -6, 0] }
-                        }
-                        transition={
-                          reduceMotion
-                            ? { duration: 0.2 }
-                            : {
-                                opacity: { duration: 0.4, delay: 0.15 },
-                                x: { duration: 0.4, delay: 0.15 },
-                                y: { duration: 3.4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
-                              }
-                        }
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                            <Bell className="h-4 w-4" aria-hidden />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-bold text-slate-900">{t('roles.toastParentTitle')}</p>
-                            <p className="text-[10px] text-slate-500">{t('roles.toastParentBody')}</p>
-                          </div>
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                            <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
-                          </span>
+                        <div className="relative flex min-h-[220px] items-center justify-center">
+                          {tab.visual === 'toasts' ? (
+                            <div className="relative w-full max-w-xs space-y-4">
+                              <motion.div
+                                className="rounded-2xl border border-emerald-400/20 bg-white p-3.5 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)]"
+                                initial={reduceMotion || !active ? false : { opacity: 0, x: -12 }}
+                                animate={
+                                  reduceMotion || !active
+                                    ? { opacity: 1 }
+                                    : { opacity: 1, x: 0, y: [0, -6, 0] }
+                                }
+                                transition={
+                                  reduceMotion || !active
+                                    ? { duration: 0.2 }
+                                    : {
+                                        opacity: { duration: 0.4, delay: 0.15 },
+                                        x: { duration: 0.4, delay: 0.15 },
+                                        y: { duration: 3.4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+                                      }
+                                }
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                                    <Bell className="h-4 w-4" aria-hidden />
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-bold text-slate-900">{t('roles.toastParentTitle')}</p>
+                                    <p className="text-[10px] text-slate-500">{t('roles.toastParentBody')}</p>
+                                  </div>
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                    <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                                  </span>
+                                </div>
+                              </motion.div>
+                              <motion.div
+                                className="ml-4 rounded-2xl border border-violet-400/20 bg-white p-3.5 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)] sm:ml-8"
+                                initial={reduceMotion || !active ? false : { opacity: 0, x: 12 }}
+                                animate={
+                                  reduceMotion || !active
+                                    ? { opacity: 1 }
+                                    : { opacity: 1, x: 0, y: [0, -8, 0] }
+                                }
+                                transition={
+                                  reduceMotion || !active
+                                    ? { duration: 0.2 }
+                                    : {
+                                        opacity: { duration: 0.4, delay: 0.3 },
+                                        x: { duration: 0.4, delay: 0.3 },
+                                        y: { duration: 3.8, repeat: Infinity, ease: 'easeInOut', delay: 0.8 },
+                                      }
+                                }
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                                    <CircleDollarSign className="h-4 w-4" aria-hidden />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-[11px] font-bold text-slate-900">{t('roles.toastPayTitle')}</p>
+                                    <p className="text-[10px] text-slate-500">{t('roles.toastPayBody')}</p>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </div>
+                          ) : (
+                            <div className="relative flex h-52 w-52 items-center justify-center sm:h-56 sm:w-56">
+                              <div
+                                className="absolute inset-0 rounded-full border border-white/10"
+                                aria-hidden
+                              />
+                              <div
+                                className="absolute inset-5 rounded-full border border-white/15"
+                                aria-hidden
+                              />
+                              <div
+                                className="absolute inset-10 rounded-full border border-white/20"
+                                aria-hidden
+                              />
+                              <div className="relative text-center">
+                                <p className="font-display text-5xl font-bold tracking-tight text-white sm:text-6xl">
+                                  {tab.stat}
+                                </p>
+                                <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#7EB6FF]">
+                                  {t(`roles.${tab.id}.statLabel`)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </motion.div>
-                      <motion.div
-                        className="ml-4 rounded-2xl border border-violet-400/20 bg-white p-3.5 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)] sm:ml-8"
-                        initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-                        animate={
-                          reduceMotion
-                            ? { opacity: 1 }
-                            : { opacity: 1, x: 0, y: [0, -8, 0] }
-                        }
-                        transition={
-                          reduceMotion
-                            ? { duration: 0.2 }
-                            : {
-                                opacity: { duration: 0.4, delay: 0.3 },
-                                x: { duration: 0.4, delay: 0.3 },
-                                y: { duration: 3.8, repeat: Infinity, ease: 'easeInOut', delay: 0.8 },
-                              }
-                        }
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-                            <CircleDollarSign className="h-4 w-4" aria-hidden />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-bold text-slate-900">{t('roles.toastPayTitle')}</p>
-                            <p className="text-[10px] text-slate-500">{t('roles.toastPayBody')}</p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                  ) : (
-                    <div className="relative flex h-52 w-52 items-center justify-center sm:h-56 sm:w-56">
-                      <div
-                        className="absolute inset-0 rounded-full border border-white/10"
-                        aria-hidden
-                      />
-                      <div
-                        className="absolute inset-5 rounded-full border border-white/15"
-                        aria-hidden
-                      />
-                      <div
-                        className="absolute inset-10 rounded-full border border-white/20"
-                        aria-hidden
-                      />
-                      <div className="relative text-center">
-                        <p className="font-display text-5xl font-bold tracking-tight text-white sm:text-6xl">
-                          {activeRole.stat}
-                        </p>
-                        <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#7EB6FF]">
-                          {t(`roles.${activeRole.id}.statLabel`)}
-                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
+                  );
+                })}
+              </motion.div>
+            </div>
           </div>
         </section>
 
