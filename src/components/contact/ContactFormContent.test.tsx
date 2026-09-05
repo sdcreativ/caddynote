@@ -5,7 +5,15 @@ import { MemoryRouter } from 'react-router-dom';
 const post = vi.fn();
 vi.mock('@/lib/apiClient', () => ({
   API_BASE_URL: '/api',
-  apiClient: { post: (...args: unknown[]) => post(...args) },
+  apiClient: {
+    post: (...args: unknown[]) => post(...args),
+    get: vi.fn().mockResolvedValue({
+      testimonials: [],
+      contact: { email: 'contact@caddynote.com', phone: '', whatsapp: '' },
+      stats: { schools: null, students: null },
+      faq: [],
+    }),
+  },
 }));
 
 vi.mock('@/hooks/use-toast', () => ({

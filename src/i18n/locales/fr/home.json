@@ -32,6 +32,10 @@
   "partners": {
     "eyebrow": "Ils nous font confiance"
   },
+  "publicStats": {
+    "schools": "Établissements",
+    "students": "Élèves"
+  },
   "roles": {
     "eyebrow": "Une expérience pour chacun",
     "title": "Simple pour tous.",
@@ -131,27 +135,7 @@
     "prev": "Témoignage précédent",
     "next": "Témoignage suivant",
     "pick": "Sélection du témoignage",
-    "item": "Témoignage {{n}}",
-    "items": [
-      {
-        "quote": "CaddyNote nous permet de suivre l’établissement avec une clarté que nous n’avions jamais eue. Les parents sont informés plus vite et nos équipes gagnent un temps précieux.",
-        "name": "Grâce N’Guessan",
-        "role": "Directrice d’établissement",
-        "place": "Abidjan"
-      },
-      {
-        "quote": "L’appel hors ligne a changé notre quotidien. Même quand le réseau faiblit, les présences sont saisies et tout se synchronise dès le retour de la connexion.",
-        "name": "Koffi Mensah",
-        "role": "Enseignant de mathématiques",
-        "place": "Accra"
-      },
-      {
-        "quote": "Les paiements Mobile Money et les alertes SMS ont simplifié le dialogue avec les familles. Moins de relances, plus de sérénité pour la trésorerie.",
-        "name": "Aïcha Diallo",
-        "role": "Responsable administrative",
-        "place": "Dakar"
-      }
-    ]
+    "item": "Témoignage {{n}}"
   },
   "featurePage": {
     "back": "Toutes les fonctionnalités",

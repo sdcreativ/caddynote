@@ -90,6 +90,15 @@ describe('canReadSetting', () => {
       canReadSetting(teacher, { category: 'platform', key: 'announcement', isPublic: true })
     ).toBe(true);
     expect(
+      canReadSetting(teacher, { category: 'platform', key: 'partners', isPublic: true })
+    ).toBe(true);
+    expect(
+      canReadSetting(teacher, { category: 'platform', key: 'testimonials', isPublic: true })
+    ).toBe(true);
+    expect(
+      canReadSetting(teacher, { category: 'platform', key: 'faq', isPublic: true })
+    ).toBe(true);
+    expect(
       canReadSetting(teacher, { category: 'system', key: 'publicStatusSnapshot', isPublic: true })
     ).toBe(true);
     expect(
@@ -124,6 +133,9 @@ describe('canWriteSetting', () => {
     const director = auth({ role: 'school_admin' });
     expect(canWriteSetting(director, 'system', 'platformFlags')).toBe(false);
     expect(canWriteSetting(director, 'platform', 'announcement')).toBe(false);
+    expect(canWriteSetting(director, 'platform', 'partners')).toBe(false);
+    expect(canWriteSetting(director, 'platform', 'testimonials')).toBe(false);
+    expect(canWriteSetting(director, 'platform', 'faq')).toBe(false);
     expect(canWriteSetting(director, 'sso_pending', 'state-1')).toBe(false);
     expect(canWriteSetting(auth({ role: 'admin', institutionId: null }), 'sso_pending', 'state-1')).toBe(false);
     expect(canWriteSetting(auth({ role: 'admin', institutionId: null }), 'sso_adopt', 'code-hash')).toBe(false);

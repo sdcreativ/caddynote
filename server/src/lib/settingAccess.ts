@@ -22,7 +22,15 @@ export const SYSTEM_STAFF_READ_KEYS = new Set([
  * Seules ces clés peuvent être lues via `isPublic`.
  * Jamais une clé `institution:*` (SSO, admissions) — le flag DB ne suffit pas.
  */
-export const PUBLIC_SETTING_KEYS = new Set(['platform:announcement', 'system:publicStatusSnapshot']);
+export const PUBLIC_SETTING_KEYS = new Set([
+  'platform:announcement',
+  'platform:partners',
+  'platform:testimonials',
+  'platform:publicContact',
+  'platform:publicStats',
+  'platform:faq',
+  'system:publicStatusSnapshot',
+]);
 
 export const isAllowlistedPublicSetting = (category: string, key: string): boolean =>
   PUBLIC_SETTING_KEYS.has(`${category}:${key}`);

@@ -19,6 +19,7 @@ import { FadeIn, Stagger, StaggerItem } from '@/components/public/FadeIn';
 import { Button } from '@/components/ui/button';
 import { BRAND } from '@/lib/brand';
 import { cn } from '@/lib/utils';
+import { usePublicVitrine } from '@/lib/publicVitrine';
 
 const BLUE = BRAND.blue;
 const NAVY = BRAND.navy;
@@ -28,6 +29,7 @@ const extraIcons = [FileCheck2, CheckCircle2, Bell, LayoutDashboard, ShieldCheck
 
 export function AboutContent() {
   const { t } = useTranslation('about');
+  const { contact } = usePublicVitrine();
   const features = t('features', { returnObjects: true }) as { title: string; description: string }[];
   const extras = t('extras', { returnObjects: true }) as string[];
 
@@ -230,12 +232,14 @@ export function AboutContent() {
                     <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
                   </Link>
                 </Button>
-                <a
-                  href="mailto:contact@caddynote.com"
-                  className="text-sm font-medium text-white/90 underline-offset-4 hover:underline"
-                >
-                  contact@caddynote.com
-                </a>
+                {contact.email ? (
+                  <a
+                    href={`mailto:${contact.email}`}
+                    className="text-sm font-medium text-white/90 underline-offset-4 hover:underline"
+                  >
+                    {contact.email}
+                  </a>
+                ) : null}
               </div>
             </section>
           </FadeIn>

@@ -471,6 +471,15 @@ export const OPENAPI_CATALOG: CatalogOp[] = [
   { method: 'post', path: '/support/tickets/:id/escalate', tag: 'Support', summary: 'Escalader un ticket (ops)', auth: 'bearer', roles: ['admin', 'school_admin'] },
 
   { method: 'post', path: '/contact', tag: 'Contact', summary: 'Formulaire contact public → file ops', auth: 'public', statuses: [201, 400, 429] },
+  { method: 'get', path: '/public/partners', tag: 'Site public', summary: 'Noms d’établissements consentants (vitrine)', auth: 'public' },
+  { method: 'get', path: '/admin/partners', tag: 'Ops admin', summary: 'Lire la liste vitrine « Ils nous font confiance »', auth: 'bearer', roles: ['admin'] },
+  { method: 'put', path: '/admin/partners', tag: 'Ops admin', summary: 'Mettre à jour la liste vitrine (max 12 noms)', auth: 'bearer', roles: ['admin'], statuses: [200, 400] },
+  { method: 'get', path: '/public/vitrine', tag: 'Site public', summary: 'Témoignages, coordonnées, chiffres et FAQ publics', auth: 'public' },
+  { method: 'get', path: '/admin/vitrine', tag: 'Ops admin', summary: 'Lire le contenu vitrine éditable', auth: 'bearer', roles: ['admin'] },
+  { method: 'put', path: '/admin/vitrine/testimonials', tag: 'Ops admin', summary: 'Mettre à jour les témoignages (max 8)', auth: 'bearer', roles: ['admin'], statuses: [200, 400] },
+  { method: 'put', path: '/admin/vitrine/contact', tag: 'Ops admin', summary: 'Mettre à jour e-mail / téléphone / WhatsApp publics', auth: 'bearer', roles: ['admin'], statuses: [200, 400] },
+  { method: 'put', path: '/admin/vitrine/stats', tag: 'Ops admin', summary: 'Mettre à jour les chiffres publics (saisie manuelle)', auth: 'bearer', roles: ['admin'], statuses: [200, 400] },
+  { method: 'put', path: '/admin/vitrine/faq', tag: 'Ops admin', summary: 'Mettre à jour la FAQ publique', auth: 'bearer', roles: ['admin'], statuses: [200, 400] },
 
   { method: 'get', path: '/services/transport/routes', tag: 'Services (Lot 9)', summary: 'Lister les lignes de transport', auth: 'bearer' },
   { method: 'post', path: '/services/transport/routes', tag: 'Services (Lot 9)', summary: 'Créer une ligne de transport', auth: 'bearer', roles: [...direction], statuses: [201] },

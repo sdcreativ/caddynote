@@ -2,10 +2,14 @@ import { Link } from 'react-router-dom';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
 import { handleAnchorClick } from '@/lib/smoothScroll';
 import { useTranslation } from 'react-i18next';
+import { telHref, usePublicVitrine, waHref } from '@/lib/publicVitrine';
 
 export function PublicFooter() {
   const { t } = useTranslation('publicFooter');
   const year = new Date().getFullYear();
+  const { contact } = usePublicVitrine();
+  const phoneLink = contact.phone ? telHref(contact.phone) : null;
+  const whatsappLink = contact.whatsapp ? waHref(contact.whatsapp) : null;
 
   return (
     <footer className="relative z-10 mt-auto w-full bg-[#001A3D] pb-24 text-white lg:pb-0">
@@ -50,11 +54,27 @@ export function PublicFooter() {
             <ul className="mt-4 space-y-2.5 text-sm text-white/80">
               <li><Link to="/about" className="hover:text-white">{t('links.about')}</Link></li>
               <li><Link to="/contact" className="hover:text-white">{t('links.contact')}</Link></li>
-              <li>
-                <a href="mailto:contact@caddynote.com" className="hover:text-white">
-                  contact@caddynote.com
-                </a>
-              </li>
+              {contact.email ? (
+                <li>
+                  <a href={`mailto:${contact.email}`} className="hover:text-white">
+                    {contact.email}
+                  </a>
+                </li>
+              ) : null}
+              {phoneLink ? (
+                <li>
+                  <a href={phoneLink} className="hover:text-white">
+                    {contact.phone}
+                  </a>
+                </li>
+              ) : null}
+              {whatsappLink ? (
+                <li>
+                  <a href={whatsappLink} className="hover:text-white" rel="noopener noreferrer">
+                    WhatsApp {contact.whatsapp}
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </div>
         </div>

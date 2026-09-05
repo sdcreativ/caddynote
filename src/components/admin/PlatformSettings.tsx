@@ -26,7 +26,7 @@ import {
 } from '@/services/strkOpsService';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Settings, Wrench, Ban, Flag, Megaphone } from 'lucide-react';
+import { Settings, Wrench, Ban, Flag, Megaphone, Handshake, Plus, X, Quote, Phone, BarChart3, HelpCircle } from 'lucide-react';
 import { currentSchoolYear } from '@/lib/schoolYear';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -163,6 +163,11 @@ const PlatformSettings = () => {
       </div>
 
       <AnnouncementPanel />
+      <PartnersPanel />
+      <TestimonialsPanel />
+      <PublicContactPanel />
+      <PublicStatsPanel />
+      <PublicFaqPanel />
 
       <Card>
         <CardHeader>
@@ -445,6 +450,484 @@ const AnnouncementPanel = () => {
         <Button onClick={() => void save()} disabled={busy || !loaded}>
           Enregistrer le bandeau
         </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const MAX_PARTNERS = 12;
+
+/** Établissements consentants affichés sur la vitrine (noms seuls). */
+const PartnersPanel = () => {
+  const { toast } = useToast();
+  const [names, setNames] = useState<string[]>([]);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await apiClient.get<{ names: string[] }>('/admin/partners');
+        setNames(res.names ?? []);
+      } catch {
+        /* first time: no data yet */
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const addName = () => {
+    const name = draft.trim();
+    if (!name) return;
+    if (names.length >= MAX_PARTNERS) {
+      toast({ title: `Maximum ${MAX_PARTNERS} noms`, variant: 'destructive' });
+      return;
+    }
+    if (names.some((existing) => existing.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) {
+      toast({ title: 'Nom déjà présent', variant: 'destructive' });
+      return;
+    }
+    setNames((prev) => [...prev, name]);
+    setDraft('');
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await apiClient.put<{ names: string[] }>('/admin/partners', { names });
+      setNames(res.names);
+      toast({
+        title: res.names.length > 0 ? 'Liste enregistrée' : 'Bandeau masqué (liste vide)',
+      });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Handshake className="h-4 w-4" /> Ils nous font confiance
+        </CardTitle>
+        <CardDescription>
+          Noms affichés sur le site public, uniquement avec consentement de l’établissement.
+          Liste vide = bandeau masqué. Maximum {MAX_PARTNERS} noms, pas de logos.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {names.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucun nom publié. Le bandeau vitrine est masqué.</p>
+        ) : (
+          <ul className="space-y-2">
+            {names.map((name) => (
+              <li key={name} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                <span className="text-sm font-medium">{name}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => setNames((prev) => prev.filter((item) => item !== name))}
+                  aria-label={`Retirer ${name}`}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex max-w-md gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Nom de l’établissement"
+            maxLength={80}
+            disabled={!loaded || busy || names.length >= MAX_PARTNERS}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addName();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!loaded || busy || !draft.trim() || names.length >= MAX_PARTNERS}
+            onClick={addName}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Ajouter
+          </Button>
+        </div>
+
+        <Button onClick={() => void save()} disabled={busy || !loaded}>
+          Enregistrer la liste
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+type VitrinePayload = {
+  testimonials: { quote: string; name: string; role: string; place: string }[];
+  contact: { email: string; phone: string; whatsapp: string };
+  stats: { schools: number | null; students: number | null };
+  faq: { q: string; a: string }[];
+};
+
+const loadVitrine = () => apiClient.get<VitrinePayload>('/admin/vitrine');
+
+const TestimonialsPanel = () => {
+  const { toast } = useToast();
+  const [items, setItems] = useState<VitrinePayload['testimonials']>([]);
+  const [draft, setDraft] = useState({ quote: '', name: '', role: '', place: '' });
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await loadVitrine();
+        setItems(res.testimonials ?? []);
+      } catch {
+        /* first time */
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const addItem = () => {
+    if (items.length >= 8) {
+      toast({ title: 'Maximum 8 témoignages', variant: 'destructive' });
+      return;
+    }
+    if (draft.quote.trim().length < 10 || !draft.name.trim() || !draft.role.trim() || !draft.place.trim()) {
+      toast({ title: 'Citation (≥ 10 car.), nom, rôle et lieu requis', variant: 'destructive' });
+      return;
+    }
+    setItems((prev) => [...prev, { ...draft, quote: draft.quote.trim(), name: draft.name.trim(), role: draft.role.trim(), place: draft.place.trim() }]);
+    setDraft({ quote: '', name: '', role: '', place: '' });
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await apiClient.put<{ items: VitrinePayload['testimonials'] }>('/admin/vitrine/testimonials', { items });
+      setItems(res.items);
+      toast({ title: res.items.length ? 'Témoignages enregistrés' : 'Section masquée (liste vide)' });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Quote className="h-4 w-4" /> Ils parlent de CaddyNote
+        </CardTitle>
+        <CardDescription>
+          Avis réels uniquement, avec consentement. Liste vide = section masquée. Maximum 8.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucun avis publié. La section vitrine est masquée.</p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <li key={`${item.name}-${item.quote}`} className="rounded-md border px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{item.name} — {item.role}, {item.place}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">« {item.quote} »</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => setItems((prev) => prev.filter((row) => row !== item))}
+                    aria-label={`Retirer ${item.name}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Textarea
+          value={draft.quote}
+          onChange={(e) => setDraft((d) => ({ ...d, quote: e.target.value }))}
+          placeholder="Citation (consentement requis)"
+          maxLength={400}
+          rows={3}
+          disabled={!loaded || busy || items.length >= 8}
+        />
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Nom" maxLength={80} disabled={!loaded || busy} />
+          <Input value={draft.role} onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))} placeholder="Rôle" maxLength={80} disabled={!loaded || busy} />
+          <Input value={draft.place} onChange={(e) => setDraft((d) => ({ ...d, place: e.target.value }))} placeholder="Ville / établissement" maxLength={80} disabled={!loaded || busy} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" disabled={!loaded || busy || items.length >= 8} onClick={addItem}>
+            <Plus className="mr-1 h-4 w-4" /> Ajouter
+          </Button>
+          <Button onClick={() => void save()} disabled={busy || !loaded}>Enregistrer les témoignages</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const PublicContactPanel = () => {
+  const { toast } = useToast();
+  const [contact, setContact] = useState({ email: 'contact@caddynote.com', phone: '', whatsapp: '' });
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await loadVitrine();
+        setContact(res.contact);
+      } catch {
+        /* first time */
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await apiClient.put<VitrinePayload['contact']>('/admin/vitrine/contact', contact);
+      setContact(res);
+      toast({ title: 'Coordonnées enregistrées' });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Phone className="h-4 w-4" /> Coordonnées publiques
+        </CardTitle>
+        <CardDescription>
+          Footer, page Contact et À propos. Téléphone et WhatsApp : laisser vide pour ne rien afficher.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>E-mail</Label>
+          <Input value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} placeholder="contact@caddynote.com" maxLength={120} disabled={!loaded || busy} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Téléphone</Label>
+            <Input value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} placeholder="+225 …" maxLength={24} disabled={!loaded || busy} />
+          </div>
+          <div className="space-y-1">
+            <Label>WhatsApp</Label>
+            <Input value={contact.whatsapp} onChange={(e) => setContact((c) => ({ ...c, whatsapp: e.target.value }))} placeholder="+225 …" maxLength={24} disabled={!loaded || busy} />
+          </div>
+        </div>
+        <Button onClick={() => void save()} disabled={busy || !loaded}>Enregistrer les coordonnées</Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const PublicStatsPanel = () => {
+  const { toast } = useToast();
+  const [schools, setSchools] = useState('');
+  const [students, setStudents] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await loadVitrine();
+        setSchools(res.stats.schools != null ? String(res.stats.schools) : '');
+        setStudents(res.stats.students != null ? String(res.stats.students) : '');
+      } catch {
+        /* first time */
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const payload = {
+        schools: schools.trim() ? Number(schools) : null,
+        students: students.trim() ? Number(students) : null,
+      };
+      const res = await apiClient.put<VitrinePayload['stats']>('/admin/vitrine/stats', payload);
+      setSchools(res.schools != null ? String(res.schools) : '');
+      setStudents(res.students != null ? String(res.students) : '');
+      toast({ title: res.schools || res.students ? 'Chiffres enregistrés' : 'Bandeau chiffres masqué' });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BarChart3 className="h-4 w-4" /> Chiffres publics
+        </CardTitle>
+        <CardDescription>
+          Saisie manuelle uniquement — pas de compteur automatique. Laisser vide pour ne rien afficher. Uniquement des chiffres réels.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Établissements</Label>
+            <Input type="number" min={1} value={schools} onChange={(e) => setSchools(e.target.value)} placeholder="Vide = masqué" disabled={!loaded || busy} />
+          </div>
+          <div className="space-y-1">
+            <Label>Élèves</Label>
+            <Input type="number" min={1} value={students} onChange={(e) => setStudents(e.target.value)} placeholder="Vide = masqué" disabled={!loaded || busy} />
+          </div>
+        </div>
+        <Button onClick={() => void save()} disabled={busy || !loaded}>Enregistrer les chiffres</Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const PublicFaqPanel = () => {
+  const { toast } = useToast();
+  const [items, setItems] = useState<{ q: string; a: string }[]>([]);
+  const [draft, setDraft] = useState({ q: '', a: '' });
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await loadVitrine();
+        setItems(res.faq ?? []);
+      } catch {
+        /* first time */
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const addItem = () => {
+    if (items.length >= 20) {
+      toast({ title: 'Maximum 20 questions', variant: 'destructive' });
+      return;
+    }
+    if (draft.q.trim().length < 5 || draft.a.trim().length < 10) {
+      toast({ title: 'Question (≥ 5) et réponse (≥ 10) requises', variant: 'destructive' });
+      return;
+    }
+    setItems((prev) => [...prev, { q: draft.q.trim(), a: draft.a.trim() }]);
+    setDraft({ q: '', a: '' });
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await apiClient.put<{ items: { q: string; a: string }[] }>('/admin/vitrine/faq', { items });
+      setItems(res.items);
+      toast({
+        title: res.items.length ? 'FAQ enregistrée' : 'FAQ du code conservée (liste vide)',
+      });
+    } catch (e) {
+      toast({
+        title: 'Échec',
+        description: e instanceof ApiError ? e.message : 'Erreur',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <HelpCircle className="h-4 w-4" /> FAQ publique
+        </CardTitle>
+        <CardDescription>
+          Page Aide. Tant qu’aucune liste n’est enregistrée, le site garde la FAQ intégrée. Enregistrer une liste la remplace.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune FAQ enregistrée — le site affiche encore les questions livrées avec le produit.</p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <li key={item.q} className="rounded-md border px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{item.q}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.a}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => setItems((prev) => prev.filter((row) => row !== item))}
+                    aria-label={`Retirer ${item.q}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Input value={draft.q} onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))} placeholder="Question" maxLength={160} disabled={!loaded || busy} />
+        <Textarea value={draft.a} onChange={(e) => setDraft((d) => ({ ...d, a: e.target.value }))} placeholder="Réponse" maxLength={1200} rows={3} disabled={!loaded || busy} />
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" disabled={!loaded || busy} onClick={addItem}>
+            <Plus className="mr-1 h-4 w-4" /> Ajouter
+          </Button>
+          <Button onClick={() => void save()} disabled={busy || !loaded}>Enregistrer la FAQ</Button>
+        </div>
       </CardContent>
     </Card>
   );

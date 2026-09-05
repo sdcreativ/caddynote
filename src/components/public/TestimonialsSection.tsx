@@ -3,38 +3,52 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePublicVitrine, type PublicTestimonial } from '@/lib/publicVitrine';
 
-const testimonialMeta = [
-  { initials: 'GN', tone: 'from-[#1D70D8] to-[#0B4FA8]' },
-  { initials: 'KM', tone: 'from-[#0EA5E9] to-[#0369A1]' },
-  { initials: 'AD', tone: 'from-[#7C3AED] to-[#4C1D95]' },
+const tones = [
+  'from-[#1D70D8] to-[#0B4FA8]',
+  'from-[#0EA5E9] to-[#0369A1]',
+  'from-[#7C3AED] to-[#4C1D95]',
 ] as const;
 
-/** Section témoignages — carrousel premium. */
+const initialsOf = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
+type Slide = PublicTestimonial & { initials: string; tone: string };
+
+/** Section témoignages — masquée s’il n’y a aucun avis réel. */
 export function TestimonialsSection() {
   const { t } = useTranslation('home');
   const reduce = useReducedMotion();
+  const { testimonials: items } = usePublicVitrine();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const items = t('testimonials.items', { returnObjects: true }) as {
-    quote: string;
-    name: string;
-    role: string;
-    place: string;
-  }[];
-  const testimonials = items.map((item, i) => ({
+
+  const testimonials: Slide[] = items.map((item, i) => ({
     ...item,
-    ...testimonialMeta[i],
+    initials: initialsOf(item.name),
+    tone: tones[i % tones.length],
   }));
   const active = testimonials[index] ?? testimonials[0];
 
   useEffect(() => {
-    if (reduce || paused) return;
+    setIndex(0);
+  }, [items.length]);
+
+  useEffect(() => {
+    if (reduce || paused || testimonials.length <= 1) return;
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % testimonials.length);
     }, 6500);
     return () => window.clearInterval(id);
-  }, [reduce, paused, index]);
+  }, [reduce, paused, index, testimonials.length]);
+
+  if (!active) return null;
 
   const go = (dir: -1 | 1) => {
     setIndex((i) => (i + dir + testimonials.length) % testimonials.length);
@@ -73,7 +87,7 @@ export function TestimonialsSection() {
             <div className="relative mt-6 min-h-[9.5rem] sm:min-h-[8.5rem]">
               <AnimatePresence mode="wait">
                 <motion.blockquote
-                  key={active.name}
+                  key={active.name + active.quote}
                   initial={reduce ? false : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={reduce ? undefined : { opacity: 0, y: -10 }}
@@ -122,75 +136,78 @@ export function TestimonialsSection() {
                 </motion.div>
               </AnimatePresence>
 
-              <div className="flex items-center gap-3 self-end sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => go(-1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                  aria-label={t('testimonials.prev')}
-                >
-                  <ChevronLeft className="h-4 w-4" aria-hidden />
-                </button>
-                <div className="flex items-center gap-1.5" role="tablist" aria-label={t('testimonials.pick')}>
-                  {testimonials.map((item, i) => (
-                    <button
-                      key={item.name}
-                      type="button"
-                      role="tab"
-                      aria-selected={i === index}
-                      aria-label={t('testimonials.item', { n: i + 1 })}
-                      onClick={() => setIndex(i)}
-                      className={cn(
-                        'h-1.5 rounded-full transition-all',
-                        i === index ? 'w-7 bg-[#1D70D8]' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
-                      )}
-                    />
-                  ))}
+              {testimonials.length > 1 ? (
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => go(-1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    aria-label={t('testimonials.prev')}
+                  >
+                    <ChevronLeft className="h-4 w-4" aria-hidden />
+                  </button>
+                  <div className="flex items-center gap-1.5" role="tablist" aria-label={t('testimonials.pick')}>
+                    {testimonials.map((item, i) => (
+                      <button
+                        key={`${item.name}-${i}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={i === index}
+                        aria-label={t('testimonials.item', { n: i + 1 })}
+                        onClick={() => setIndex(i)}
+                        className={cn(
+                          'h-1.5 rounded-full transition-all',
+                          i === index ? 'w-7 bg-[#1D70D8]' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => go(1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    aria-label={t('testimonials.next')}
+                  >
+                    <ChevronRight className="h-4 w-4" aria-hidden />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => go(1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                  aria-label={t('testimonials.next')}
-                >
-                  <ChevronRight className="h-4 w-4" aria-hidden />
-                </button>
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
 
-        {/* Mini cards — autres voix */}
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {testimonials.map((item, i) => (
-            <button
-              key={item.name}
-              type="button"
-              onClick={() => setIndex(i)}
-              className={cn(
-                'rounded-2xl border px-4 py-3.5 text-left transition',
-                i === index
-                  ? 'border-[#1D70D8]/40 bg-white shadow-[0_12px_30px_-18px_rgba(29,112,216,0.45)]'
-                  : 'border-transparent bg-white/50 hover:border-slate-200 hover:bg-white'
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white',
-                    item.tone
-                  )}
-                >
-                  {item.initials}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#0B1F3A]">{item.name}</p>
-                  <p className="truncate text-[11px] text-slate-500">{item.place}</p>
+        {testimonials.length > 1 ? (
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {testimonials.map((item, i) => (
+              <button
+                key={`${item.name}-${i}`}
+                type="button"
+                onClick={() => setIndex(i)}
+                className={cn(
+                  'rounded-2xl border px-4 py-3.5 text-left transition',
+                  i === index
+                    ? 'border-[#1D70D8]/40 bg-white shadow-[0_12px_30px_-18px_rgba(29,112,216,0.45)]'
+                    : 'border-transparent bg-white/50 hover:border-slate-200 hover:bg-white'
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white',
+                      item.tone
+                    )}
+                  >
+                    {item.initials}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#0B1F3A]">{item.name}</p>
+                    <p className="truncate text-[11px] text-slate-500">{item.place}</p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );

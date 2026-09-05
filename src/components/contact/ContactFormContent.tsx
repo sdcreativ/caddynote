@@ -16,9 +16,11 @@ import {
   Clock,
   CheckCircle2,
   Building2,
+  MessageCircle,
 } from 'lucide-react';
 import { FadeIn } from '@/components/public/FadeIn';
 import { cn } from '@/lib/utils';
+import { telHref, usePublicVitrine, waHref } from '@/lib/publicVitrine';
 
 const BLUE = '#1D70D8';
 const NAVY = '#0B1F3A';
@@ -26,6 +28,7 @@ const NAVY = '#0B1F3A';
 export function ContactFormContent() {
   const { t } = useTranslation('contact');
   const { toast } = useToast();
+  const { contact } = usePublicVitrine();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: '',
@@ -127,25 +130,43 @@ export function ContactFormContent() {
         <div className="mt-10 grid items-start gap-8 sm:mt-14 sm:gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
           <FadeIn className="order-2 space-y-4 lg:order-1">
             {[
-              {
-                icon: Mail,
-                title: t('emailTitle'),
-                body: 'contact@caddynote.com',
-                hint: t('emailHint'),
-              },
-              {
-                icon: Phone,
-                title: t('phoneTitle'),
-                body: '+33 1 23 45 67 89',
-                hint: t('phoneHint'),
-              },
+              contact.email
+                ? {
+                    icon: Mail,
+                    title: t('emailTitle'),
+                    body: contact.email,
+                    hint: t('emailHint'),
+                    href: `mailto:${contact.email}`,
+                  }
+                : null,
+              contact.phone && telHref(contact.phone)
+                ? {
+                    icon: Phone,
+                    title: t('phoneTitle'),
+                    body: contact.phone,
+                    hint: t('phoneHint'),
+                    href: telHref(contact.phone) ?? undefined,
+                  }
+                : null,
+              contact.whatsapp && waHref(contact.whatsapp)
+                ? {
+                    icon: MessageCircle,
+                    title: t('whatsappTitle'),
+                    body: contact.whatsapp,
+                    hint: t('whatsappHint'),
+                    href: waHref(contact.whatsapp) ?? undefined,
+                  }
+                : null,
               {
                 icon: MapPin,
                 title: t('presenceTitle'),
                 body: t('presenceBody'),
                 hint: t('presenceHint'),
+                href: undefined as string | undefined,
               },
-            ].map((item) => (
+            ]
+              .filter((item): item is NonNullable<typeof item> => item != null)
+              .map((item) => (
               <div
                 key={item.title}
                 className="flex gap-4 rounded-2xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_12px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm"
@@ -158,7 +179,17 @@ export function ContactFormContent() {
                 </span>
                 <div>
                   <h2 className="text-sm font-bold text-[#0B1F3A]">{item.title}</h2>
-                  <p className="mt-0.5 text-[15px] font-medium text-slate-700">{item.body}</p>
+                  {item.href ? (
+                    <a
+                      href={item.href}
+                      className="mt-0.5 block text-[15px] font-medium text-slate-700 underline-offset-4 hover:underline"
+                      rel={item.href.startsWith('https:') ? 'noopener noreferrer' : undefined}
+                    >
+                      {item.body}
+                    </a>
+                  ) : (
+                    <p className="mt-0.5 text-[15px] font-medium text-slate-700">{item.body}</p>
+                  )}
                   <p className="mt-1 text-xs text-slate-600">{item.hint}</p>
                 </div>
               </div>

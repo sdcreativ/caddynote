@@ -16,6 +16,7 @@ import { FEATURES } from '@/data/features';
 import { localizeFeature } from '@/i18n/localizeCatalog';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '@/lib/apiClient';
+import { usePublicVitrine } from '@/lib/publicVitrine';
 import {
   CheckCircle2,
   ArrowRight,
@@ -67,8 +68,6 @@ type PublicPlanCard = {
   priceLabel: string;
 };
 
-const partnerLabels = ['Groupe Avenir', 'Lycée Horizon', 'École Verte', 'Campus Nord', 'Institut Baobab'];
-
 const Index = () => {
   const { user, isLoading } = useStrkAuth();
   const reduceMotion = useReducedMotion();
@@ -76,7 +75,13 @@ const Index = () => {
   const [role, setRole] = useState<(typeof roleTabs)[number]['id']>('directions');
   const [videoOpen, setVideoOpen] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PublicPlanCard[]>([]);
+  const [partnerNames, setPartnerNames] = useState<string[]>([]);
+  const { stats } = usePublicVitrine();
   const { t } = useTranslation('home');
+  const publicStatItems = [
+    stats.schools != null ? { label: t('publicStats.schools'), value: stats.schools } : null,
+    stats.students != null ? { label: t('publicStats.students'), value: stats.students } : null,
+  ].filter((item): item is { label: string; value: number } => item != null);
   const activeRole = roleTabs.find((r) => r.id === role) ?? roleTabs[0];
   const featureCards = FEATURES.map((f) => {
     const loc = localizeFeature(f);
@@ -128,6 +133,23 @@ const Index = () => {
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { names } = await apiClient.get<{ names: string[] }>('/public/partners', { skipAuth: true });
+        if (!cancelled && Array.isArray(names)) {
+          setPartnerNames(names.filter((name) => typeof name === 'string' && name.trim()));
+        }
+      } catch {
+        if (!cancelled) setPartnerNames([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const displayPlans: PublicPlanCard[] =
     pricingPlans.length > 0
@@ -329,23 +351,41 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Partners */}
-        <section className="border-y border-slate-100 bg-white px-4 py-10 sm:px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
-            {t('partners.eyebrow')}
-          </p>
-          <div className="mx-auto mt-6 flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {partnerLabels.map((name) => (
-              <span
-                key={name}
-                className="text-sm font-bold tracking-wide text-slate-500"
-                style={{ letterSpacing: '0.04em' }}
-              >
-                {name}
-              </span>
-            ))}
-          </div>
-        </section>
+        {publicStatItems.length > 0 ? (
+          <section className="border-y border-slate-100 bg-white px-4 py-8 sm:px-6">
+            <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-12 gap-y-4">
+              {publicStatItems.map((item) => (
+                <p key={item.label} className="text-center">
+                  <span className="block font-display text-3xl font-bold tracking-tight text-[#0B1F3A]">
+                    {item.value.toLocaleString('fr-FR')}
+                  </span>
+                  <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    {item.label}
+                  </span>
+                </p>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {partnerNames.length > 0 ? (
+          <section className="border-y border-slate-100 bg-white px-4 py-10 sm:px-6">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+              {t('partners.eyebrow')}
+            </p>
+            <div className="mx-auto mt-6 flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
+              {partnerNames.map((name) => (
+                <span
+                  key={name}
+                  className="text-sm font-bold tracking-wide text-slate-500"
+                  style={{ letterSpacing: '0.04em' }}
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* 3. Roles — maquette « Une expérience pour chacun » */}
         <section id="roles" className="scroll-mt-32 px-4 py-20 sm:px-6 sm:py-28" style={{ backgroundColor: NAVY }}>

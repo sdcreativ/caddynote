@@ -18,6 +18,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { FadeIn, Stagger, StaggerItem } from '@/components/public/FadeIn';
+import { usePublicVitrine } from '@/lib/publicVitrine';
 
 const guideIcons = {
   '/aide/guide-ecoles': Building2,
@@ -29,7 +30,9 @@ const guideIcons = {
 
 export function HelpContent() {
   const { t } = useTranslation('help');
-  const faq = t('faq', { returnObjects: true }) as { q: string; a: string }[];
+  const { faq: publishedFaq } = usePublicVitrine();
+  const bundledFaq = t('faq', { returnObjects: true }) as { q: string; a: string }[];
+  const faq = publishedFaq.length > 0 ? publishedFaq : bundledFaq;
   const guides = t('guides', { returnObjects: true }) as { to: string; title: string; description: string }[];
 
   return (
