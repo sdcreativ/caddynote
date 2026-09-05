@@ -73,7 +73,7 @@ export function AboutContent() {
           <FadeIn delay={0.08} className="relative mx-auto w-full max-w-md lg:max-w-none">
             <div className="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-[0_28px_60px_-36px_rgba(15,23,42,0.4)]">
               <img
-                src="/caddynote-phone-mockup.png"
+                src="/caddynote-phone-mockup.png?v=3"
                 alt={t('mockupAlt')}
                 className="h-auto w-full object-cover object-top"
                 loading="lazy"

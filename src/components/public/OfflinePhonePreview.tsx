@@ -16,11 +16,11 @@ export function OfflinePhonePreview() {
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         <motion.img
-          src="/caddynote-phone-mockup.png?v=2"
+          src="/caddynote-phone-mockup.png?v=3"
           alt={t('phoneAlt')}
           width={720}
           height={1280}
-          className="h-auto w-full select-none drop-shadow-[0_36px_48px_rgba(11,31,58,0.3)]"
+          className="h-auto w-full select-none"
           draggable={false}
           animate={reduce ? undefined : { y: [0, -8, 0] }}
           transition={
