@@ -40,19 +40,21 @@ const upsertSetting = async (key: string, value: object, description: string) =>
   });
 };
 
-const publicContactFromRow = (row: { value: unknown; isPublic: boolean } | null): PublicContact => {
+type SettingRow = { value: unknown; isPublic: boolean | null };
+
+const publicContactFromRow = (row: SettingRow | null): PublicContact => {
   if (!row || !row.isPublic) {
     return { email: DEFAULT_PUBLIC_EMAIL, phone: '', whatsapp: '' };
   }
   return parseStoredContact(row.value, true);
 };
 
-const publicList = <T>(row: { value: unknown; isPublic: boolean } | null, parse: (value: unknown) => T[]): T[] => {
+const publicList = <T>(row: SettingRow | null, parse: (value: unknown) => T[]): T[] => {
   if (!row || !row.isPublic) return [];
   return parse(row.value);
 };
 
-const publicStatsFromRow = (row: { value: unknown; isPublic: boolean } | null): PublicStats => {
+const publicStatsFromRow = (row: SettingRow | null): PublicStats => {
   if (!row || !row.isPublic) return { schools: null, students: null };
   return parseStoredStats(row.value);
 };
