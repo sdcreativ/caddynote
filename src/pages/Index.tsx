@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 import { homePathForRole } from '@/lib/homePath';
 import { PublicShell } from '@/components/public/PublicShell';
@@ -38,6 +38,7 @@ import {
 
 const BLUE = '#1D70D8';
 const NAVY = '#0B1F3A';
+const roleSlideEase = { type: 'spring' as const, stiffness: 118, damping: 26, mass: 0.9 };
 
 const audienceLinks = [
   { key: 'schools' as const, icon: Building2, href: '/#roles' },
@@ -440,6 +441,7 @@ const Index = () => {
               </h2>
             </FadeIn>
 
+            <LayoutGroup>
             <div
               className="-mx-4 mt-10 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 pb-1 sm:mx-auto sm:mt-10 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
               role="tablist"
@@ -465,18 +467,26 @@ const Index = () => {
                     aria-selected={active}
                     onClick={() => selectRole(index)}
                     className={cn(
-                      'inline-flex shrink-0 snap-start items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors',
+                      'relative inline-flex shrink-0 snap-start items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold',
                       active
-                        ? 'border-transparent bg-[#1D70D8] text-white shadow-[0_12px_32px_-8px_rgba(29,112,216,0.65)]'
-                        : 'border-white/25 bg-transparent text-white/90 hover:border-white/45 hover:bg-white/5'
+                        ? 'border-transparent text-white'
+                        : 'border-white/25 bg-transparent text-white/90 transition-colors duration-500 hover:border-white/45 hover:bg-white/5'
                     )}
                   >
-                    <tab.icon className="h-4 w-4" strokeWidth={2} aria-hidden />
-                    {t(`roles.${tab.id}.label`)}
+                    {active ? (
+                      <motion.span
+                        layoutId="role-tab-pill"
+                        className="absolute inset-0 rounded-full bg-[#1D70D8] shadow-[0_12px_32px_-8px_rgba(29,112,216,0.65)]"
+                        transition={reduceMotion ? { duration: 0 } : roleSlideEase}
+                      />
+                    ) : null}
+                    <tab.icon className="relative z-10 h-4 w-4" strokeWidth={2} aria-hidden />
+                    <span className="relative z-10">{t(`roles.${tab.id}.label`)}</span>
                   </button>
                 );
               })}
             </div>
+            </LayoutGroup>
 
             <div
               className="mt-10 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-[#132A4A] via-[#0F2340] to-[#0B1F3A]"
@@ -496,21 +506,19 @@ const Index = () => {
               <motion.div
                 className="flex w-full"
                 animate={{ x: `${-roleIndex * 100}%` }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
-                }
+                transition={reduceMotion ? { duration: 0 } : roleSlideEase}
               >
                 {roleTabs.map((tab, index) => {
                   const active = roleIndex === index;
                   return (
-                    <div
+                    <motion.div
                       key={tab.id}
                       role="tabpanel"
                       aria-hidden={!active}
                       {...(!active ? { inert: '' } : {})}
                       className="min-w-full"
+                      animate={{ opacity: active ? 1 : 0.42 }}
+                      transition={reduceMotion ? { duration: 0 } : roleSlideEase}
                     >
                       <div className="grid items-center gap-8 p-6 sm:gap-10 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:p-12">
                         <div>
@@ -622,7 +630,7 @@ const Index = () => {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </motion.div>
