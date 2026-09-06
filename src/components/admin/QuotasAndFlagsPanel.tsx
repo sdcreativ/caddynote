@@ -29,7 +29,7 @@ const LABELS: Record<string, string> = {
   storageGb: 'Stockage (Go)',
 };
 
-/** SAA-003 / SAA-005 — quotas + feature flags (établissement courant ou forcé). */
+/** SAA-003 / SAA-005 : quotas + feature flags (établissement courant ou forcé). */
 type QuotasAndFlagsPanelProps = {
   /** Super-admin : établissement sélectionné explicitement. */
   institutionId?: string;
@@ -133,7 +133,7 @@ export const QuotasAndFlagsPanel = ({ institutionId: institutionIdProp }: Quotas
           <CardDescription>
             {canEditFlags
               ? 'Surcharges tenant (admin). Effectif = plateforme > override > plan > défaut module.'
-              : 'Lecture seule — plan + overrides + plateforme.'}
+              : 'Lecture seule : plan + overrides + plateforme.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

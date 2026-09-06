@@ -6,13 +6,13 @@
   "unauthenticated": "Utilisateur non authentifié. Veuillez vous reconnecter.",
   "tools": {
     "title": "Outils d’administration",
-    "hint": "Exports et journal d’audit — retirés du menu principal pour alléger la navigation Direction.",
+    "hint": "Exports et journal d’audit : retirés du menu principal pour alléger la navigation Direction.",
     "exports": "Exports",
     "audit": "Journal d’audit"
   },
   "accountSecurity": {
     "title": "Compte & sécurité",
-    "hint": "Mot de passe, double authentification et sessions se gèrent dans Profil — un seul endroit.",
+    "hint": "Mot de passe, double authentification et sessions se gèrent dans Profil : un seul endroit.",
     "openProfile": "Ouvrir mon profil"
   },
   "tabs": {

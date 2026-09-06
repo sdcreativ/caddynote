@@ -21,7 +21,7 @@ const initialsOf = (name: string): string => {
 
 type Slide = PublicTestimonial & { initials: string; tone: string };
 
-/** Section témoignages — masquée s’il n’y a aucun avis réel. */
+/** Section témoignages : masquée s’il n’y a aucun avis réel. */
 export function TestimonialsSection() {
   const { t } = useTranslation('home');
   const reduce = useReducedMotion();
@@ -125,7 +125,7 @@ export function TestimonialsSection() {
                   <div>
                     <p className="text-base font-bold text-[#0B1F3A]">{active.name}</p>
                     <p className="text-sm text-slate-500">
-                      {active.role} — {active.place}
+                      {active.role} : {active.place}
                     </p>
                     <div className="mt-1.5 flex items-center gap-0.5" aria-label={t('testimonials.stars')}>
                       {Array.from({ length: 5 }).map((_, i) => (

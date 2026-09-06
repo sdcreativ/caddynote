@@ -193,7 +193,7 @@ export function AssignTeacherClassDialog({
                 {available.map((klass) => (
                   <SelectItem key={klass.id} value={klass.id}>
                     {klass.teacher_name
-                      ? `${klass.name} — ${t('assign.currentlyHeldBy', { name: klass.teacher_name })}`
+                      ? `${klass.name} : ${t('assign.currentlyHeldBy', { name: klass.teacher_name })}`
                       : klass.name}
                   </SelectItem>
                 ))}

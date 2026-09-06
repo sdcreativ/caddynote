@@ -584,7 +584,7 @@ const AdmissionsAdminPage = () => {
                           <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                             <p className="mb-3 text-sm font-medium text-slate-700">
                               {t('apply.completeness', { percent: packet.completeness.percent })}
-                              {packet.template ? ` — ${packet.template.name}` : ''}
+                              {packet.template ? ` : ${packet.template.name}` : ''}
                             </p>
                             <ul className="space-y-2">
                               {packet.items.map((item) => (
@@ -691,8 +691,8 @@ const AdmissionsAdminPage = () => {
                                     <ul className="mt-1 w-full text-xs text-slate-500">
                                       {versionsByItem[item.id]!.map((v) => (
                                         <li key={`${item.id}-v${v.version}`}>
-                                          v{v.version} — {v.status}
-                                          {v.fileName ? ` — ${v.fileName}` : ''}
+                                          v{v.version} : {v.status}
+                                          {v.fileName ? ` : ${v.fileName}` : ''}
                                           {v.isCurrent ? ` (${t('admin.currentVersion')})` : ''}
                                         </li>
                                       ))}

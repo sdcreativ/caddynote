@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-/** Smartphone photoréaliste — suivi parent (maquette terrain). */
+/** Smartphone photoréaliste : suivi parent (maquette terrain). */
 export function OfflinePhonePreview() {
   const reduce = useReducedMotion();
   const { t } = useTranslation('home');

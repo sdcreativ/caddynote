@@ -68,7 +68,7 @@ export default function ProvisionDemoFromContactDialog({
     }
     const { firstName, lastName } = splitName(contact.name);
     return {
-      institutionName: `Établissement — ${contact.name}`,
+      institutionName: `Établissement : ${contact.name}`,
       institutionType: 'private_school' as InstitutionType,
       adminEmail: contact.email,
       adminFirstName: firstName,
@@ -106,7 +106,7 @@ export default function ProvisionDemoFromContactDialog({
       toast({
         title: result.alreadyProvisioned ? 'Session déjà créée' : 'Session démo créée',
         description: result.alreadyProvisioned
-          ? `${result.institution.name} — ${result.admin.email}`
+          ? `${result.institution.name} : ${result.admin.email}`
           : `${result.institution.name} · admin ${result.admin.email}` +
             (result.emailSent
               ? ' · invitation envoyée'

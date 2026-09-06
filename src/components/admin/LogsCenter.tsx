@@ -21,7 +21,7 @@ interface AuditLogRow {
   institution?: { name: string } | null;
 }
 
-/** IAM-005 — journal réel `GET /audit-log` (plus de mock). */
+/** IAM-005 : journal réel `GET /audit-log` (plus de mock). */
 const LogsCenter = () => {
   const { user } = useStrkAuth();
   const { toast } = useToast();
@@ -131,7 +131,7 @@ const LogsCenter = () => {
                   <p>
                     {[log.actor?.firstName, log.actor?.lastName].filter(Boolean).join(' ') || 'Système'}
                     {log.actor?.email ? ` (${log.actor.email})` : ''}
-                    {log.institution?.name ? ` — ${log.institution.name}` : ''}
+                    {log.institution?.name ? ` : ${log.institution.name}` : ''}
                   </p>
                   {(log.targetType || log.ipAddress) && (
                     <p className="text-xs text-muted-foreground">

@@ -45,7 +45,7 @@ type ToHandleItem = {
 
 
 /**
- * Accueil parent — triage seulement :
+ * Accueil parent : triage seulement :
  * salut + À traiter + CTA vers Mes enfants (détail opérationnel).
  */
 const ParentDashboardHome = ({
@@ -235,7 +235,7 @@ const ParentDashboardHome = ({
         ) : null}
       </header>
 
-      {/* Q1 — À traiter */}
+      {/* Q1 : À traiter */}
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -302,7 +302,7 @@ const ParentDashboardHome = ({
           >
             {t('quickActions.myChildren')}
           </button>
-          <span className="text-slate-400"> — </span>
+          <span className="text-slate-400"> : </span>
           {t('parentMobile.openChildrenHint', {
             defaultValue: 'notes, absences, finances et services par enfant',
           })}

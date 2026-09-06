@@ -473,7 +473,7 @@ const InstitutionManager = () => {
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Quotas & flags — {selectedInstitution?.name}
+              Quotas & flags : {selectedInstitution?.name}
             </DialogTitle>
           </DialogHeader>
           {selectedInstitution ? (

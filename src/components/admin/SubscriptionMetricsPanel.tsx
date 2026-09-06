@@ -28,7 +28,7 @@ type SubscriptionMetricsPanelProps = {
   planDistribution: PlanSlice[];
 };
 
-/** KPI + graphiques abonnements — extrait de SubscriptionManager. */
+/** KPI + graphiques abonnements : extrait de SubscriptionManager. */
 export function SubscriptionMetricsPanel({
   totalRevenue,
   activeSubscriptions,

@@ -116,7 +116,7 @@ const StudentDashboardHome = ({
           <Link to="/my-suivi" className="font-medium text-blue-700 underline-offset-2 hover:underline">
             {t('studentMobile.openSuivi', { defaultValue: 'Ouvrir mon suivi' })}
           </Link>
-          <span className="text-slate-400"> — </span>
+          <span className="text-slate-400"> : </span>
           {t('studentMobile.openSuiviHint', {
             defaultValue: 'présence, emploi du temps, notes et devoirs',
           })}

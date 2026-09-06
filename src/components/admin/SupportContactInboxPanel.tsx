@@ -13,7 +13,7 @@ type SupportContactInboxPanelProps = {
   onAcknowledge: (message: ContactOpsMessage) => void;
 };
 
-/** File `/contact` publique — extrait de SupportOpsCenter. */
+/** File `/contact` publique : extrait de SupportOpsCenter. */
 export function SupportContactInboxPanel({
   messages,
   busy,
@@ -28,7 +28,7 @@ export function SupportContactInboxPanel({
         <div>
           <CardTitle className="text-base">File contact public</CardTitle>
           <CardDescription>
-            Messages `/contact` non traités — créer une session démo en un clic, ou convertir en ticket.
+            Messages `/contact` non traités : créer une session démo en un clic, ou convertir en ticket.
           </CardDescription>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={onRefresh}>

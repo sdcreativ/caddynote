@@ -283,7 +283,7 @@ const AddEventDialog = ({ open, onOpenChange, onAddEvent, initialDate }: AddEven
                 {filteredCourses.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
                     {course.class_name
-                      ? `${course.name} — ${course.class_name}`
+                      ? `${course.name} : ${course.class_name}`
                       : course.name}
                   </SelectItem>
                 ))}

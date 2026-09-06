@@ -23,7 +23,7 @@ type GradesEntryPanelProps = {
   canCreateGrades: boolean;
 };
 
-/** Onglet Saisie — stats, filtres et liste des notes. */
+/** Onglet Saisie : stats, filtres et liste des notes. */
 export function GradesEntryPanel({
   filteredGrades,
   searchTerm,

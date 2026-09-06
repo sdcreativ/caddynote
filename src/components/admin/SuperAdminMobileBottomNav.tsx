@@ -30,7 +30,7 @@ interface SuperAdminMobileBottomNavProps {
 }
 
 /**
- * Barre ops mobile (`lg:hidden`) — 4 sections + « Plus » (ouvre le drawer).
+ * Barre ops mobile (`lg:hidden`) : 4 sections + « Plus » (ouvre le drawer).
  */
 const SuperAdminMobileBottomNav = ({
   activeSection,

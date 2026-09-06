@@ -10,7 +10,7 @@ interface ErrorStateProps {
   className?: string;
 }
 
-/** État d’erreur homogène avec action de nouvel essai — UX-005. */
+/** État d’erreur homogène avec action de nouvel essai : UX-005. */
 export const ErrorState = ({ title, description, onRetry, retryLabel, className }: ErrorStateProps) => {
   const { t } = useTranslation('app');
   return (

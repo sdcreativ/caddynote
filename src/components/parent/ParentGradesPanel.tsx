@@ -8,7 +8,7 @@ type ParentGradesPanelProps = {
   gradeSummary: StudentGradeSummary | null;
 };
 
-/** Notes publiées — extrait de Mes enfants. */
+/** Notes publiées : extrait de Mes enfants. */
 export function ParentGradesPanel({ canView, loading, gradeSummary }: ParentGradesPanelProps) {
   if (!canView) {
     return <p className="text-sm text-gray-500">Vous n'avez pas accès aux notes de cet enfant.</p>;

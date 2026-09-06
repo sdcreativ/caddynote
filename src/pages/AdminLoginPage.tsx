@@ -74,7 +74,7 @@ const AdminLoginPage = () => {
             </CardContent>
           </Card>
           <p className="text-center text-sm text-slate-500">
-            © {year} CaddyNote — {t('admin.footer')}
+            © {year} CaddyNote : {t('admin.footer')}
             <span className="mt-1 block">
               <Lock className="mr-1 inline h-3 w-3" aria-hidden="true" />
               {t('admin.ssl')}

@@ -476,7 +476,7 @@ const Classes = () => {
           <DialogHeader>
             <DialogTitle>
               {t('courses.manageTitle')}
-              {courseClass?.name ? ` — ${courseClass.name}` : ''}
+              {courseClass?.name ? ` : ${courseClass.name}` : ''}
             </DialogTitle>
             <DialogDescription>{t('courses.manageDescription')}</DialogDescription>
           </DialogHeader>

@@ -130,7 +130,7 @@ const ObservabilityCenter = () => {
               Tentatives d’auth échouées
             </CardTitle>
             <CardDescription>
-              login.failed + mfa.failed — compteur 24h : {ops?.security.failedAuthLast24h ?? '—'}
+              login.failed + mfa.failed : compteur 24h : {ops?.security.failedAuthLast24h ?? '—'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -227,7 +227,7 @@ const ObservabilityCenter = () => {
               <CardHeader>
                 <CardTitle className="text-base">Historique ops (process)</CardTitle>
                 <CardDescription>
-                  Anneau mémoire locale API (max 24) — pas de persistance durable entre redémarrages.
+                  Anneau mémoire locale API (max 24) : pas de persistance durable entre redémarrages.
                 </CardDescription>
               </CardHeader>
               <CardContent>

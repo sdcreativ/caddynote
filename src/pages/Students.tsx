@@ -96,7 +96,7 @@ const Students = () => {
     hasLogin: Boolean(student.email),
     class: t('unassigned'), // Pour l'instant, pas de classe assignée
     // PER-005 : reflète l'état réel du compte (désactivé n'est plus un état
-    // fictif — c'était toujours "active" en dur avant, quel que soit le
+    // fictif : c'était toujours "active" en dur avant, quel que soit le
     // statut réel, et les actions Suspendre/Réactiver n'avaient aucun effet).
     status: student.isActive === false ? 'suspended' as const : 'active' as const,
     phone: student.phoneNumber,
@@ -162,7 +162,7 @@ const Students = () => {
   };
 
   // PER-005 : "supprimer" et "suspendre" pointent vers la même action
-  // côté serveur (désactivation — le compte et son historique sont
+  // côté serveur (désactivation : le compte et son historique sont
   // conservés, seule la connexion est bloquée) : il n'existe pas de
   // distinction "suspendu temporairement" vs "désactivé" dans le modèle
   // de données, donc pas d'UI qui prétendrait le contraire.
@@ -316,7 +316,7 @@ const Students = () => {
   // ELV-005 : import en masse (colonnes attendues :
   // firstName,lastName,email,phoneNumber,className,studentNumber).
   // Contrepartie de l'export ci-dessus, réellement traité côté serveur
-  // (POST /students/import) — pas une simulation.
+  // (POST /students/import) : pas une simulation.
   const handleImportFile = async (file: File) => {
     const csv = await file.text();
     setImportPreview({ csv, rows: previewCsvRows(csv) });

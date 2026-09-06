@@ -20,7 +20,7 @@
     "errorTitle": "Erreur d'export",
     "errorBody": "Une erreur est survenue lors de l'export."
   },
-  "bulletinHint": "Le bulletin scolaire officiel (PDF + QR) se génère depuis Documents après calcul des moyennes — distinct de cet export tabulaire.",
+  "bulletinHint": "Le bulletin scolaire officiel (PDF + QR) se génère depuis Documents après calcul des moyennes : distinct de cet export tabulaire.",
   "bulletinLink": "Ouvrir Documents",
   "schedule": {
     "title": "Export planifié",

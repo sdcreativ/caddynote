@@ -36,7 +36,7 @@ const emptyForm = {
   sortOrder: '0',
 };
 
-/** CRUD plans Stripe (Price IDs, quotas) — ops Super Admin / SubscriptionManager.
+/** CRUD plans Stripe (Price IDs, quotas) : ops Super Admin / SubscriptionManager.
  * Distinct de `subscription/PublicOffersCatalogAdmin` (catalogue marketing public). */
 const SubscriptionPlansAdmin = () => {
   const { toast } = useToast();
@@ -154,7 +154,7 @@ const SubscriptionPlansAdmin = () => {
             <CreditCard className="h-4 w-4" /> Catalogue des plans
           </CardTitle>
           <CardDescription>
-            CRUD admin — Price IDs Stripe requis pour le checkout. Sans ID = plan DB only.
+            CRUD admin : Price IDs Stripe requis pour le checkout. Sans ID = plan DB only.
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -190,7 +190,7 @@ const SubscriptionPlansAdmin = () => {
             </li>
           ))}
           {plans.length === 0 && !loading && (
-            <li className="py-4 text-muted-foreground">Aucun plan — utilisez Seed ou créez-en un.</li>
+            <li className="py-4 text-muted-foreground">Aucun plan : utilisez Seed ou créez-en un.</li>
           )}
         </ul>
 

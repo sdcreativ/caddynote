@@ -65,7 +65,7 @@ type ServicesTransportPanelProps = {
   onAddSlot: (routeId: string) => void;
 };
 
-/** Module transport — extrait de ServicesPage. */
+/** Module transport : extrait de ServicesPage. */
 export function ServicesTransportPanel({
   routes,
   saving,
@@ -181,7 +181,7 @@ export function ServicesTransportPanel({
                       <span>
                         {t(`planning.day${slot.dayOfWeek}`)} · {slot.departureTime} ·{' '}
                         {slot.direction === 'inbound' ? t('planning.inbound') : t('planning.outbound')}
-                        {slot.label ? ` — ${slot.label}` : ''}
+                        {slot.label ? ` : ${slot.label}` : ''}
                       </span>
                       <Button
                         size="sm"

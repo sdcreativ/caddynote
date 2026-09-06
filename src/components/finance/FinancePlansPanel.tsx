@@ -13,7 +13,7 @@ type FinancePlansPanelProps = {
   onCancel: (planId: string) => void;
 };
 
-/** Onglet plans de paiement — extrait de FinancePage. */
+/** Onglet plans de paiement : extrait de FinancePage. */
 export function FinancePlansPanel({
   paymentPlans,
   formatAmount,
@@ -43,8 +43,8 @@ export function FinancePlansPanel({
                   <div>
                     <p className="font-medium">{plan.label}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatAmount(plan.totalCents, plan.currency)} — {plan.status}
-                      {plan.academicYear ? ` — ${plan.academicYear}` : ''}
+                      {formatAmount(plan.totalCents, plan.currency)} : {plan.status}
+                      {plan.academicYear ? ` : ${plan.academicYear}` : ''}
                     </p>
                   </div>
                   {plan.status !== 'cancelled' ? (

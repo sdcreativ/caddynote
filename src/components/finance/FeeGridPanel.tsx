@@ -330,7 +330,7 @@ export function FeeGridPanel({ students, userRole, onInvoiceCreated }: Props) {
               <SelectContent>
                 {feeTypes.map((ft) => (
                   <SelectItem key={ft.id} value={ft.code}>
-                    {ft.code} — {ft.label}
+                    {ft.code} : {ft.label}
                   </SelectItem>
                 ))}
               </SelectContent>

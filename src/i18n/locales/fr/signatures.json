@@ -37,7 +37,7 @@
   "studentTitle": "Mes signatures à faire",
   "staffTitle": "Signatures (école)",
   "studentSubtitle": "Documents à signer pour votre scolarité.",
-  "staffSubtitle": "Gestion staff — créer, relancer, exporter. La signature elle-même se fait via le lien /signatures/:id/sign (pas /sign, qui est la connexion).",
+  "staffSubtitle": "Gestion staff : créer, relancer, exporter. La signature elle-même se fait via le lien /signatures/:id/sign (pas /sign, qui est la connexion).",
   "remindPending": "Relancer les en attente",
   "newSignature": "Nouvelle signature",
   "sent": "Envoyées",
@@ -91,12 +91,12 @@
     "typeExit": "sortie",
     "typeDocument": "document",
     "ofType": "Signature de {{type}}",
-    "expiresOn": " — expire le {{date}}",
+    "expiresOn": " : expire le {{date}}",
     "captured": "Signature capturée",
     "saving": "Enregistrement…",
     "saveMine": "Enregistrer ma signature",
     "title": "Signer le document",
-    "subtitle": "Action de signature — distincte de la liste de gestion (/signatures)."
+    "subtitle": "Action de signature : distincte de la liste de gestion (/signatures)."
   },
   "filters": {
     "searchPlaceholder": "Rechercher un étudiant...",

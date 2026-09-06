@@ -178,7 +178,7 @@ const SystemManagement = () => {
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <ol className="list-decimal space-y-1 pl-5">
             <li>Télécharger le dump via le bouton ci-dessous (URL présignée 1 h).</li>
-            <li>Vérifier l’intégrité (`pg_restore --list` — bouton Vérifier).</li>
+            <li>Vérifier l’intégrité (`pg_restore --list` : bouton Vérifier).</li>
             <li>Hors production : `pg_restore` vers une base dédiée, puis bascule contrôlée.</li>
             <li>Documenter l’opération et l’horodatage dans le journal d’audit.</li>
           </ol>

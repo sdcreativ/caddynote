@@ -18,7 +18,7 @@ type PresentationVideoModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/** Lecteur modal — vidéo de présentation produit. */
+/** Lecteur modal : vidéo de présentation produit. */
 export function PresentationVideoModal({ open, onOpenChange }: PresentationVideoModalProps) {
   const { t } = useTranslation('home');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -29,7 +29,7 @@ export function PresentationVideoModal({ open, onOpenChange }: PresentationVideo
     if (open) {
       el.currentTime = 0;
       void el.play().catch(() => {
-        /* autoplay peut être bloqué — contrôles visibles */
+        /* autoplay peut être bloqué : contrôles visibles */
       });
     } else {
       el.pause();

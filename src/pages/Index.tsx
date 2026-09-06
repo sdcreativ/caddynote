@@ -230,7 +230,7 @@ const Index = () => {
   }, [user, isLoading]);
 
   // Visiteur authentifié : redirection dashboard (pas de page marketing).
-  // Visiteur anonyme : contenu immédiat — ne jamais bloquer sur isLoading
+  // Visiteur anonyme : contenu immédiat : ne jamais bloquer sur isLoading
   // (sinon une API lente / token périmé retarde tout le hero jusqu'à 3 s).
   if (user) {
     return (
@@ -251,7 +251,7 @@ const Index = () => {
     <PublicShell>
       <PresentationVideoModal open={videoOpen} onOpenChange={setVideoOpen} />
       <main className="flex-1">
-        {/* 1. Hero — maquette header/hero */}
+        {/* 1. Hero : maquette header/hero */}
         <section className="relative isolate overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-16">
           <div className="pointer-events-none absolute inset-0" aria-hidden>
             <div className="absolute -left-24 top-0 h-80 w-80 rounded-full bg-[#1D70D8]/12 blur-3xl" />
@@ -332,7 +332,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* 2. Features — maquette « Tout est connecté » */}
+        {/* 2. Features : maquette « Tout est connecté » */}
         <section id="features" className="scroll-mt-32 bg-white px-4 pb-20 pt-6 sm:px-6 sm:pb-24 sm:pt-8">
           <div className="mx-auto max-w-6xl">
             <div className="mb-14 flex flex-col items-start justify-between gap-4 border-b border-slate-100 pb-6 sm:mb-16 sm:flex-row sm:items-center">
@@ -427,7 +427,7 @@ const Index = () => {
           </section>
         ) : null}
 
-        {/* 3. Roles — maquette « Une expérience pour chacun » */}
+        {/* 3. Roles : maquette « Une expérience pour chacun » */}
         <section id="roles" className="scroll-mt-32 px-4 py-20 sm:px-6 sm:py-28" style={{ backgroundColor: NAVY }}>
           <div className="mx-auto max-w-5xl">
             <FadeIn className="mx-auto max-w-2xl text-center">
@@ -638,7 +638,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* 4. Terrain — maquette offline / mobile */}
+        {/* 4. Terrain : maquette offline / mobile */}
         <section className="bg-[#F4F6F9] px-4 py-16 sm:px-6 sm:py-20">
           <div className="mx-auto grid max-w-6xl items-center gap-10 rounded-[1.5rem] bg-white px-5 py-10 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.18)] sm:gap-12 sm:rounded-[2rem] sm:px-10 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-14 lg:py-16">
             <FadeIn>
@@ -668,7 +668,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* 5. Pricing — maquette offres */}
+        {/* 5. Pricing : maquette offres */}
         <section id="pricing" className="scroll-mt-32 bg-[#F7F8FA] px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-6xl">
             <FadeIn className="mx-auto max-w-2xl text-center">
@@ -742,10 +742,10 @@ const Index = () => {
           </div>
         </section>
 
-        {/* 6. Témoignages — carrousel premium */}
+        {/* 6. Témoignages : carrousel premium */}
         <TestimonialsSection />
 
-        {/* 7. Final CTA — maquette (bleu royal + halo) */}
+        {/* 7. Final CTA : maquette (bleu royal + halo) */}
         <section
           className="relative isolate overflow-hidden px-4 py-[4.5rem] sm:px-6 sm:py-28"
           style={{

@@ -30,7 +30,7 @@ type ServicesCanteenPanelProps = {
   onEndSubscription: (subscriptionId: string) => void;
 };
 
-/** Module cantine — extrait de ServicesPage. */
+/** Module cantine : extrait de ServicesPage. */
 export function ServicesCanteenPanel({
   canteenDisabled,
   plans,
@@ -59,7 +59,7 @@ export function ServicesCanteenPanel({
           <Card key={p.id}>
             <CardHeader className="py-3">
               <CardTitle className="text-base">
-                {p.name} — {(p.priceCents / 100).toFixed(0)}{' '}
+                {p.name} : {(p.priceCents / 100).toFixed(0)}{' '}
                 <Badge variant="outline">{t('abo', { count: p.subscriptions.length })}</Badge>
               </CardTitle>
             </CardHeader>

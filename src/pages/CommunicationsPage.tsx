@@ -29,7 +29,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 /**
- * COM-001/004 — envoi multicanal + journal de livraison (API déjà en place).
+ * COM-001/004 : envoi multicanal + journal de livraison (API déjà en place).
  */
 export default function CommunicationsPage() {
   const { user } = useStrkAuth();
@@ -250,7 +250,7 @@ export default function CommunicationsPage() {
                   <div>
                     <p className="text-sm font-medium text-slate-900">
                       {log.channel.toUpperCase()}
-                      {log.subject ? ` — ${log.subject}` : ''}
+                      {log.subject ? ` : ${log.subject}` : ''}
                     </p>
                     <p className="text-xs text-slate-500">
                       {new Date(log.requestedAt).toLocaleString('fr-FR')}

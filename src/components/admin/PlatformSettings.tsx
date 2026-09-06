@@ -399,7 +399,7 @@ const AnnouncementPanel = () => {
           <Input
             value={data.shortText}
             onChange={(e) => setData((d) => ({ ...d, shortText: e.target.value }))}
-            placeholder="Rentrée — présentation sur demande"
+            placeholder="Rentrée : présentation sur demande"
             maxLength={200}
           />
         </div>
@@ -655,7 +655,7 @@ const TestimonialsPanel = () => {
               <li key={`${item.name}-${item.quote}`} className="rounded-md border px-3 py-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium">{item.name} — {item.role}, {item.place}</p>
+                    <p className="text-sm font-medium">{item.name} : {item.role}, {item.place}</p>
                     <p className="mt-1 text-sm text-muted-foreground">« {item.quote} »</p>
                   </div>
                   <Button
@@ -812,7 +812,7 @@ const PublicStatsPanel = () => {
           <BarChart3 className="h-4 w-4" /> Chiffres publics
         </CardTitle>
         <CardDescription>
-          Saisie manuelle uniquement — pas de compteur automatique. Laisser vide pour ne rien afficher. Uniquement des chiffres réels.
+          Saisie manuelle uniquement : pas de compteur automatique. Laisser vide pour ne rien afficher. Uniquement des chiffres réels.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -895,7 +895,7 @@ const PublicFaqPanel = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune FAQ enregistrée — le site affiche encore les questions livrées avec le produit.</p>
+          <p className="text-sm text-muted-foreground">Aucune FAQ enregistrée : le site affiche encore les questions livrées avec le produit.</p>
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (
@@ -933,7 +933,7 @@ const PublicFaqPanel = () => {
   );
 };
 
-/** Rétention audit, overages, file dunning — réglages §2.4. */
+/** Rétention audit, overages, file dunning : réglages §2.4. */
 const SaaSOpsControls = () => {
   const { toast } = useToast();
   const [auditDays, setAuditDays] = useState(365);

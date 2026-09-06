@@ -27,7 +27,7 @@ import {
 } from "@/services/strkSupportService";
 
 /**
- * SAA-006 (Lot 10) — jusqu'ici aucune interface n'existait pour le support
+ * SAA-006 (Lot 10) : jusqu'ici aucune interface n'existait pour le support
  * client (backend nouvellement construit, voir server/src/routes/
  * support.routes.ts). Page volontairement simple : liste + fil de
  * messages, priorité/statut modifiables par le personnel, note interne
@@ -167,7 +167,7 @@ const SupportPage = () => {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <span className="font-medium">{t('docsBannerTitle', { defaultValue: 'Documentation' })} — </span>
+        <span className="font-medium">{t('docsBannerTitle', { defaultValue: 'Documentation' })} : </span>
         {t('docsBannerBody', { defaultValue: 'FAQ et guides d’usage sont sur la page Aide (pas ici).' })}{' '}
         <Link to="/aide" className="font-semibold text-blue-700 underline-offset-2 hover:underline">
           {t('docsBannerCta', { defaultValue: 'Ouvrir l’aide' })}

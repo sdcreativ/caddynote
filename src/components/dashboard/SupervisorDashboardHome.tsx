@@ -36,7 +36,7 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil vie scolaire — mobile P0 (CTA absences + KPI + grille) ;
+ * Accueil vie scolaire : mobile P0 (CTA absences + KPI + grille) ;
  * desktop conserve la grille KPI + actions rapides.
  */
 const SupervisorDashboardHome = ({

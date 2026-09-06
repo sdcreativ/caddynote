@@ -37,7 +37,7 @@ export const EXPERIENCES: ExperienceDetail[] = [
     icon: Building2,
     title: 'Décidez avec une vision complète.',
     body: 'Des indicateurs fiables sur les effectifs, l’assiduité, les résultats et les finances de chaque établissement.',
-    hero: 'Pilotez votre établissement avec une vision claire — effectifs, assiduité, résultats et finances au même endroit.',
+    hero: 'Pilotez votre établissement avec une vision claire : effectifs, assiduité, résultats et finances au même endroit.',
     stat: '100%',
     statLabel: 'De visibilité',
     pillars: [
@@ -74,7 +74,7 @@ export const EXPERIENCES: ExperienceDetail[] = [
     label: 'Enseignants',
     icon: GraduationCap,
     title: 'L’appel et le suivi, sans friction.',
-    body: 'Présences hors ligne, saisie des notes et communication aux parents — pensé pour le quotidien en classe.',
+    body: 'Présences hors ligne, saisie des notes et communication aux parents : pensé pour le quotidien en classe.',
     hero: 'Concentrez-vous sur la classe : l’appel, les notes et les échanges avec les familles sont simplifiés.',
     stat: '3×',
     statLabel: 'Plus rapide',

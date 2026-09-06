@@ -20,7 +20,7 @@ type StatusPayload = {
   notice?: string;
 };
 
-/** Page status publique (SLO léger) — GET /status API. */
+/** Page status publique (SLO léger) : GET /status API. */
 const StatusPage = () => {
   const [data, setData] = useState<StatusPayload | null>(null);
   const [error, setError] = useState<string | null>(null);

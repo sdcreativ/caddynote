@@ -82,7 +82,7 @@ type StaffRow = {
 };
 
 /**
- * Lot 9 — socle opérationnel sur `/services/*` + facturation cantine.
+ * Lot 9 : socle opérationnel sur `/services/*` + facturation cantine.
  */
 
 const SERVICE_MODULES = ['transport', 'canteen', 'library', 'boarding', 'clinic', 'hr'] as const;
@@ -467,7 +467,7 @@ const ServicesPage = () => {
       )}
 
       <Tabs value={activeTab ?? undefined} onValueChange={setActiveTab}>
-        {/* Un module à la fois — retour hub pour changer. */}
+        {/* Un module à la fois : retour hub pour changer. */}
         <TabsContent value="transport" className="space-y-3">
           <ServicesTransportPanel
             routes={routes}
@@ -592,7 +592,7 @@ const ServicesPage = () => {
               <Card key={r.id}>
                 <CardHeader className="py-3">
                   <CardTitle className="text-base">
-                    {r.label} — {r.assignments.length}/{r.capacity}
+                    {r.label} : {r.assignments.length}/{r.capacity}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 pb-4">
@@ -748,7 +748,7 @@ const ServicesPage = () => {
             staff.map((s) => (
               <Card key={s.id}>
                 <CardContent className="py-3">
-                  {s.jobTitle} — {[s.profile.firstName, s.profile.lastName].filter(Boolean).join(' ')}
+                  {s.jobTitle} : {[s.profile.firstName, s.profile.lastName].filter(Boolean).join(' ')}
                 </CardContent>
               </Card>
             ))

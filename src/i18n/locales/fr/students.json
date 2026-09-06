@@ -87,7 +87,7 @@
     "invalidEmail": "Adresse e-mail invalide.",
     "successTitle": "Élève créé",
     "successRecordBody": "Fiche créée sans accès de connexion. Activez l’espace élève depuis la fiche si besoin.",
-    "successLoginBody": "Identifiant : {{email}} — Mot de passe temporaire : {{password}}. À changer à la première connexion.",
+    "successLoginBody": "Identifiant : {{email}} : Mot de passe temporaire : {{password}}. À changer à la première connexion.",
     "emailSent": "Invitation e-mail envoyée.",
     "emailNotSent": "Invitation e-mail non envoyée (envoi indisponible ou adresse invalide).",
     "errorBody": "Impossible de créer l'étudiant. Veuillez réessayer."
@@ -102,10 +102,10 @@
     "activateOpaqueHint": "Génère un identifiant opaque (pas le prénom.nom). Remettez le mot de passe à la famille (feuillet / SMS).",
     "emailLabel": "E-mail de connexion",
     "activatedTitle": "Espace élève activé",
-    "activatedBody": "Identifiant : {{email}} — Mot de passe temporaire : {{password}}",
+    "activatedBody": "Identifiant : {{email}} : Mot de passe temporaire : {{password}}",
     "resetPassword": "Nouveau mot de passe provisoire",
     "resetTitle": "Mot de passe réinitialisé",
-    "resetBody": "Identifiant : {{email}} — Nouveau provisoire : {{password}}",
+    "resetBody": "Identifiant : {{email}} : Nouveau provisoire : {{password}}",
     "error": "Impossible de gérer l’accès élève."
   },
   "details": {
@@ -126,8 +126,8 @@
     "status": "Statut",
     "historyHint": "Historique scolaire pluriannuel (inscriptions par année).",
     "noHistory": "Aucun parcours enregistré.",
-    "enrollmentLine": "{{year}} — {{className}}",
-    "enrollmentLineActive": "{{year}} — {{className}} (en cours)",
+    "enrollmentLine": "{{year}} : {{className}}",
+    "enrollmentLineActive": "{{year}} : {{className}} (en cours)",
     "unknownClass": "Classe inconnue",
     "outcome": "Issue : {{outcome}}",
     "endedAt": "Fin : {{date}}",

@@ -24,7 +24,7 @@ type ParentFinancePanelProps = {
   onPay: (invoiceId: string, provider: 'cinetpay' | 'stripe') => void;
 };
 
-/** Facturation famille / enfant — extrait de Mes enfants. */
+/** Facturation famille / enfant : extrait de Mes enfants. */
 export function ParentFinancePanel({
   canViewBilling,
   canMakePayments,
@@ -43,7 +43,7 @@ export function ParentFinancePanel({
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Vue famille</CardTitle>
             <CardDescription>
-              Soldes par enfant (paiement multi-factures reporté — chaque facture se paie séparément).
+              Soldes par enfant (paiement multi-factures reporté : chaque facture se paie séparément).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -198,7 +198,7 @@ export function ParentFinancePanel({
                   ) : null}
                   {!canMakePayments && remaining > 0 && inv.status !== 'cancelled' ? (
                     <p className="text-xs text-muted-foreground">
-                      Consultation seule — le paiement en ligne n’est pas autorisé pour votre lien.
+                      Consultation seule : le paiement en ligne n’est pas autorisé pour votre lien.
                     </p>
                   ) : null}
                 </CardContent>

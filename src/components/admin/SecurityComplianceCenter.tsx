@@ -323,7 +323,7 @@ const SecurityComplianceCenter = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Résultat dry-run — {purgeResult.candidates.length} candidat(s)
+              Résultat dry-run : {purgeResult.candidates.length} candidat(s)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -333,7 +333,7 @@ const SecurityComplianceCenter = () => {
               <ul className="max-h-48 space-y-1 overflow-y-auto text-xs font-mono">
                 {purgeResult.candidates.slice(0, 50).map((c) => (
                   <li key={c.key}>
-                    {c.key} — {c.reason} ({c.sizeBytes} o)
+                    {c.key} : {c.reason} ({c.sizeBytes} o)
                   </li>
                 ))}
               </ul>
@@ -345,7 +345,7 @@ const SecurityComplianceCenter = () => {
         <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Download className="h-4 w-4" /> DSAR — export / désactivation
+            <Download className="h-4 w-4" /> DSAR : export / désactivation
             </CardTitle>
           <CardDescription>
             Export JSON administratif. Soft-delete = désactivation. Anonymisation DSAR =
@@ -467,7 +467,7 @@ const SecurityComplianceCenter = () => {
           <CardTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-4 w-4" /> Consentements (opt-out)
             </CardTitle>
-          <CardDescription>Registre COM-003 — canaux désactivés par les utilisateurs.</CardDescription>
+          <CardDescription>Registre COM-003 : canaux désactivés par les utilisateurs.</CardDescription>
           </CardHeader>
           <CardContent>
           {consents.length === 0 ? (
@@ -494,7 +494,7 @@ const SecurityComplianceCenter = () => {
               <BookOpen className="h-4 w-4" /> Registre des traitements (RoPA)
             </CardTitle>
             <CardDescription>
-              Éditable — persisté dans settings system/ropaRegister. Version {ropaMeta.version}
+              Éditable : persisté dans settings system/ropaRegister. Version {ropaMeta.version}
               {ropaMeta.exportedAt
                 ? ` · dernière sauvegarde ${new Date(ropaMeta.exportedAt).toLocaleString('fr-FR')}`
                 : ''}
@@ -623,7 +623,7 @@ const SecurityComplianceCenter = () => {
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4" /> Sessions actives (votre compte)
           </CardTitle>
-          <CardDescription>GET/DELETE /auth/sessions — révocation serveur (IAM-004). MFA obligatoire pour le personnel (pas élèves/parents).</CardDescription>
+          <CardDescription>GET/DELETE /auth/sessions : révocation serveur (IAM-004). MFA obligatoire pour le personnel (pas élèves/parents).</CardDescription>
             </CardHeader>
             <CardContent>
           {sessions.length === 0 ? (

@@ -49,7 +49,7 @@ export type SuperAdminNotificationsBellProps = {
 };
 
 /**
- * Cloche Notifications Super Admin — badge visible + résumé « N demande(s) de démo ».
+ * Cloche Notifications Super Admin : badge visible + résumé « N demande(s) de démo ».
  */
 export const SuperAdminNotificationsBell = ({
   onOpenSupportOps,
@@ -192,7 +192,7 @@ export const SuperAdminNotificationsBell = ({
                 {t('notificationsBell.demoSummary', { count: demoCount })}
               </p>
               <p className="truncate text-xs text-slate-500">
-                {demoContacts[0]?.name} — {demoContacts[0]?.subject}
+                {demoContacts[0]?.name} : {demoContacts[0]?.subject}
               </p>
             </div>
           </DropdownMenuItem>

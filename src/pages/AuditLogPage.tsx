@@ -15,7 +15,7 @@ import { ApiError } from '@/lib/apiClient';
 import { fetchAuditLog, type AuditLogEntry } from '@/services/strkAuditService';
 
 /**
- * IAM-005 — consultation du journal d’audit serveur (direction uniquement).
+ * IAM-005 : consultation du journal d’audit serveur (direction uniquement).
  */
 const actorLabel = (entry: AuditLogEntry) => {
   const a = entry.actor;

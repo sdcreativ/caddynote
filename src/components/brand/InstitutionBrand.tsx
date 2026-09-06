@@ -10,7 +10,7 @@ type InstitutionBrandProps = {
   to?: string;
   size?: number;
   className?: string;
-  /** Masque le nom (logo / initiales seuls) — utile en navbar mobile. */
+  /** Masque le nom (logo / initiales seuls) : utile en navbar mobile. */
   hideName?: boolean;
   onClick?: () => void;
   'aria-label'?: string;

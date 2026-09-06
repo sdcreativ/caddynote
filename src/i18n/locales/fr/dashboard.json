@@ -8,7 +8,7 @@
     "toPlatformConsoleHint": "Gérer CaddyNote : établissements, abonnements, support et technique."
   },
   "roleHints": {
-    "admin": "Espace établissement — pour l’ops CaddyNote, ouvrez Ops plateforme.",
+    "admin": "Espace établissement : pour l’ops CaddyNote, ouvrez Ops plateforme.",
     "staff": "Indicateurs de votre établissement (effectif, présence, absences).",
     "student": "Vos notes, absences récentes et devoirs en cours.",
     "parent": "Suivi de l’enfant sélectionné (facturation et accès famille).",
@@ -65,12 +65,12 @@
     "followUp": "Suivi"
   },
   "teacherMobile": {
-    "primaryCtaHint": "Action principale du jour — deux clics pour faire l’appel",
+    "primaryCtaHint": "Action principale du jour : deux clics pour faire l’appel",
     "shortcutsTitle": "Aller où",
     "absencesToHandle": "{{count}} absence(s) à suivre",
     "absencesCta": "Voir les absences",
-    "callReminder": "Appel du jour non fait — démarrez depuis le bouton ci-dessous",
-    "callInMinutes": "Appel dans {{minutes}} min — {{course}}",
+    "callReminder": "Appel du jour non fait : démarrez depuis le bouton ci-dessous",
+    "callInMinutes": "Appel dans {{minutes}} min : {{course}}",
     "callSlotHint": "Début {{time}} · {{className}}",
     "callNoClass": "Classe non renseignée",
     "nextCoursesTitle": "Prochains cours",
@@ -94,7 +94,7 @@
     "primaryCtaAbsences": "Justifier les absences",
     "primaryCtaHint": "Deux clics pour le suivi famille, les absences ou le paiement",
     "shortcutsTitle": "Aller où",
-    "unpaidToHandle": "{{count}} facture(s) — {{amount}} à régler",
+    "unpaidToHandle": "{{count}} facture(s) : {{amount}} à régler",
     "absencesToHandle": "{{count}} absence(s) à justifier",
     "absencesToHandleHint": "Déposez un justificatif depuis l’espace enfants",
     "admissionStatus": "Préinscription · {{status}}",
@@ -125,11 +125,11 @@
   "accountantMobile": {
     "primaryCta": "Ouvrir les finances",
     "shortcutsTitle": "Aller où",
-    "unpaidToHandle": "{{count}} facture(s) — {{amount}} à encaisser"
+    "unpaidToHandle": "{{count}} facture(s) : {{amount}} à encaisser"
   },
   "teamCockpit": {
     "toHandleTitle": "Ops plateforme",
-    "toHandleEmpty": "Rien d’urgent — la console reste le point d’entrée ops.",
+    "toHandleEmpty": "Rien d’urgent : la console reste le point d’entrée ops.",
     "toHandleLoading": "Chargement des priorités ops…",
     "shortcutsTitle": "Aller où",
     "opsRowTitle": "Raccourcis ops",
@@ -207,7 +207,7 @@
     "retry": "Réessayer"
   },
   "setup": {
-    "title": "Démarrage — lier enseignants, classes et cours",
+    "title": "Démarrage : lier enseignants, classes et cours",
     "body": "Les absences et l’appel n’apparaissent qu’après cette chaîne : enseignants → classes → élèves dans les classes → cours (enseignant + classe) → appel.",
     "stepTeachers": "Créer au moins un enseignant",
     "stepClasses": "Créer au moins une classe",

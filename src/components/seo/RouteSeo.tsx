@@ -108,7 +108,7 @@ export function RouteSeo() {
   if (isAppPath(pathname)) {
     return (
       <SeoHead
-        title="CaddyNote — Espace connecté"
+        title="CaddyNote : Espace connecté"
         description="Espace applicatif CaddyNote."
         path={pathname}
         noIndex
@@ -119,7 +119,7 @@ export function RouteSeo() {
   // 404 / routes inconnues
   return (
     <SeoHead
-      title={`Page introuvable — ${DEFAULT_SEO.title}`}
+      title={`Page introuvable : ${DEFAULT_SEO.title}`}
       description={DEFAULT_SEO.description}
       path={pathname}
       noIndex

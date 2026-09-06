@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { FadeIn, Stagger, StaggerItem } from '@/components/public/FadeIn';
 
 /**
- * Espace parent dédié — point d’entrée public + redirection si déjà connecté
+ * Espace parent dédié : point d’entrée public + redirection si déjà connecté
  * en rôle parent vers /dashboard (cockpit famille).
  */
 export default function ParentSpacePage() {
@@ -68,7 +68,7 @@ export default function ParentSpacePage() {
               </h1>
               <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
                 Consultez le parcours scolaire, justifiez une absence et suivez la scolarité en toute
-                transparence — conçu pour les familles.
+                transparence : conçu pour les familles.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-12 rounded-full bg-[#1D70D8] px-6 hover:bg-[#185CB4]">

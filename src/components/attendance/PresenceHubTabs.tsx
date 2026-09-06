@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { hasAnyRole, SECRETARIAT_ROLES, DIRECTION_ROLES } from '@/lib/roles';
 import { useStrkAuth } from '@/hooks/useStrkAuth';
 
-/** Onglets Appel | Justificatifs | Émargement — hub Présences (Direction / secrétariat / enseignant). */
+/** Onglets Appel | Justificatifs | Émargement : hub Présences (Direction / secrétariat / enseignant). */
 export function PresenceHubTabs() {
   const { t } = useTranslation('nav');
   const { t: ta } = useTranslation('attendance');

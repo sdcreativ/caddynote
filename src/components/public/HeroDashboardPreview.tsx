@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Bell, Check, CircleDollarSign } from 'lucide-react';
 import { CaddyNoteMark } from '@/components/brand/CaddyNoteLogo';
 
-/** Aperçu dashboard hero — toasts flottants animés (maquette). */
+/** Aperçu dashboard hero : toasts flottants animés (maquette). */
 export function HeroDashboardPreview() {
   const reduce = useReducedMotion();
   const { t } = useTranslation('home');
@@ -87,7 +87,7 @@ export function HeroDashboardPreview() {
         </div>
       </div>
 
-      {/* Toast paiement — flottement */}
+      {/* Toast paiement : flottement */}
       <motion.div
         className="absolute -right-2 top-10 z-10 w-[12.5rem] rounded-2xl border border-violet-100 bg-white p-3 shadow-[0_18px_40px_-12px_rgba(91,33,182,0.35)] sm:-right-4 sm:top-14 sm:w-52"
         initial={reduce ? false : { opacity: 0, y: 16, scale: 0.96 }}
@@ -121,7 +121,7 @@ export function HeroDashboardPreview() {
         </div>
       </motion.div>
 
-      {/* Toast parent — flottement déphasé */}
+      {/* Toast parent : flottement déphasé */}
       <motion.div
         className="absolute -left-1 bottom-8 z-10 w-[13rem] rounded-2xl border border-emerald-100 bg-white p-3 shadow-[0_18px_40px_-12px_rgba(5,150,105,0.3)] sm:-left-3 sm:bottom-10 sm:w-56"
         initial={reduce ? false : { opacity: 0, y: 16, scale: 0.96 }}

@@ -60,7 +60,7 @@ type GradesWorkflowPanelProps = {
   onImportCsv: () => void;
 };
 
-/** Onglet Publication & calcul — export, publish, moyennes, import CSV. */
+/** Onglet Publication & calcul : export, publish, moyennes, import CSV. */
 export function GradesWorkflowPanel({
   courses,
   periods,

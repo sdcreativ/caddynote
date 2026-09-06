@@ -24,7 +24,7 @@ import {
 import { ApiError } from '@/lib/apiClient';
 
 /**
- * SUI-001/002 — suivi pédagogique + discipline (timeline unifiée).
+ * SUI-001/002 : suivi pédagogique + discipline (timeline unifiée).
  */
 export default function FollowUpPage() {
   const { t } = useTranslation('followup');

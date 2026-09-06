@@ -6,7 +6,7 @@ interface LoadingStateProps {
   className?: string;
 }
 
-/** État de chargement homogène (listes / pages) — UX-005. */
+/** État de chargement homogène (listes / pages) : UX-005. */
 export const LoadingState = ({ label, className }: LoadingStateProps) => {
   const { t } = useTranslation('app');
   return (

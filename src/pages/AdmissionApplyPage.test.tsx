@@ -105,7 +105,7 @@ describe('AdmissionApplyPage (wizard)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Étape 1 sur 8 — Établissement/i)).toBeInTheDocument();
+      expect(screen.getByText(/Étape 1 sur 8 : Établissement/i)).toBeInTheDocument();
     });
 
     const bar = screen.getByRole('progressbar', { name: /Progression du dossier/i });
@@ -128,7 +128,7 @@ describe('AdmissionApplyPage (wizard)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Étape 7 sur 8 — Soumission/i)).toBeInTheDocument();
+      expect(screen.getByText(/Étape 7 sur 8 : Soumission/i)).toBeInTheDocument();
     });
 
     const privacy = screen.getByRole('link', { name: 'politique de confidentialité' });
@@ -139,7 +139,7 @@ describe('AdmissionApplyPage (wizard)', () => {
 
     await waitFor(() => {
       expect(submitAdmission).toHaveBeenCalledWith('tok-public-1');
-      expect(screen.getByText(/Étape 8 sur 8 — Paiement & suivi/i)).toBeInTheDocument();
+      expect(screen.getByText(/Étape 8 sur 8 : Paiement & suivi/i)).toBeInTheDocument();
     });
     expect(screen.getByText('Dossier soumis.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ouvrir mon suivi' })).toHaveAttribute(

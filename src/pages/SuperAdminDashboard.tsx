@@ -35,7 +35,7 @@ import { TwoFactorAuthDialog } from '@/components/settings/TwoFactorAuthDialog';
 export const SUPER_ADMIN_SECTIONS = [
   'overview',
   'users',
-  // Alias historiques (redirect → users) — plus de clones métier.
+  // Alias historiques (redirect → users) : plus de clones métier.
   'teachers',
   'students',
   'classes',
@@ -203,7 +203,7 @@ const SuperAdminDashboard = () => {
           <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold">Journal d’audit</h2>
-              <p className="text-sm text-muted-foreground">Redirection — même source que Logs.</p>
+              <p className="text-sm text-muted-foreground">Redirection : même source que Logs.</p>
             </div>
             <LogsCenter />
           </div>
@@ -219,7 +219,7 @@ const SuperAdminDashboard = () => {
       case 'security':
         return (
           <AlertsCenter
-            title="Sécurité — alertes ops"
+            title="Sécurité : alertes ops"
             focus="system"
             onNavigateSection={setActiveSection}
           />

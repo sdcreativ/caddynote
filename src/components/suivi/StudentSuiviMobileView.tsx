@@ -24,7 +24,7 @@ type SuiviAction = {
   icon: LucideIcon;
 };
 
-/** Raccourcis élève (sans Message — déjà en bottom nav). */
+/** Raccourcis élève (sans Message : déjà en bottom nav). */
 const STUDENT_ACTIONS: SuiviAction[] = [
   { label: 'Emploi du temps', hint: 'Horaires & salles', href: '/calendar', icon: Calendar },
   { label: 'Matières', hint: 'Cours & contenus', href: '/my-courses', icon: BookOpen },

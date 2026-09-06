@@ -45,7 +45,7 @@ const isOverdue = (dueAt: string, now = Date.now()) => {
   return Number.isFinite(due) && due < now;
 };
 
-/** Module bibliothèque — catalogue, prêts, retours et filtre retards. */
+/** Module bibliothèque : catalogue, prêts, retours et filtre retards. */
 export function ServicesLibraryPanel({
   items,
   saving,

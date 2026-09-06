@@ -248,7 +248,7 @@ const SupportOpsCenter = () => {
             : 'Réponse enregistrée (e-mail non envoyé)',
           description: result.prospectEmailed
             ? `E-mail remis à ${result.prospectEmail}.`
-            : `Message dans le ticket, mais SMTP non configuré — ${result.prospectEmail} n’a pas reçu d’e-mail.`,
+            : `Message dans le ticket, mais SMTP non configuré : ${result.prospectEmail} n’a pas reçu d’e-mail.`,
         });
       } else {
         toast({ title: 'Réponse enregistrée' });
@@ -491,7 +491,7 @@ const SupportOpsCenter = () => {
                 id="ticket-inst"
                 value={newInstitutionId}
                 onChange={(e) => setNewInstitutionId(e.target.value)}
-                placeholder="Optionnel — ou choisir via recherche"
+                placeholder="Optionnel : ou choisir via recherche"
               />
             </div>
             <div className="space-y-1">
@@ -685,7 +685,7 @@ const SupportOpsCenter = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Actions compte</CardTitle>
-          <CardDescription>UUID cible — ou cliquez un résultat de recherche.</CardDescription>
+          <CardDescription>UUID cible : ou cliquez un résultat de recherche.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="max-w-lg space-y-2">
@@ -757,7 +757,7 @@ const SupportOpsCenter = () => {
                 id="imp-reason"
                 value={impersonateReason}
                 onChange={(e) => setImpersonateReason(e.target.value)}
-                placeholder="Ex. ticket client — vérifier affichage notes"
+                placeholder="Ex. ticket client : vérifier affichage notes"
               />
             </div>
             <div className="space-y-1">

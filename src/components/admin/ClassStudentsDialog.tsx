@@ -141,14 +141,14 @@ export const ClassStudentsDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Gestion des élèves — {classData?.name}
+            Gestion des élèves : {classData?.name}
           </DialogTitle>
           <DialogDescription>Affectez ou retirez des élèves de cette classe.</DialogDescription>
         </DialogHeader>
 
         {!institutionId ? (
           <p className="text-sm text-destructive">
-            Établissement manquant pour cette classe — rechargez la page.
+            Établissement manquant pour cette classe : rechargez la page.
           </p>
         ) : (
           <div className="space-y-6 py-4">

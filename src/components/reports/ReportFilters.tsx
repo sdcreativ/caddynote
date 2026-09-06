@@ -7,19 +7,19 @@ import { fetchClassesByInstitution, type ClassWithDetails } from "@/services/str
 import { fetchStrkSubjectsByInstitution, type StrkSubject } from "@/services/strkSubjectService";
 
 /**
- * RPT-001 — composant de filtre standardisé et réutilisable pour les écrans
+ * RPT-001 : composant de filtre standardisé et réutilisable pour les écrans
  * de reporting. Les primitives ci-dessous existaient déjà côté serveur,
- * chacune sur son propre endpoint (institutionId partout — ORG-004, plage de
- * dates sur absences/notes/export, matière sur les notes — EVA-004) mais
+ * chacune sur son propre endpoint (institutionId partout : ORG-004, plage de
+ * dates sur absences/notes/export, matière sur les notes : EVA-004) mais
  * n'étaient branchées sur aucune interface commune (voir audit §4.15).
  *
  * Volontairement absents de ce composant : "niveau" et "statut". Le cahier
  * des charges les cite, mais ni l'un ni l'autre n'existe comme concept
- * structurant côté données — il n'y a pas de champ "niveau" distinct de la
+ * structurant côté données : il n'y a pas de champ "niveau" distinct de la
  * classe (le niveau est encodé dans le nom de la classe, ex. "6ème A" —
  * ajouter un filtre "niveau" reviendrait à dupliquer le filtre classe), et
  * "statut" n'a de sens que pour des écrans précis (admissions, discipline)
- * déjà filtrables sur leur propre page — l'imposer ici serait un champ
+ * déjà filtrables sur leur propre page : l'imposer ici serait un champ
  * fictif, sans portée réelle, sur les écrans qui ne l'utilisent pas.
  */
 export interface ReportFiltersValue {
@@ -46,7 +46,7 @@ interface ReportFiltersProps {
   /**
    * Établissement auquel scoper le chargement des classes/matières quand le
    * filtre établissement n'est pas affiché (l'appelant est déjà limité à son
-   * propre établissement). Ignoré si show.institution est actif — c'est
+   * propre établissement). Ignoré si show.institution est actif : c'est
    * alors value.institutionId qui fait foi.
    */
   scopeInstitutionId?: string;

@@ -147,7 +147,7 @@ const TenantHealthDialog = ({ institutionId, open, onOpenChange }: TenantHealthD
             Santé établissement
           </DialogTitle>
           <DialogDescription>
-            {data?.institution.name || 'Chargement…'} — score unifié, onboarding, quotas.
+            {data?.institution.name || 'Chargement…'} : score unifié, onboarding, quotas.
           </DialogDescription>
         </DialogHeader>
 
@@ -176,7 +176,7 @@ const TenantHealthDialog = ({ institutionId, open, onOpenChange }: TenantHealthD
               <ul className="space-y-1 rounded-md border p-3 text-xs text-muted-foreground">
                 {data.health.factors.map((f) => (
                   <li key={f.key}>
-                    {f.label} ({f.impact}) — {f.detail}
+                    {f.label} ({f.impact}) : {f.detail}
                   </li>
                 ))}
               </ul>

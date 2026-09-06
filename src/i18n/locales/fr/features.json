@@ -3,7 +3,7 @@
     "title": "Présences & alertes familles",
     "short": "Enregistrez les présences en quelques secondes et prévenez automatiquement les parents par SMS ou notification.",
     "eyebrow": "Assiduité",
-    "hero": "L’appel en classe, sans friction — même hors connexion.",
+    "hero": "L’appel en classe, sans friction : même hors connexion.",
     "body": "CaddyNote accélère la prise de présence et alerte les familles dès l’enregistrement. Les enseignants gagnent du temps ; la direction dispose d’une vision fiable de l’assiduité.",
     "highlights": [
       { "title": "Mode hors ligne", "text": "Saisissez l’appel même sans réseau : la synchronisation se fait dès le retour de la connexion." },
@@ -24,7 +24,7 @@
     "hero": "Toute la vie de l’établissement, dans un seul espace de travail.",
     "body": "Admissions, dossiers, planning, discipline et suivi : CaddyNote remplace les tableurs dispersés par une base unique, partagée entre directions, enseignants et secrétariat.",
     "highlights": [
-      { "title": "Dossiers élèves", "text": "Identité, tuteurs, santé, parcours scolaire — accessibles selon les droits de chacun." },
+      { "title": "Dossiers élèves", "text": "Identité, tuteurs, santé, parcours scolaire : accessibles selon les droits de chacun." },
       { "title": "Admissions & inscriptions", "text": "Préinscriptions en ligne, suivi des dossiers et bascule vers l’année scolaire." },
       { "title": "Emplois du temps", "text": "Cours, salles, disponibilités enseignants et détection des conflits." }
     ],
@@ -57,7 +57,7 @@
     "title": "Paiements simplifiés",
     "short": "Suivez les frais de scolarité et acceptez les paiements Mobile Money avec des reçus instantanés.",
     "eyebrow": "Finance",
-    "hero": "La scolarité encaissée, suivie et justifiée — en FCFA.",
+    "hero": "La scolarité encaissée, suivie et justifiée : en FCFA.",
     "body": "Factures, échéances, Mobile Money et rapprochement : CaddyNote donne à la direction une vision nette des encaissements, sans tableurs parallèles.",
     "highlights": [
       { "title": "Mobile Money", "text": "Acceptez les paiements via les canaux locaux et confirmez les reçus automatiquement." },

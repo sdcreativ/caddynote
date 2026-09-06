@@ -57,7 +57,7 @@ const AdvancedAnalyticsDashboard: React.FC<{
   const periodLabel = `${periodDays} derniers jours`;
 
   // RPT-003 : ce bandeau est réutilisé sur les onglets sans donnée réelle
-  // (télémétrie appareils / APM) — voir useAdvancedAnalytics.tsx.
+  // (télémétrie appareils / APM) : voir useAdvancedAnalytics.tsx.
   const NotConnected = ({ reason }: { reason: string }) => (
     <Card>
       <CardContent className="p-6 flex items-start gap-3 text-muted-foreground">
@@ -112,7 +112,7 @@ const AdvancedAnalyticsDashboard: React.FC<{
         </Card>
       )}
 
-      {/* KPIs principaux — tous réels (voir useAdvancedAnalytics.tsx) */}
+      {/* KPIs principaux : tous réels (voir useAdvancedAnalytics.tsx) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
@@ -257,7 +257,7 @@ const AdvancedAnalyticsDashboard: React.FC<{
               </div>
               {(metrics.averageGrade === null || metrics.assignmentCompletionRate === null) && (
                 <p className="text-xs text-muted-foreground mt-4">
-                  « — » : pas encore de donnée réelle sur ce périmètre (aucune note publiée / aucun devoir attendu).
+                  « : » : pas encore de donnée réelle sur ce périmètre (aucune note publiée / aucun devoir attendu).
                 </p>
               )}
             </CardContent>
@@ -315,7 +315,7 @@ const AdvancedAnalyticsDashboard: React.FC<{
               </div>
             </CardContent>
           </Card>
-          <NotConnected reason="Heures d’activité, appareils et navigateurs : télémétrie client absente — non simulée." />
+          <NotConnected reason="Heures d’activité, appareils et navigateurs : télémétrie client absente : non simulée." />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">

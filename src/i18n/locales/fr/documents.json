@@ -60,7 +60,7 @@
   },
   "templates": {
     "title": "Personnalisation des documents (DOC-002)",
-    "description": "Couleurs, pied de page, signature — modèles versionnés par type.",
+    "description": "Couleurs, pied de page, signature : modèles versionnés par type.",
     "defaultSignatureLabel": "Le Chef d’établissement",
     "loadTitle": "Chargement template",
     "savedTitle": "Modèle enregistré",

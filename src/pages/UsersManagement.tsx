@@ -111,7 +111,7 @@ const UsersManagement = () => {
   } = useStrkUsers();
   const { institutions } = useStrkInstitutions();
 
-  /** Porte école uniquement — liste globale plateforme = /super-admin/users. */
+  /** Porte école uniquement : liste globale plateforme = /super-admin/users. */
   const isPlatformAdminWithoutSchool = user?.role === 'admin' && !user.institutionId;
 
   const reloadUsers = async () => {

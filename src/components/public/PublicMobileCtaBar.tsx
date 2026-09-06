@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const HIDDEN_ON = new Set(['/sign', '/signup', '/forgot-password', '/reset-password']);
 
 /**
- * Barre fixe mobile — Connexion (icône) + Démo (CTA principal).
+ * Barre fixe mobile : Connexion (icône) + Démo (CTA principal).
  * Masquée dès `lg` (header desktop suffit).
  */
 export function PublicMobileCtaBar() {

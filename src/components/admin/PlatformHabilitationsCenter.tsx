@@ -119,7 +119,7 @@ const PlatformHabilitationsCenter = () => {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Habilitations CaddyNote</h2>
         <p className="text-sm text-muted-foreground">
-          Rôles d’administration de la plateforme (RBAC) — attribution multi-rôles pour l’équipe éditeur SDCREATIV.
+          Rôles d’administration de la plateforme (RBAC) : attribution multi-rôles pour l’équipe éditeur SDCREATIV.
         </p>
         {superAdmin ? (
           <p className="mt-2 text-sm">

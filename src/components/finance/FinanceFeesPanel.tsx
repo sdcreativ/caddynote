@@ -18,7 +18,7 @@ type FinanceFeesPanelProps = {
   onSaveLateFees: () => void;
 };
 
-/** Onglet catalogue frais + pénalités — extrait de FinancePage. */
+/** Onglet catalogue frais + pénalités : extrait de FinancePage. */
 export function FinanceFeesPanel({
   feeItems,
   formatAmount,

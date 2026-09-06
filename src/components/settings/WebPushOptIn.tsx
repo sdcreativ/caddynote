@@ -1,5 +1,5 @@
 /**
- * Opt-in Web Push (VAPID) — Paramètres utilisateur.
+ * Opt-in Web Push (VAPID) : Paramètres utilisateur.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, BellOff, Loader2 } from 'lucide-react';

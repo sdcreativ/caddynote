@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Tuile d’action mobile — zone tactile et typo lisibles (≥ ~44px). */
+/** Tuile d’action mobile : zone tactile et typo lisibles (≥ ~44px). */
 export function MobileQuickTile({
   label,
   icon,
@@ -53,7 +53,7 @@ const TONE_TITLE: Record<CompactTone, string> = {
   amber: 'text-amber-800/90',
 };
 
-/** KPI compact mobile — libellé et valeur plus lisibles. */
+/** KPI compact mobile : libellé et valeur plus lisibles. */
 export function MobileCompactStat({
   title,
   value,

@@ -43,7 +43,7 @@ const parseFeatures = (raw: PlanFeatures | string): PlanFeatures => {
 };
 
 /**
- * Catalogue des offres affichées sur l'accueil public — réservé au super admin.
+ * Catalogue des offres affichées sur l'accueil public : réservé au super admin.
  * Ce n'est pas une page de souscription personnelle.
  * Distinct de `admin/SubscriptionPlansAdmin` (CRUD Stripe Price IDs / ops billing).
  */
@@ -194,7 +194,7 @@ export function PublicOffersCatalogAdmin() {
             Plans tarifaires
           </h1>
           <p className="mt-1 text-slate-500">
-            Gérez les offres affichées sur la page d’accueil publique — pas une souscription personnelle.
+            Gérez les offres affichées sur la page d’accueil publique : pas une souscription personnelle.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

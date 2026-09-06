@@ -90,7 +90,7 @@ const AttendanceManagement = () => {
 
   // Bug réel corrigé au passage (découvert en travaillant NFR-004, même
   // écran) : ce bouton se contentait d'un toast « Export en cours » sans
-  // jamais rien produire — même malfaçon que celle corrigée pour RPT-002.
+  // jamais rien produire : même malfaçon que celle corrigée pour RPT-002.
   // `GET /reports/export?type=attendance` existe déjà et est testé ; il
   // suffisait de l'appeler.
   const exportAttendance = async () => {

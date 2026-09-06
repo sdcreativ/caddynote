@@ -557,7 +557,7 @@ const EditGuardianRightsDialog: React.FC<EditGuardianRightsDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            Droits — {guardian?.guardian?.first_name} {guardian?.guardian?.last_name}
+            Droits : {guardian?.guardian?.first_name} {guardian?.guardian?.last_name}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">

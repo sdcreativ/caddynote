@@ -37,7 +37,7 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil secrétariat — mobile P0 (CTA élèves + KPI + grille) ;
+ * Accueil secrétariat : mobile P0 (CTA élèves + KPI + grille) ;
  * desktop conserve la grille KPI + actions rapides.
  */
 const SecretaryDashboardHome = ({

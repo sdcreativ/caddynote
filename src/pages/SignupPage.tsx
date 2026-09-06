@@ -9,7 +9,7 @@ import { legalTransComponents } from '@/components/legal/legalLinks';
 
 const BLUE = '#1D70D8';
 
-/** Page « obtenir un compte » — plus d’auto-inscription (modèle Pronote). */
+/** Page « obtenir un compte » : plus d’auto-inscription (modèle Pronote). */
 export default function SignupPage() {
   const { t } = useTranslation('auth');
 

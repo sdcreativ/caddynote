@@ -13,7 +13,7 @@ interface MobileBottomNavProps {
 }
 
 /**
- * Barre de navigation inférieure — mobile uniquement (`lg:hidden`).
+ * Barre de navigation inférieure : mobile uniquement (`lg:hidden`).
  * Slot « Plus » ouvre la sidebar pour le reste du métier (P2).
  */
 const MobileBottomNav = ({ role, onOpenMore }: MobileBottomNavProps) => {

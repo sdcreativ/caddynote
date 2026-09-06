@@ -42,7 +42,7 @@ export const FEATURES: FeatureDetail[] = [
     short:
       'Enregistrez les présences en quelques secondes et prévenez automatiquement les parents par SMS ou notification.',
     eyebrow: 'Assiduité',
-    hero: 'L’appel en classe, sans friction — même hors connexion.',
+    hero: 'L’appel en classe, sans friction : même hors connexion.',
     body: 'CaddyNote accélère la prise de présence et alerte les familles dès l’enregistrement. Les enseignants gagnent du temps ; la direction dispose d’une vision fiable de l’assiduité.',
     tone: 'bg-[#E8F1FF] text-[#1D70D8]',
     icon: Bell,
@@ -84,7 +84,7 @@ export const FEATURES: FeatureDetail[] = [
       {
         icon: Users,
         title: 'Dossiers élèves',
-        text: 'Identité, tuteurs, santé, parcours scolaire — accessibles selon les droits de chacun.',
+        text: 'Identité, tuteurs, santé, parcours scolaire : accessibles selon les droits de chacun.',
       },
       {
         icon: FileText,
@@ -144,7 +144,7 @@ export const FEATURES: FeatureDetail[] = [
     short:
       'Suivez les frais de scolarité et acceptez les paiements Mobile Money avec des reçus instantanés.',
     eyebrow: 'Finance',
-    hero: 'La scolarité encaissée, suivie et justifiée — en FCFA.',
+    hero: 'La scolarité encaissée, suivie et justifiée : en FCFA.',
     body: 'Factures, échéances, Mobile Money et rapprochement : CaddyNote donne à la direction une vision nette des encaissements, sans tableurs parallèles.',
     tone: 'bg-[#FFFBEB] text-[#D97706]',
     icon: CircleDollarSign,

@@ -329,7 +329,7 @@ const CommunicationTools = () => {
                 <SelectValue placeholder="Aucun modèle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Aucun — contenu libre</SelectItem>
+                <SelectItem value="__none__">Aucun : contenu libre</SelectItem>
                 {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.useCase} · {t.channel} · {t.locale}

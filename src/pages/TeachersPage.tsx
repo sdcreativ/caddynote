@@ -32,7 +32,7 @@ const TEACHER_CSV_TEMPLATE =
   'firstName,lastName,email,phoneNumber,role\nJean,Dupont,jean.dupont@ecole.fr,0600000000,teacher\nMarie,Martin,marie.martin@ecole.fr,,head_teacher\n';
 
 /**
- * Chap. 22.1 — liste enseignants + import CSV + attribution classe titulaire.
+ * Chap. 22.1 : liste enseignants + import CSV + attribution classe titulaire.
  */
 const TeachersPage = () => {
   const { t } = useTranslation('teachers');

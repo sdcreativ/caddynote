@@ -31,7 +31,7 @@ type Props = {
 };
 
 /**
- * Lot 5.4 — encaissement multi-factures, avoirs, parrainages (staff).
+ * Lot 5.4 : encaissement multi-factures, avoirs, parrainages (staff).
  */
 export function FinanceLot54Panel({ invoices, students, onChanged }: Props) {
   const { t } = useTranslation('finance');
@@ -289,7 +289,7 @@ export function FinanceLot54Panel({ invoices, students, onChanged }: Props) {
             <ul className="text-sm space-y-1 border-t pt-3">
               {creditNotes.slice(0, 8).map((n) => (
                 <li key={n.id}>
-                  {formatAmount(n.remainingCents, n.currency)} / {formatAmount(n.amountCents, n.currency)} — {n.status}
+                  {formatAmount(n.remainingCents, n.currency)} / {formatAmount(n.amountCents, n.currency)} : {n.status}
                 </li>
               ))}
               {creditNotes.length === 0 && (
@@ -320,7 +320,7 @@ export function FinanceLot54Panel({ invoices, students, onChanged }: Props) {
                 <SelectContent>
                   {openInvoices.map((inv) => (
                     <SelectItem key={inv.id} value={inv.id}>
-                      {inv.invoice_number} — {inv.student.name}
+                      {inv.invoice_number} : {inv.student.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -375,7 +375,7 @@ export function FinanceLot54Panel({ invoices, students, onChanged }: Props) {
             <ul className="text-sm space-y-1 border-t pt-3">
               {sponsorships.slice(0, 8).map((s) => (
                 <li key={s.id}>
-                  {s.sponsorName} — {formatAmount(s.remainingCents, s.currency)} /{' '}
+                  {s.sponsorName} : {formatAmount(s.remainingCents, s.currency)} /{' '}
                   {formatAmount(s.amountCents, s.currency)}
                 </li>
               ))}
@@ -407,7 +407,7 @@ export function FinanceLot54Panel({ invoices, students, onChanged }: Props) {
                 <SelectContent>
                   {openInvoices.map((inv) => (
                     <SelectItem key={inv.id} value={inv.id}>
-                      {inv.invoice_number} — {inv.student.name}
+                      {inv.invoice_number} : {inv.student.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

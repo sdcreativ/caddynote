@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** Rôle exact — préférer `requiredRoles` (famille serveur) dès qu’un équivalent existe. */
+  /** Rôle exact : préférer `requiredRoles` (famille serveur) dès qu’un équivalent existe. */
   requiredRole?: StrkUserRole;
   /** Un des rôles suffit (ex. TEACHING_ROLES). Prioritaire sur `requiredRole`. */
   requiredRoles?: readonly StrkUserRole[];

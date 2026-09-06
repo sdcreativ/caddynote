@@ -130,7 +130,7 @@ const opsTone = (kind: PlatformOpsItem['kind']) => {
 };
 
 /**
- * Accueil Équipe CaddyNote — cockpit ops 1–2 clics :
+ * Accueil Équipe CaddyNote : cockpit ops 1–2 clics :
  * À traiter → KPI → CTA + raccourcis plateforme (+ métier si institution liée).
  */
 const AdminDashboardHome = ({
@@ -201,7 +201,7 @@ const AdminDashboardHome = ({
         <p className="text-sm text-slate-500">{t('roleHints.admin')}</p>
       </header>
 
-      {/* Q1 — À traiter / ops plateforme */}
+      {/* Q1 : À traiter / ops plateforme */}
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -255,7 +255,7 @@ const AdminDashboardHome = ({
         )}
       </section>
 
-      {/* Q2 — Pulsation plateforme */}
+      {/* Q2 : Pulsation plateforme */}
       <div className="grid grid-cols-2 gap-3 md:hidden">
         <MobileCompactStat
           title={t('stats.institutions')}
@@ -327,7 +327,7 @@ const AdminDashboardHome = ({
         />
       </div>
 
-      {/* Q3 — CTA + ops plateforme */}
+      {/* Q3 : CTA + ops plateforme */}
       <div className="space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('teamCockpit.shortcutsTitle')}

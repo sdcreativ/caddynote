@@ -79,7 +79,7 @@ const GradesPage = () => {
     description: "",
     date: new Date().toISOString().split('T')[0]
   });
-  // EVA-004 : period_id est requis côté serveur pour créer une note — le
+  // EVA-004 : period_id est requis côté serveur pour créer une note : le
   // formulaire n'avait jusqu'ici ni sélecteur de cours, ni d'élève, ni de
   // période, ce qui faisait échouer (400) toute création réelle.
   const [courses, setCourses] = useState<CourseWithDetails[]>([]);
@@ -114,7 +114,7 @@ const GradesPage = () => {
     filterGrades();
   }, [grades, searchTerm, filterType]);
 
-  // Cours et périodes nécessaires au formulaire de saisie — chargés une
+  // Cours et périodes nécessaires au formulaire de saisie : chargés une
   // fois que l'établissement de l'utilisateur est connu.
   useEffect(() => {
     if (!user?.institutionId || !canCreateGrades) return;
@@ -295,7 +295,7 @@ const GradesPage = () => {
     }
 
     // createGrade avale ses propres erreurs et renvoie null plutôt que de
-    // lever une exception — sans ce contrôle explicite, un échec silencieux
+    // lever une exception : sans ce contrôle explicite, un échec silencieux
     // (400, permissions...) affichait quand même le toast de succès.
     const created = await createGrade({
       ...newGrade,

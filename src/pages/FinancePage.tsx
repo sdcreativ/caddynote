@@ -47,7 +47,7 @@ import { ApiError } from '@/lib/apiClient';
 import { generatePaymentReceipt, generateInvoiceDocument, downloadDocument } from '@/services/strkDocumentService';
 
 /**
- * FIN-002/003 — le module finance était construit et testé côté serveur
+ * FIN-002/003 : le module finance était construit et testé côté serveur
  * (catalogue de frais, factures avec remises, paiements virement/espèces)
  * sans aucune interface : `POST /finance/invoices` n'était appelé nulle
  * part. Cette page relie enfin l'écran à l'API existante.
@@ -88,7 +88,7 @@ const FinancePage = () => {
   const [newFee, setNewFee] = useState({ name: '', amount: '' });
 
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
-  /** Encaisser (quotidien) vs Paramétrer — porté par `/finance/:workspace`. */
+  /** Encaisser (quotidien) vs Paramétrer : porté par `/finance/:workspace`. */
   const financeWorkspace: FinanceWorkspace = isFinanceWorkspace(workspaceParam)
     ? workspaceParam
     : 'collect';
@@ -108,7 +108,7 @@ const FinancePage = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('cash');
 
-  // FIN-002 : pénalité de retard — désactivée tant que le montant n'est pas
+  // FIN-002 : pénalité de retard : désactivée tant que le montant n'est pas
   // explicitement renseigné (chaîne vide ↔ null, pas 0 par défaut).
   const [lateFeeAmount, setLateFeeAmount] = useState('');
   const [paymentPlans, setPaymentPlans] = useState<StrkPaymentPlan[]>([]);
@@ -227,7 +227,7 @@ const FinancePage = () => {
     }
   };
 
-  // FIN-003 : redirige vers le fournisseur — messages d'erreur explicites
+  // FIN-003 : redirige vers le fournisseur : messages d'erreur explicites
   // (ex. "pas encore configuré sur cette instance") plutôt que génériques,
   // puisque ces providers sont volontairement dégradés (501) sans clés API.
   const handleOnlinePayment = async (kind: 'cinetpay' | 'stripe') => {
@@ -247,7 +247,7 @@ const FinancePage = () => {
   };
 
   // DOC-001 : un reçu de paiement est un document versionné/vérifiable par
-  // QR — distinct du simple affichage du paiement dans la facture.
+  // QR : distinct du simple affichage du paiement dans la facture.
   const handleGenerateReceipt = async (paymentId: string) => {
     const doc = await generatePaymentReceipt(paymentId);
     if (!doc) {
@@ -657,7 +657,7 @@ const FinancePage = () => {
                       </Select>
                       <Button onClick={handleRecordPayment}>{tc('actions.save')}</Button>
                     </div>
-                    {/* FIN-003 : Mobile Money/carte — dégradés proprement
+                    {/* FIN-003 : Mobile Money/carte : dégradés proprement
                         (message explicite) si le fournisseur n'a pas de clé
                         API configurée sur cette instance. */}
                     <div className="flex gap-2 pt-1">

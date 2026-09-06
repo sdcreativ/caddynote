@@ -17,7 +17,7 @@ type VerifyPayload = {
 };
 
 /**
- * DOC-004 — page publique (sans compte) pour scanner le QR d’un document.
+ * DOC-004 : page publique (sans compte) pour scanner le QR d’un document.
  * L’API `GET /documents/verify/:token` reste la source de vérité (JSON) ;
  * le QR du PDF pointe ici via APP_URL.
  */

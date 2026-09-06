@@ -17,7 +17,7 @@ import {
 } from '@/services/strkBankService';
 import { ApiError } from '@/lib/apiClient';
 
-/** FIN-007 — rapprochement bancaire branché sur l’API existante. */
+/** FIN-007 : rapprochement bancaire branché sur l’API existante. */
 export function BankReconciliationPanel({ institutionId }: { institutionId: string }) {
   const { t } = useTranslation('finance');
   const { t: tc } = useTranslation('common');

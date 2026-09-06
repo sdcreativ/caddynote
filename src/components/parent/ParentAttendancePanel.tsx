@@ -23,7 +23,7 @@ type ParentAttendancePanelProps = {
   onOpenFile: (absenceId: string) => void;
 };
 
-/** Absences / retards — extrait de Mes enfants. */
+/** Absences / retards : extrait de Mes enfants. */
 export function ParentAttendancePanel({
   canView,
   loading,

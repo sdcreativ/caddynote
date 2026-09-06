@@ -4,7 +4,7 @@
   "openMenu": "Ouvrir le menu",
   "closeMenu": "Fermer le menu",
   "accountMenu": "Menu compte",
-  "logoHome": "CaddyNote — Tableau de bord",
+  "logoHome": "CaddyNote : Tableau de bord",
   "institution": "Établissement",
   "profile": "Profil",
   "settings": "Paramètres",
@@ -18,8 +18,8 @@
   "searchEmpty": "Aucun résultat",
   "searchPages": "Pages",
   "searchAlerts": "Alertes récentes",
-  "offlineBanner": "Hors ligne — la navigation reste possible, mais les enregistrements (hors appel) nécessitent une connexion. L’appel peut être saisi et sera synchronisé au retour du réseau.",
-  "offlineBannerWithPending": "Hors ligne — {{count}} saisie(s) d’appel en attente de synchronisation.",
+  "offlineBanner": "Hors ligne : la navigation reste possible, mais les enregistrements (hors appel) nécessitent une connexion. L’appel peut être saisi et sera synchronisé au retour du réseau.",
+  "offlineBannerWithPending": "Hors ligne : {{count}} saisie(s) d’appel en attente de synchronisation.",
   "mfaBanner": {
     "title": "Renforcez la sécurité de votre compte",
     "body": "Activez la connexion à deux facteurs (application d’authentification) pour protéger l’accès à l’établissement.",
@@ -109,7 +109,7 @@
     "institutions": "Établissements",
     "subscription": "Abonnement",
     "plansCatalog": "Plans tarifaires",
-    "usersHint": "Identifiants et rôles (connexion) — distinct des fiches Élèves / Enseignants"
+    "usersHint": "Identifiants et rôles (connexion) : distinct des fiches Élèves / Enseignants"
   },
   "roles": {
     "schoolAdmin": "Direction",

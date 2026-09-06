@@ -417,7 +417,7 @@ const MessagesPage = () => {
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:gap-6">
-        {/* Liste — masquée sur mobile quand un détail est ouvert */}
+        {/* Liste : masquée sur mobile quand un détail est ouvert */}
         <div className={cn('min-w-0 flex-1 space-y-3 md:space-y-4', selectedMessage ? 'hidden lg:block' : 'block')}>
           <div className="flex w-full rounded-xl bg-slate-100/90 p-1">
             <button
@@ -548,7 +548,7 @@ const MessagesPage = () => {
           </div>
         </div>
 
-        {/* Détail — plein écran sur mobile, colonne fixe ≥ lg */}
+        {/* Détail : plein écran sur mobile, colonne fixe ≥ lg */}
         {selectedMessage ? (
           <Card className="w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border-slate-200/80 shadow-sm lg:w-96 lg:max-w-[24rem]">
             <CardHeader className="space-y-3 border-b border-slate-100 pb-4">

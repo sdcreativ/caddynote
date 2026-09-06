@@ -30,7 +30,7 @@ const kpiValue = (state: LoadState, value: string | number | null | undefined, e
 };
 
 /**
- * Accueil comptable — cockpit deux clics finance.
+ * Accueil comptable : cockpit deux clics finance.
  */
 const AccountantDashboardHome = ({
   userName,

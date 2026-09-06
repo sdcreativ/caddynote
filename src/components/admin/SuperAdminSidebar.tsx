@@ -51,7 +51,7 @@ type NavItemDef = {
 type NavGroupDef = {
   labelKey: string;
   items: NavItemDef[];
-  /** Groupe « Plus plateforme » — replié par défaut. */
+  /** Groupe « Plus plateforme » : replié par défaut. */
   defaultCollapsed?: boolean;
 };
 
@@ -84,7 +84,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    // Famille analytics — demoted hors Essentiel / Plus ops
+    // Famille analytics : demoted hors Essentiel / Plus ops
     labelKey: 'groups.analyse',
     defaultCollapsed: true,
     items: [

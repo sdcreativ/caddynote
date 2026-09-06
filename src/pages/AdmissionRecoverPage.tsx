@@ -12,7 +12,7 @@ import { ApiError } from '@/lib/apiClient';
 import { recoverAdmissionByEmail } from '@/services/strkAdmissionService';
 
 /**
- * Récupération du dossier par e-mail — alternative UX à « conserver le lien ».
+ * Récupération du dossier par e-mail : alternative UX à « conserver le lien ».
  */
 export default function AdmissionRecoverPage() {
   const { t } = useTranslation('admissions');

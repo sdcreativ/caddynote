@@ -35,10 +35,10 @@ import {
 } from '@/services/strkDocumentService';
 
 /**
- * DOC-001 à 005 — le module Documents était entièrement construit et testé
+ * DOC-001 à 005 : le module Documents était entièrement construit et testé
  * côté serveur (5 types, personnalisation, révocation, vérification
  * publique par QR) sans aucune interface. Cette page relie enfin l'écran à
- * l'API existante — mêmes principes que `/finance` juste avant.
+ * l'API existante : mêmes principes que `/finance` juste avant.
  */
 
 const GENERATABLE_TYPES: { value: StrkDocumentType; needsStudent: boolean; needsPeriod?: boolean; needsClass?: boolean; needsYear?: boolean }[] = [
@@ -129,7 +129,7 @@ const DocumentsPage = () => {
       setGenClassId('');
       setGenYear('');
       loadData();
-      // Téléchargement immédiat — utile pour la carte élève (impression wallet).
+      // Téléchargement immédiat : utile pour la carte élève (impression wallet).
       try {
         await downloadDocument(created.id, `${created.type}-v${created.version}.pdf`);
       } catch {
@@ -185,7 +185,7 @@ const DocumentsPage = () => {
           </p>
         </div>
         {/* La génération est réservée à la direction côté serveur
-            (requireRole admin/school_admin) — un enseignant peut consulter
+            (requireRole admin/school_admin) : un enseignant peut consulter
             la liste (rôle inclus dans GET /documents) mais pas émettre de
             document officiel. */}
         {['admin', 'school_admin'].includes(user?.role || '') && (

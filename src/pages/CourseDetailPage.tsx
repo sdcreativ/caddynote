@@ -189,7 +189,7 @@ const CourseDetailPage = () => {
                     <div>
                       <p className="font-medium">
                         {new Date(lesson.lessonDate).toLocaleDateString('fr-FR')}
-                        {lesson.title ? ` — ${lesson.title}` : ''}
+                        {lesson.title ? ` : ${lesson.title}` : ''}
                       </p>
                       <p className="mt-1 text-sm whitespace-pre-wrap">{lesson.contentCovered}</p>
                       {lesson.homeworkGiven && (

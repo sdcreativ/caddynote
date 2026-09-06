@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 /**
- * UX-005 — bannière hors-ligne sur le shell authentifié.
+ * UX-005 : bannière hors-ligne sur le shell authentifié.
  * Complète l’indicateur d’appel (OfflineStatusBadge) : ici toute l’app
  * sait qu’elle est déconnectée ; le détail de file d’attente reste sur
  * l’écran d’appel.

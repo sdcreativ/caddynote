@@ -205,7 +205,7 @@ const AnalyticsCenter = () => {
                   </div>
                 </CardContent>
               </Card>
-              <NotConnected reason="Heures d’activité, appareils et navigateurs : télémétrie client absente — non simulée." />
+              <NotConnected reason="Heures d’activité, appareils et navigateurs : télémétrie client absente : non simulée." />
             </>
           ) : (
             <NotConnected reason="Chargement des métriques d’activité…" />
@@ -215,7 +215,7 @@ const AnalyticsCenter = () => {
         <TabsContent value="product" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
-              Événements `product.*` (console Super Admin, KPIs, etc.) — pas de données inventées.
+              Événements `product.*` (console Super Admin, KPIs, etc.) : pas de données inventées.
             </p>
             <select
               value={productDays}
@@ -265,7 +265,7 @@ const AnalyticsCenter = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <NotConnected reason="Aucun événement product.* sur la période — ouverture des sections Super Admin en générera." />
+                <NotConnected reason="Aucun événement product.* sur la période : ouverture des sections Super Admin en générera." />
               )}
             </>
           ) : (

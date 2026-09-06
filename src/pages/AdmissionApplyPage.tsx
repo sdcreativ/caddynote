@@ -887,7 +887,7 @@ const AdmissionApplyPage = () => {
                           {t('apply.summaryGuardian')}
                         </dt>
                         <dd className="mt-0.5 font-medium">
-                          {guardian.firstName} {guardian.lastName} — {guardian.email}
+                          {guardian.firstName} {guardian.lastName} : {guardian.email}
                         </dd>
                       </div>
                     </dl>
@@ -1012,7 +1012,7 @@ const AdmissionApplyPage = () => {
                                           : isComplete
                                             ? t('apply.docStatusUploaded', { name: item.fileName || '—' })
                                             : t('apply.docStatusMissing')}
-                                      {item.rejectionReason ? ` — ${item.rejectionReason}` : ''}
+                                      {item.rejectionReason ? ` : ${item.rejectionReason}` : ''}
                                     </p>
                                     {item.helpText && (
                                       <p className="text-xs text-slate-400">{item.helpText}</p>
@@ -1031,8 +1031,8 @@ const AdmissionApplyPage = () => {
                                         className="sr-only"
                                         aria-label={
                                           done
-                                            ? `${item.documentType.label} — ${t('apply.docReplace')}`
-                                            : `${item.documentType.label} — ${t('apply.docChoose')}`
+                                            ? `${item.documentType.label} : ${t('apply.docReplace')}`
+                                            : `${item.documentType.label} : ${t('apply.docChoose')}`
                                         }
                                         onChange={(e) =>
                                           void handlePacketFile(

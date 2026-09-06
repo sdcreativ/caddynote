@@ -94,7 +94,7 @@
     "noCopy": "Pas de copie",
     "correct": "Corriger",
     "emptyFilter": "Aucun élève dans ce filtre.",
-    "grading": "Notation — {{name}}",
+    "grading": "Notation : {{name}}",
     "gradeLabel": "Note / {{max}}",
     "comment": "Commentaire",
     "noCopyToGrade": "Pas de copie à noter",

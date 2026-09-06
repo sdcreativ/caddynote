@@ -149,7 +149,7 @@ describe('TeacherDashboardHome (cockpit deux clics)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Appel dans 8 min — Mathématiques/i)).toBeInTheDocument();
+      expect(screen.getByText(/Appel dans 8 min : Mathématiques/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/Début 16:00 · 3ème/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Appel dans 8 min/i })).toHaveAttribute(

@@ -17,7 +17,7 @@
     "recentAbsent": "Absent",
     "recentLate": "Retard",
     "historyTitle": "Historique des appels",
-    "historyForClass": "Séances de {{className}} — matière, horaire et enseignant",
+    "historyForClass": "Séances de {{className}} : matière, horaire et enseignant",
     "historySelectClass": "Sélectionnez une classe pour voir l'historique",
     "justificationsTab": "Justificatifs"
   },
@@ -89,8 +89,8 @@
     "title": "Faire l'appel",
     "course": "Cours",
     "coursePlaceholder": "Sélectionner un cours",
-    "courseWithClass": "{{name}} — {{className}}",
-    "noCourse": "Aucun de vos cours n'est rattaché à une classe pour l'instant — l'appel ne peut pas être pris sans effectif.",
+    "courseWithClass": "{{name}} : {{className}}",
+    "noCourse": "Aucun de vos cours n'est rattaché à une classe pour l'instant : l'appel ne peut pas être pris sans effectif.",
     "loadingRoster": "Chargement de l'effectif...",
     "emptyRoster": "Aucun élève rattaché à cette classe pour l'instant.",
     "savedTitle": "Appel enregistré",
@@ -110,7 +110,7 @@
     "unknownTitle": "Élève inconnu",
     "unknownBody": "Ce QR ne correspond à aucun élève de la classe.",
     "identifiedTitle": "Élève identifié",
-    "identifiedBody": "{{name}} — choisissez Absent ou Retard pour enregistrer.",
+    "identifiedBody": "{{name}} : choisissez Absent ou Retard pour enregistrer.",
     "qrUnavailableTitle": "Scan QR indisponible",
     "qrUnavailableBody": "Ce navigateur ne décode pas les QR. Sélectionnez l’élève dans la liste.",
     "cameraError": "Impossible d’accéder à la caméra",
@@ -127,6 +127,6 @@
   },
   "offline": {
     "syncing": "Synchronisation en cours ({{count}})",
-    "pending": "Hors ligne — {{count}} en attente"
+    "pending": "Hors ligne : {{count}} en attente"
   }
 }

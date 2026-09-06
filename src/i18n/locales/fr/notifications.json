@@ -14,7 +14,7 @@
   "markRead": "Marquer comme lu",
   "empty": "Aucune nouvelle notification",
   "emptyUnreadTitle": "Aucune notification non lue",
-  "emptyUnreadBody": "Vous êtes à jour — les nouvelles alertes apparaîtront ici.",
+  "emptyUnreadBody": "Vous êtes à jour : les nouvelles alertes apparaîtront ici.",
   "emptyAllTitle": "Aucune notification",
   "emptyAllBody": "Votre établissement n’a encore rien envoyé dans cette boîte."
 }

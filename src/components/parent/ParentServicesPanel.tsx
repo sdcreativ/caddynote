@@ -53,7 +53,7 @@ type ParentServicesPanelProps = {
   onEnrollTransport: (routeId: string) => void;
 };
 
-/** Cantine / transport — extrait de Mes enfants pour alléger l’onglet principal. */
+/** Cantine / transport : extrait de Mes enfants pour alléger l’onglet principal. */
 export function ParentServicesPanel({
   loading,
   child,

@@ -290,7 +290,7 @@ function RoleNavBody({
   );
 }
 
-/** Nav établissement — lit le provider dashboard (badges). */
+/** Nav établissement : lit le provider dashboard (badges). */
 function SchoolRoleNav({
   onNavigate,
   institutionName,

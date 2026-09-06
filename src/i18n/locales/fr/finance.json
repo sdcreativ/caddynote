@@ -74,8 +74,8 @@
     "labelPlaceholder": "Scolarité 2026-2027",
     "installmentDefault": "Échéance {{count}}",
     "addInstallment": "Ajouter une échéance",
-    "installmentLine": "Échéance {{index}} — {{number}} — {{amount}}{{due}} — {{status}}",
-    "dueDateSuffix": " — échéance {{date}}"
+    "installmentLine": "Échéance {{index}} : {{number}} : {{amount}}{{due}} : {{status}}",
+    "dueDateSuffix": " : échéance {{date}}"
   },
   "toasts": {
     "loadError": "Impossible de charger la finance.",
@@ -85,7 +85,7 @@
     "formIncomplete": "Formulaire incomplet",
     "formIncompleteBody": "Choisissez un élève et au moins une ligne.",
     "invoiceCreated": "Facture créée",
-    "invoiceCreatedBody": "{{number}} — {{amount}}",
+    "invoiceCreatedBody": "{{number}} : {{amount}}",
     "invoiceCreateError": "Impossible de créer la facture (remise supérieure au total ?).",
     "paymentRecorded": "Paiement enregistré",
     "paymentError": "Impossible d’enregistrer ce paiement (montant supérieur au solde dû ?).",
@@ -202,7 +202,7 @@
     "archiveConfirmTitle": "Archiver cette grille ?",
     "newType": "Type custom",
     "platformCatalog": "Catalogue plateforme",
-    "platformCatalogHint": "Référentiel seed — non modifiable ici (État / plateforme).",
+    "platformCatalogHint": "Référentiel seed : non modifiable ici (État / plateforme).",
     "customTypes": "Types de l’établissement",
     "noCustomTypes": "Aucun type custom pour le moment.",
     "code": "Code",
@@ -216,7 +216,7 @@
     "stepLabel": "Libellé",
     "dueOffsetDays": "Jours (offset)",
     "nationalTitle": "Référentiel national CI",
-    "nationalHint": "Données gérées par l’État ivoirien — lecture seule dans CaddyNote.",
+    "nationalHint": "Données gérées par l’État ivoirien : lecture seule dans CaddyNote.",
     "loadNational": "Charger",
     "nationalMeta": "Géré par {{managedBy}} · version {{version}} · source {{source}}",
     "sector": "Secteur",

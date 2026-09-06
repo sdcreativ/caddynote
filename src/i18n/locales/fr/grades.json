@@ -1,12 +1,12 @@
 {
   "title": "Notes",
   "subtitleStudent": "Consultez vos notes et évaluations",
-  "subtitleTeacher": "Saisie du jour d’abord — publication, calcul et import dans l’onglet dédié.",
-  "subtitleDirection": "Vue établissement des notes — saisie possible dès qu’un cours existe.",
+  "subtitleTeacher": "Saisie du jour d’abord : publication, calcul et import dans l’onglet dédié.",
+  "subtitleDirection": "Vue établissement des notes : saisie possible dès qu’un cours existe.",
   "panels": {
     "entry": "Saisie",
     "workflow": "Publication & calcul",
-    "workflowHint": "Publier les brouillons, calculer les moyennes, importer ou exporter — hors du flux de saisie du jour."
+    "workflowHint": "Publier les brouillons, calculer les moyennes, importer ou exporter : hors du flux de saisie du jour."
   },
   "publish": "Publier",
   "computeAverages": "Calculer moyennes",
@@ -111,7 +111,7 @@
     "importing": "Import…"
   },
   "bulk": {
-    "description": "Un devoir, toute la classe — un seul enregistrement (EVA-003). Les cases vides sont ignorées.",
+    "description": "Un devoir, toute la classe : un seul enregistrement (EVA-003). Les cases vides sont ignorées.",
     "titlePlaceholder": "Ex. Devoir n°2",
     "emptyRoster": "Choisissez un cours rattaché à une classe pour charger la liste.",
     "filled": "{{filled}}/{{total}} note(s) saisies",

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchDiagnostics, type DiagnosticsPayload } from '@/services/strkOpsService';
 import { buildIntegrationAlerts } from '@/lib/integrationDiagnostics';
 
-/** Alertes dérivées des diagnostics réels — plus de mockAlerts. */
+/** Alertes dérivées des diagnostics réels : plus de mockAlerts. */
 const CriticalAlertsCenter = ({ embedded = false }: { embedded?: boolean }) => {
   const [diag, setDiag] = useState<DiagnosticsPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ const CriticalAlertsCenter = ({ embedded = false }: { embedded?: boolean }) => {
       alerts.push({
         severity: 'ok',
         title: 'Système nominal',
-        detail: `Diagnostics OK — ${new Date(diag.timestamp).toLocaleString('fr-FR')}`,
+        detail: `Diagnostics OK : ${new Date(diag.timestamp).toLocaleString('fr-FR')}`,
       });
     }
   }

@@ -9,14 +9,14 @@ import type { CourseWithDetails } from '@/services/strkCourseService';
 
 /**
  * NFR-004 : ce dialogue ("Faire l'appel" depuis `TeacherAttendancePage.tsx`)
- * était un stub — champ "classe" en texte libre jamais relié à une vraie
+ * était un stub : champ "classe" en texte libre jamais relié à une vraie
  * classe, `setStudents([])` inconditionnel (commentaire "In real app, this
  * would fetch students..."), et une redirection `window.location.href`
  * vers `?class=...` alors que la page cible lit `?course=` (paramètre non
  * concordant : la redirection n'aurait de toute façon jamais présélectionné
- * le bon cours). Remplacé par le vrai flux — sélection d'un cours réel du
+ * le bon cours). Remplacé par le vrai flux : sélection d'un cours réel du
  * professeur, chargement du vrai effectif (`fetchStudentsByClass`, mis en
- * cache — voir `strkAttendanceService.ts`), et réutilisation de
+ * cache : voir `strkAttendanceService.ts`), et réutilisation de
  * `QuickAttendance`, le composant d'appel réellement fonctionnel déjà
  * utilisé par `/attendance` (hors ligne compris, PRS-003).
  */

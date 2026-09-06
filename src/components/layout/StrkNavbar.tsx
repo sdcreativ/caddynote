@@ -351,7 +351,7 @@ function SchoolSearchAlerts({ onPick }: { onPick: () => void }) {
             navigate(a.href);
           }}
         >
-          {a.studentName} — {a.label}
+          {a.studentName} : {a.label}
         </CommandItem>
       ))}
     </CommandGroup>

@@ -13,7 +13,7 @@ import {
   type CommOpsLog,
 } from '@/services/strkOpsService';
 
-/** File communications failed / queued — retry & purge. */
+/** File communications failed / queued : retry & purge. */
 const CommunicationsOpsPanel = () => {
   const { toast } = useToast();
   const confirm = useConfirmDialog();

@@ -58,7 +58,7 @@ export function QuickActionsManager() {
   const { user } = useStrkAuth();
   const context = useContext(QuickActionsContext);
   // NFR-004 : `AttendanceDialog` a besoin des cours réels de l'enseignant
-  // pour proposer un choix de classe (voir le composant — il ne reçoit plus
+  // pour proposer un choix de classe (voir le composant : il ne reçoit plus
   // de texte libre déconnecté d'une vraie classe). Chargé une fois, comme le
   // fait déjà `TeacherAttendancePage.tsx` pour son propre sélecteur.
   const { courses, loadCoursesByTeacher } = useStrkCourses();

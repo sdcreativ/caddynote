@@ -193,10 +193,10 @@ export function EstablishmentOverview() {
         />
       )}
 
-      {/* Q1 — À traiter */}
+      {/* Q1 : À traiter */}
       <PriorityAlerts alerts={data.alerts} total={data.alertCount} />
 
-      {/* Q2 — Pulsation (KPI) */}
+      {/* Q2 : Pulsation (KPI) */}
       <div className="grid grid-cols-2 gap-3 md:hidden">
         <MobileCompactStat
           title={t('overview.enrolledStudents')}
@@ -298,7 +298,7 @@ export function EstablishmentOverview() {
         ) : null}
       </div>
 
-      {/* Q3 — Aller où */}
+      {/* Q3 : Aller où */}
       <div className="space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           {t('directionMobile.shortcutsTitle')}
@@ -309,7 +309,7 @@ export function EstablishmentOverview() {
           onClick={() => navigate(primaryCta.href)}
         />
         <p className="sr-only">{t('directionMobile.primaryCtaHint')}</p>
-        {/* Mobile : 4 raccourcis cœur — le reste via bottom nav / Plus */}
+        {/* Mobile : 4 raccourcis cœur : le reste via bottom nav / Plus */}
         <div className="grid grid-cols-2 gap-3 md:hidden">
           <MobileQuickTile
             label={t('quickActions.students')}
@@ -386,7 +386,7 @@ export function EstablishmentOverview() {
         </div>
       </div>
 
-      {/* Secondaire — uniquement s’il y a des données */}
+      {/* Secondaire : uniquement s’il y a des données */}
       {showSecondary ? (
         <div className="hidden space-y-4 md:block">
           {showAttendanceChart || showAgenda ? (

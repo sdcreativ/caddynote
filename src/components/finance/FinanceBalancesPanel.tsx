@@ -18,7 +18,7 @@ import {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-/** Lot 5 — rapport soldes à une date + export CSV/XLSX journalisé. */
+/** Lot 5 : rapport soldes à une date + export CSV/XLSX journalisé. */
 export function FinanceBalancesPanel() {
   const { t } = useTranslation('finance');
   const { t: tc } = useTranslation('common');

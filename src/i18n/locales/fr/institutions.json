@@ -77,7 +77,7 @@
     "usersBreakdown": "{{students}} élèves · {{teachers}} enseignants",
     "loading": "Chargement…",
     "attendance": "Assiduité globale",
-    "noAttendance": "Aucun élève — pas de taux inventé",
+    "noAttendance": "Aucun élève : pas de taux inventé",
     "attendanceHint": "Taux calculé sur les absences",
     "typeDistribution": "Répartition par type",
     "noInstitutionsChart": "Aucun établissement à afficher.",

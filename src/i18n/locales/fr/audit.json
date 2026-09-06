@@ -1,6 +1,6 @@
 {
   "title": "Journal d’audit",
-  "subtitle": "Traces serveur des actions sensibles (IAM-005) — non modifiables depuis le client.",
+  "subtitle": "Traces serveur des actions sensibles (IAM-005) : non modifiables depuis le client.",
   "refresh": "Actualiser",
   "filterDescription": "Préfixe d’action (ex. finance., assignment., auth.)",
   "action": "Action",

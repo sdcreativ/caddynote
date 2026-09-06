@@ -1,6 +1,6 @@
 {
   "title": "Communications",
-  "subtitle": "E-mail, SMS, WhatsApp et notifications — journal de livraison unifié.",
+  "subtitle": "E-mail, SMS, WhatsApp et notifications : journal de livraison unifié.",
   "refresh": "Actualiser",
   "loadErrorTitle": "Impossible de charger le journal",
   "networkError": "Erreur réseau",
@@ -16,7 +16,7 @@
   "body": "Message",
   "sending": "Envoi…",
   "journalTitle": "Journal",
-  "journalDescription": "Traçabilité COM-004 — statuts queued / sent / delivered / failed.",
+  "journalDescription": "Traçabilité COM-004 : statuts queued / sent / delivered / failed.",
   "loading": "Chargement du journal…",
   "emptyTitle": "Aucune communication",
   "emptyBody": "Les envois apparaîtront ici avec leur statut de livraison.",

@@ -10,7 +10,7 @@ type GuideSectionProps = {
 };
 
 /** Remplace le bloc `<section><h2/><Separator/>...</section>` répété dans
- * les 4 guides — un seul endroit pour l'espacement, l'icône et l'entrée en
+ * les 4 guides : un seul endroit pour l'espacement, l'icône et l'entrée en
  * fondu, cohérent avec le reste des pages publiques (AboutContent). Le
  * contenu métier de chaque guide (paragraphes, listes, `Alert`) reste
  * inchangé, seul l'habillage change. */

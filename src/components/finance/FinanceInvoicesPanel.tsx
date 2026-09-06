@@ -21,7 +21,7 @@ type FinanceInvoicesPanelProps = {
   onSelect: (invoice: StrkInvoice) => void;
 };
 
-/** Onglet factures — extrait de FinancePage. */
+/** Onglet factures : extrait de FinancePage. */
 export function FinanceInvoicesPanel({
   invoices,
   isLoading,

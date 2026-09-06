@@ -45,7 +45,7 @@
     "toastParentTitle": "Parent informé",
     "toastParentBody": "SMS envoyé à M. Jean Dupont",
     "toastPayTitle": "Paiement reçu",
-    "toastPayBody": "125 000 FCFA — Mobile Money",
+    "toastPayBody": "125 000 FCFA : Mobile Money",
     "directions": {
       "label": "Directions",
       "title": "Décidez avec une vision complète.",
@@ -55,7 +55,7 @@
     "enseignants": {
       "label": "Enseignants",
       "title": "L’appel et le suivi, sans friction.",
-      "body": "Présences hors ligne, saisie des notes et communication aux parents — pensé pour le quotidien en classe.",
+      "body": "Présences hors ligne, saisie des notes et communication aux parents : pensé pour le quotidien en classe.",
       "statLabel": "Plus rapide"
     },
     "parents": {
@@ -160,6 +160,6 @@
     "weekAttendance": "Présence de la semaine",
     "recentAlerts": "Alertes récentes"
   },
-  "phoneAlt": "Application CaddyNote sur smartphone — suivi scolaire de Koffi pour Mme Traoré",
+  "phoneAlt": "Application CaddyNote sur smartphone : suivi scolaire de Koffi pour Mme Traoré",
   "heroGreeting": "Bonjour Mariam 👋"
 }

@@ -1,6 +1,6 @@
 {
   "navAria": "Navigation ops plateforme",
-  "logoAria": "CaddyNote — Super Admin",
+  "logoAria": "CaddyNote : Super Admin",
   "openMenu": "Ouvrir le menu",
   "closeMenu": "Fermer le menu",
   "bottomNav": {
@@ -39,12 +39,12 @@
   },
   "usersPage": {
     "title": "Comptes plateforme",
-    "subtitle": "{{count}} comptes tous tenants — distinct des comptes école (/users).",
+    "subtitle": "{{count}} comptes tous tenants : distinct des comptes école (/users).",
     "create": "Nouveau compte"
   },
   "advancedUsersPage": {
     "title": "Actions en masse",
-    "subtitle": "Bulk plateforme (suspendre, réactiver, rôle, établissement) — complément de « Comptes plateforme » (fiches).",
+    "subtitle": "Bulk plateforme (suspendre, réactiver, rôle, établissement) : complément de « Comptes plateforme » (fiches).",
     "visibleAccounts": "Comptes visibles",
     "listTitle": "Sélection"
   },
@@ -68,7 +68,7 @@
     "users": "Comptes plateforme",
     "usersHint": "Fiches tous tenants",
     "advancedUsers": "Actions en masse",
-    "advancedUsersHint": "Bulk / CSV — pas les comptes école",
+    "advancedUsersHint": "Bulk / CSV : pas les comptes école",
     "institutions": "Établissements",
     "system": "Système",
     "systemHint": "Diagnostics & sauvegardes",

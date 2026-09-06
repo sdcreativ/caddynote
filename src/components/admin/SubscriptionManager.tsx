@@ -778,7 +778,7 @@ const SubscriptionManager = () => {
             Dunning / alertes abonnements
           </CardTitle>
           <p className="text-sm text-muted-foreground font-normal">
-            Essais qui se terminent, expirations — cliquez pour filtrer la liste.
+            Essais qui se terminent, expirations : cliquez pour filtrer la liste.
           </p>
         </CardHeader>
         <CardContent>

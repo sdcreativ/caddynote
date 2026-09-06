@@ -184,7 +184,7 @@ const InstitutionGroupsPanel = () => {
         <CardTitle className="flex items-center gap-2 text-base">
           <Building2 className="h-4 w-4" /> Groupes multi-établissements
         </CardTitle>
-        <CardDescription>CRUD ORG-002 — admin global uniquement.</CardDescription>
+        <CardDescription>CRUD ORG-002 : admin global uniquement.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">

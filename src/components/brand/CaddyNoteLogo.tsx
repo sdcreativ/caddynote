@@ -17,7 +17,7 @@ type CaddyNoteLogoProps = {
 };
 
 /**
- * Monogramme CN imbriqué (C blanc/navy devant, N bleu derrière) — même marque que la vidéo.
+ * Monogramme CN imbriqué (C blanc/navy devant, N bleu derrière) : même marque que la vidéo.
  */
 export function CaddyNoteMark({
   size = 32,
@@ -50,7 +50,7 @@ export function CaddyNoteLogo({
   nav = false,
   inverted = false,
   onClick,
-  'aria-label': ariaLabel = `${BRAND.name} — Accueil`,
+  'aria-label': ariaLabel = `${BRAND.name} : Accueil`,
 }: CaddyNoteLogoProps) {
   const content = (
     <span className={cn('inline-flex items-center gap-2.5', className)}>

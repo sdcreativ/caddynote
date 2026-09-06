@@ -306,7 +306,7 @@ const MyChildrenPage = () => {
               {myAdmissions.map((app) => (
                 <div key={app.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
                   <span>
-                    {app.studentFirstName} {app.studentLastName} — {app.status}
+                    {app.studentFirstName} {app.studentLastName} : {app.status}
                   </span>
                   <Button asChild size="sm" variant="outline">
                     <Link to={`/admissions/suivi/${app.publicToken}`}>Suivre</Link>
@@ -345,7 +345,7 @@ const MyChildrenPage = () => {
             {myAdmissions.map((app) => (
               <div key={app.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
                 <span>
-                  {app.studentFirstName} {app.studentLastName} — {app.status}
+                  {app.studentFirstName} {app.studentLastName} : {app.status}
                 </span>
                 <Button asChild size="sm" variant="outline">
                   <Link to={`/admissions/suivi/${app.publicToken}`}>Suivre</Link>
@@ -359,7 +359,7 @@ const MyChildrenPage = () => {
         <div>
           <h1 className="font-display text-[1.75rem] font-semibold tracking-tight md:text-3xl">Mes enfants</h1>
           <p className="mt-1 text-base text-slate-600 md:text-slate-500">
-            Absences, notes et finances — santé et services dans Plus.
+            Absences, notes et finances : santé et services dans Plus.
           </p>
         </div>
 

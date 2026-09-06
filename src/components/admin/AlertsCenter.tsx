@@ -164,7 +164,7 @@ const AlertsCenter = ({
         id: 'system-ok',
         type: 'success',
         title: 'Système nominal',
-        message: `Diagnostics OK — ${new Date(diag.timestamp).toLocaleString('fr-FR')}`,
+        message: `Diagnostics OK : ${new Date(diag.timestamp).toLocaleString('fr-FR')}`,
         timestamp: new Date(diag.timestamp),
         source: 'Système',
         section: 'system',
@@ -221,7 +221,7 @@ const AlertsCenter = ({
         <div>
           <h2 className="text-2xl font-bold">{title}</h2>
           <p className="text-sm text-muted-foreground">
-            Alertes dérivées des diagnostics API et des abonnements — aucune donnée fictive.
+            Alertes dérivées des diagnostics API et des abonnements : aucune donnée fictive.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

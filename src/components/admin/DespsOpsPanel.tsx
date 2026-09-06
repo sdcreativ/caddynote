@@ -26,7 +26,7 @@ export const isDespsPreviewEnabled = () =>
   String(import.meta.env.VITE_DESPS_PREVIEW ?? '').toLowerCase() === 'true';
 
 /**
- * Ops DESPS — dry-run export élèves (permission platform.integrations.desps).
+ * Ops DESPS : dry-run export élèves (permission platform.integrations.desps).
  * Surface preview uniquement : pas d’envoi live tant que le contrat API n’est pas figé.
  */
 export function DespsOpsPanel({ institutions }: { institutions: { id: string; name: string }[] }) {
@@ -69,7 +69,7 @@ export function DespsOpsPanel({ institutions }: { institutions: { id: string; na
           <Badge variant="outline">Preview</Badge>
         </CardTitle>
         <CardDescription>
-          Connecteur stub — dry-run local uniquement. Sync live désactivée tant que le contrat API n’est pas branché.
+          Connecteur stub : dry-run local uniquement. Sync live désactivée tant que le contrat API n’est pas branché.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

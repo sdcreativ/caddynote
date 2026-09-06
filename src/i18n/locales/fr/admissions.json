@@ -18,7 +18,7 @@
     "feePromptLabel": "Montant en FCFA (ex. 12000 ou 12.000)",
     "feeInvalid": "Montant invalide",
     "feeSavedTitle": "Frais enregistrés",
-    "feeSavedBody": "{{amount}} — le candidat peut payer en ligne.",
+    "feeSavedBody": "{{amount}} : le candidat peut payer en ligne.",
     "feeSaveError": "Impossible d’enregistrer les frais.",
     "feeConfirmed": "Frais confirmés (règlement manuel)",
     "feeConfirmError": "Confirmation impossible.",
@@ -46,7 +46,7 @@
     "pieceUpdated": "Pièce mise à jour",
     "pieceUpdateError": "Impossible de mettre à jour la pièce.",
     "packetLoadError": "Impossible de charger le dossier de pièces.",
-    "rejectReasonDefault": "Document non conforme — merci de le remplacer.",
+    "rejectReasonDefault": "Document non conforme : merci de le remplacer.",
     "originalSeen": "Original présenté",
     "reused": "Réemployée",
     "download": "Voir / télécharger",
@@ -70,7 +70,7 @@
       "draft": "Brouillon",
       "all": "Tous"
     },
-    "tabQueueHint": "Dossiers à instruire aujourd’hui — statut, frais, décision.",
+    "tabQueueHint": "Dossiers à instruire aujourd’hui : statut, frais, décision.",
     "tabConfigHint": "Modèles de pièces et paramètres de campagne (pas le quotidien)."
   },
   "config": {
@@ -127,8 +127,8 @@
   "apply": {
     "title": "Préinscription",
     "eyebrow": "Admissions",
-    "subtitle": "Déposez un dossier en quelques minutes — le suivi arrive par e-mail.",
-    "stepOf": "Étape {{current}} sur 8 — {{label}}",
+    "subtitle": "Déposez un dossier en quelques minutes : le suivi arrive par e-mail.",
+    "stepOf": "Étape {{current}} sur 8 : {{label}}",
     "progressLabel": "Progression du dossier",
     "description": "Sans compte : indiquez votre e-mail, nous vous enverrons le lien de suivi.",
     "recoverLink": "Déjà un dossier ? Recevoir mon lien",
@@ -193,7 +193,7 @@
     "reusedBadge": "Réemployée",
     "docStatusMissing": "Non fourni",
     "docStatusUploaded": "Téléversé : {{name}}",
-    "docStatusOriginalPending": "Copie reçue — original à présenter : {{name}}",
+    "docStatusOriginalPending": "Copie reçue : original à présenter : {{name}}",
     "docStatusPhysicalOnly": "À présenter en original sur place (pas de téléversement).",
     "docStateProvided": "Pièce fournie",
     "docStatePartial": "Copie reçue, original à présenter",

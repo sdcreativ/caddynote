@@ -91,7 +91,7 @@
     "teacher": "Enseignant *",
     "selectTeacher": "Sélectionner un enseignant",
     "teacherRequired": "Choisissez l’enseignant responsable du cours.",
-    "noTeachers": "Aucun enseignant dans l’établissement — créez-en un dans Utilisateurs.",
+    "noTeachers": "Aucun enseignant dans l’établissement : créez-en un dans Utilisateurs.",
     "title": "Créer un nouveau cours",
     "description": "Ajoutez un nouveau cours à votre planning",
     "name": "Nom du cours *",

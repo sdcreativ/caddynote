@@ -35,7 +35,7 @@ const COLORS = [
 ];
 
 /**
- * Accueil console ops plateforme — métriques & raccourcis CaddyNote.
+ * Accueil console ops plateforme : métriques & raccourcis CaddyNote.
  * Pas de parcours métier école (élèves / classes / exercices / espace établissement).
  */
 const SuperAdminOverview = () => {
@@ -62,8 +62,8 @@ const SuperAdminOverview = () => {
         setSystemOk(ok);
         setSystemDetail(
           ok
-            ? `Diagnostics OK — ${new Date(diag.timestamp).toLocaleString('fr-FR')}`
-            : `Dégradé — DB ${diag.database} / status ${diag.status}`
+            ? `Diagnostics OK : ${new Date(diag.timestamp).toLocaleString('fr-FR')}`
+            : `Dégradé : DB ${diag.database} / status ${diag.status}`
         );
       } catch {
         setSystemOk(false);
@@ -192,7 +192,7 @@ const SuperAdminOverview = () => {
         </div>
       </div>
 
-      {/* Desktop : contexte ops (sans CTA école — déjà dans la sidebar) */}
+      {/* Desktop : contexte ops (sans CTA école : déjà dans la sidebar) */}
       <div className="hidden rounded-xl border border-border bg-muted/40 px-4 py-3 md:block">
         <p className="text-[11px] font-medium text-muted-foreground">{t('hereLabel')}</p>
         <p className="text-sm font-semibold">{t('console')}</p>

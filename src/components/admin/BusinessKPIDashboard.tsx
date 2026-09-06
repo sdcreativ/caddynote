@@ -19,7 +19,7 @@ import { trackProductEvent } from '@/lib/productTelemetry';
 
 const ALL = '__all__';
 
-/** KPIs réels (analytics + groupes) — sélecteur multi-groupes / établissement. */
+/** KPIs réels (analytics + groupes) : sélecteur multi-groupes / établissement. */
 const BusinessKPIDashboard = () => {
   const { toast } = useToast();
   const { institutions, loadInstitutions } = useStrkInstitutions();
@@ -117,7 +117,7 @@ const BusinessKPIDashboard = () => {
             <BarChart3 className="h-6 w-6" /> KPIs plateforme
           </h2>
           <p className="text-sm text-muted-foreground">
-            Données /analytics — générées{' '}
+            Données /analytics : générées{' '}
             {metrics?.generatedAt ? new Date(metrics.generatedAt).toLocaleString('fr-FR') : '…'}
           </p>
         </div>
@@ -234,9 +234,9 @@ const BusinessKPIDashboard = () => {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           {groups.length === 0 ? (
-            <p>Aucun groupe (ORG-002) — créez-en un ci-dessous.</p>
+            <p>Aucun groupe (ORG-002) : créez-en un ci-dessous.</p>
           ) : selectedGroupId === ALL ? (
-            <p>{groups.length} groupe(s) — sélectionnez-en un pour les effectifs consolidés.</p>
+            <p>{groups.length} groupe(s) : sélectionnez-en un pour les effectifs consolidés.</p>
           ) : (
             <>
               {groupTotals && (

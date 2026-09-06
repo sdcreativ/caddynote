@@ -66,7 +66,7 @@ export function buildSignupJsonLd() {
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: 'Essai gratuit 30 jours — Créer un compte CaddyNote',
+      name: 'Essai gratuit 30 jours : Créer un compte CaddyNote',
       description:
         'Créez votre compte CaddyNote et profitez de 30 jours d’essai gratuit sans carte bancaire.',
       url,

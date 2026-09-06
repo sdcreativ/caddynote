@@ -11,7 +11,7 @@ type StudentDetail = {
 };
 
 /**
- * Suivi élève — présence du jour + raccourcis scolaires.
+ * Suivi élève : présence du jour + raccourcis scolaires.
  * Les priorités « À traiter » sont sur l’Accueil (`/dashboard`).
  */
 const MySuiviPage = () => {
