@@ -35,4 +35,14 @@ describe('HelpContent (UX-004)', () => {
     );
     expect(queryByRole('link', { name: /^PDF$/i })).toBeNull();
   });
+
+  it('lie les mentions légales et la confidentialité', () => {
+    const { getByRole } = render(
+      <MemoryRouter>
+        <HelpContent />
+      </MemoryRouter>
+    );
+    expect(getByRole('link', { name: 'Mentions légales' })).toHaveAttribute('href', '/mentions-legales');
+    expect(getByRole('link', { name: 'Confidentialité' })).toHaveAttribute('href', '/confidentialite');
+  });
 });

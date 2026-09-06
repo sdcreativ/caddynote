@@ -4,7 +4,8 @@ import { PublicShell } from '@/components/public/PublicShell';
 import { StrkLoginForm } from '@/components/auth/StrkLoginForm';
 import { FadeIn } from '@/components/public/FadeIn';
 import { CaddyNoteMark } from '@/components/brand/CaddyNoteLogo';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { legalTransComponents } from '@/components/legal/legalLinks';
 
 const BLUE = '#1D70D8';
 
@@ -104,6 +105,9 @@ const SignPage = () => {
                 <Link to="/signup" className="font-semibold text-[#1D70D8] hover:underline">
                   {t('sign.startTrial')}
                 </Link>
+              </p>
+              <p className="mt-5 text-center text-xs leading-relaxed text-slate-500">
+                <Trans ns="auth" i18nKey="sign.legal" components={legalTransComponents()} />
               </p>
             </section>
           </FadeIn>

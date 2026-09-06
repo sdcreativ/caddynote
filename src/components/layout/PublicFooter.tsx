@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
+import { LegalInlineLinks } from '@/components/legal/LegalInlineLinks';
 import { handleAnchorClick } from '@/lib/smoothScroll';
 import { useTranslation } from 'react-i18next';
 import { telHref, usePublicVitrine, waHref } from '@/lib/publicVitrine';
@@ -54,6 +55,8 @@ export function PublicFooter() {
             <ul className="mt-4 space-y-2.5 text-sm text-white/80">
               <li><Link to="/about" className="hover:text-white">{t('links.about')}</Link></li>
               <li><Link to="/contact" className="hover:text-white">{t('links.contact')}</Link></li>
+              <li><Link to="/mentions-legales" className="hover:text-white">{t('links.legal')}</Link></li>
+              <li><Link to="/confidentialite" className="hover:text-white">{t('links.privacy')}</Link></li>
               {contact.email ? (
                 <li>
                   <a href={`mailto:${contact.email}`} className="hover:text-white">
@@ -83,7 +86,7 @@ export function PublicFooter() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-white/80 sm:flex-row sm:px-8 lg:px-10">
           <p>{t('copyright', { year })}</p>
-          <p>{t('legal')}</p>
+          <LegalInlineLinks linkClassName="hover:text-white" />
         </div>
       </div>
     </footer>

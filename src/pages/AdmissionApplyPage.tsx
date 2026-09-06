@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { legalTransComponents } from '@/components/legal/legalLinks';
 import { ArrowLeft, Check, CheckCircle2, Circle, Clock3, Loader2, School, Trash2, Replace } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1094,6 +1095,9 @@ const AdmissionApplyPage = () => {
                 {step === 6 && (
                   <div className="space-y-4">
                     <p className="text-sm leading-relaxed text-slate-600">{t('apply.submitHint')}</p>
+                    <p className="text-sm leading-relaxed text-slate-600">
+                      <Trans ns="admissions" i18nKey="apply.submitPrivacy" components={legalTransComponents()} />
+                    </p>
                   </div>
                 )}
 

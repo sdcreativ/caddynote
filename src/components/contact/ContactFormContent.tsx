@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { legalTransComponents } from '@/components/legal/legalLinks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -328,7 +329,9 @@ export function ContactFormContent() {
                 </div>
 
                 <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs leading-relaxed text-slate-600">{t('consent')}</p>
+                  <p className="text-xs leading-relaxed text-slate-600">
+                    <Trans ns="contact" i18nKey="consent" components={legalTransComponents()} />
+                  </p>
                   <Button
                     type="submit"
                     disabled={isSubmitting}

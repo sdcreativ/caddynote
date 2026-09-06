@@ -46,6 +46,7 @@ import admin from './locales/fr/admin.json';
 import notifications from './locales/fr/notifications.json';
 import guides from './locales/fr/guides.json';
 import superAdmin from './locales/fr/superAdmin.json';
+import legal from './locales/fr/legal.json';
 
 /**
  * NFR-009 — architecture i18n, français initial. Jusqu'ici aucune librairie
@@ -121,6 +122,7 @@ export const resources = {
     notifications,
     guides,
     superAdmin,
+    legal,
   },
 } as const;
 

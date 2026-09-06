@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { legalTransComponents } from '@/components/legal/legalLinks';
 import {
   HelpCircle,
   BookOpen,
@@ -129,6 +130,9 @@ export function HelpContent() {
           </Link>
         </div>
         <p className="mt-2 text-sm text-slate-500">{t('supportHint')}</p>
+        <p className="mt-4 text-sm text-slate-500">
+          <Trans ns="help" i18nKey="legalLinks" components={legalTransComponents()} />
+        </p>
       </section>
       </FadeIn>
     </div>

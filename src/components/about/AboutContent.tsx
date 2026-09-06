@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { legalTransComponents } from '@/components/legal/legalLinks';
 import {
   CheckCircle2,
   BarChart3,
@@ -241,6 +242,13 @@ export function AboutContent() {
                   </a>
                 ) : null}
               </div>
+              <p className="mt-4 text-sm text-white/80">
+                <Trans
+                  ns="about"
+                  i18nKey="legalLinks"
+                  components={legalTransComponents('font-semibold text-white underline-offset-4 hover:underline')}
+                />
+              </p>
             </section>
           </FadeIn>
         </div>

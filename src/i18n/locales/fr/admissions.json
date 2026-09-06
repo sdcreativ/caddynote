@@ -215,6 +215,7 @@
     "docAdded": "Pièce ajoutée",
     "docError": "Envoi de la pièce impossible.",
     "submitHint": "Vérifiez les informations puis soumettez. Les frais de dossier se règlent à l’étape suivante (Mobile Money / carte si configurés, ou confirmation par l’établissement).",
+    "submitPrivacy": "En soumettant, vous acceptez le traitement de vos données décrit dans la <privacy>politique de confidentialité</privacy>.",
     "submitting": "Envoi…",
     "submit": "Soumettre le dossier",
     "submitError": "Soumission impossible.",

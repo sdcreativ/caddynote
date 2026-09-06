@@ -12,7 +12,7 @@
  * Prérequis : frontend joignable (`npm run dev` ou `npm run preview`).
  */
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
@@ -24,6 +24,30 @@ const BASE = process.env.A11Y_BASE_URL || 'http://127.0.0.1:8080';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(root, 'a11y-output');
 
+async function resolveChromePath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  const candidates = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ];
+  const local = candidates.find((p) => existsSync(p));
+  if (local) return local;
+  try {
+    const bundled = await puppeteer.executablePath();
+    if (bundled && existsSync(bundled)) return bundled;
+  } catch {
+    /* cache Puppeteer vide */
+  }
+  return undefined;
+}
+
 const PAGES = [
   { id: 'home', path: '/' },
   { id: 'sign', path: '/sign' },
@@ -31,6 +55,8 @@ const PAGES = [
   { id: 'about', path: '/about' },
   { id: 'contact', path: '/contact' },
   { id: 'help', path: '/aide' },
+  { id: 'legal', path: '/mentions-legales' },
+  { id: 'privacy', path: '/confidentialite' },
   { id: 'forgot', path: '/forgot-password' },
   // Parcours public admissions (wizard + récupération) — contraste peint NFR-008
   { id: 'admissions', path: '/admissions' },
@@ -112,14 +138,22 @@ async function main() {
     process.exit(2);
   }
 
+  const executablePath = await resolveChromePath();
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    ...(executablePath ? { executablePath } : {}),
   });
+
+  const wanted = (process.env.A11Y_PAGES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const pages = wanted.length ? PAGES.filter((p) => wanted.includes(p.id)) : PAGES;
 
   const reports = [];
   try {
-    for (const spec of PAGES) {
+    for (const spec of pages) {
       process.stdout.write(`Audit ${spec.path} … `);
       const report = await auditPage(browser, spec);
       reports.push(report);

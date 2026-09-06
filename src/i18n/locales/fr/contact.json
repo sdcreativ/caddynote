@@ -34,7 +34,7 @@
   "subjectPlaceholder": "Ex. Offre Performance, demande de démo…",
   "message": "Message",
   "messagePlaceholder": "Présentez brièvement votre établissement et votre besoin…",
-  "consent": "En envoyant ce formulaire, vous acceptez d’être recontacté au sujet de CaddyNote.",
+  "consent": "En envoyant ce formulaire, vous acceptez d’être recontacté au sujet de CaddyNote. Consultez la <privacy>politique de confidentialité</privacy>.",
   "submit": "Envoyer le message",
   "submitting": "Envoi en cours…",
   "successTitle": "Message envoyé",

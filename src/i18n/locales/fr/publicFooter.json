@@ -12,8 +12,9 @@
     "guides": "Guides",
     "admissions": "Préinscription",
     "about": "À propos",
-    "contact": "Contact"
+    "contact": "Contact",
+    "legal": "Mentions légales",
+    "privacy": "Confidentialité"
   },
-  "copyright": "© {{year}} CaddyNote — La gestion scolaire, simplifiée",
-  "legal": "Mentions légales · Confidentialité"
+  "copyright": "© {{year}} CaddyNote — La gestion scolaire, simplifiée"
 }

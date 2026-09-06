@@ -57,4 +57,14 @@ describe('PublicFooter (UX-004)', () => {
     const results = await checkA11y(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('lie les mentions légales et la confidentialité', () => {
+    const { getAllByRole } = render(
+      <MemoryRouter>
+        <PublicFooter />
+      </MemoryRouter>
+    );
+    expect(getAllByRole('link', { name: 'Mentions légales' })[0]).toHaveAttribute('href', '/mentions-legales');
+    expect(getAllByRole('link', { name: 'Confidentialité' })[0]).toHaveAttribute('href', '/confidentialite');
+  });
 });

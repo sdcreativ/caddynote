@@ -63,5 +63,6 @@
   "moreBody": "Contact public pour les prospects, ou ticket Support si vous avez déjà un compte établissement.",
   "contactCta": "Formulaire contact",
   "supportCta": "Tickets Support (compte)",
-  "supportHint": "Après connexion : menu → Support"
+  "supportHint": "Après connexion : menu → Support",
+  "legalLinks": "Mentions légales et confidentialité : <notice>Mentions légales</notice> · <privacy>Confidentialité</privacy>."
 }

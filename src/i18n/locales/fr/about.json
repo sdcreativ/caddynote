@@ -49,5 +49,6 @@
   "techAfter": ".",
   "contactTitle": "Nous contacter",
   "contactBody": "Pour une question ou une démonstration, écrivez-nous.",
-  "contactCta": "Formulaire de contact"
+  "contactCta": "Formulaire de contact",
+  "legalLinks": "<notice>Mentions légales</notice> · <privacy>Confidentialité</privacy>"
 }

@@ -86,6 +86,8 @@ import AdmissionApplyPage from "./pages/AdmissionApplyPage";
 import AdmissionStatusPage from "./pages/AdmissionStatusPage";
 import AdmissionRecoverPage from "./pages/AdmissionRecoverPage";
 import AdmissionsAdminPage from "./pages/AdmissionsAdminPage";
+import LegalNoticePage from "@/pages/LegalNoticePage";
+import PrivacyPage from "@/pages/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +114,10 @@ function App() {
                 <Route path="/fonctionnalites/:slug" element={<FeatureDetailPage />} />
                 <Route path="/experiences/:slug" element={<ExperienceDetailPage />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/mentions-legales" element={<LegalNoticePage />} />
+                <Route path="/confidentialite" element={<PrivacyPage />} />
+                <Route path="/legal" element={<Navigate to="/mentions-legales" replace />} />
+                <Route path="/privacy" element={<Navigate to="/confidentialite" replace />} />
                 <Route path="/status" element={<StatusPage />} />
                 <Route path="/verify/document/:token" element={<DocumentVerifyPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />

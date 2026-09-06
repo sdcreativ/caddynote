@@ -45,6 +45,18 @@ export const PUBLIC_SEO_PAGES: SeoPage[] = [
       'Contactez l’équipe CaddyNote pour une démonstration, un devis ou un accompagnement de déploiement.',
   },
   {
+    path: '/mentions-legales',
+    title: 'Mentions légales — CaddyNote',
+    description:
+      'Éditeur, hébergement et conditions d’utilisation du site et de la plateforme CaddyNote.',
+  },
+  {
+    path: '/confidentialite',
+    title: 'Politique de confidentialité — CaddyNote',
+    description:
+      'Comment CaddyNote et les établissements traitent les données personnelles : finalités, droits et conservation.',
+  },
+  {
     path: '/signup',
     title: 'Essai gratuit 30 jours — Créer un compte CaddyNote',
     description:

@@ -1,0 +1,158 @@
+{
+  "updated": "Dernière mise à jour : 6 septembre 2026",
+  "legalNav": "Informations légales",
+  "links": {
+    "notice": "Mentions légales",
+    "privacy": "Confidentialité"
+  },
+  "notice": {
+    "eyebrow": "Informations légales",
+    "title": "Mentions légales",
+    "intro": "Ces mentions identifient l’éditeur de CaddyNote et les conditions d’utilisation du site public https://caddynote.com.",
+    "seeOther": "Le traitement des données personnelles est décrit dans la <privacy>politique de confidentialité</privacy>. Pour une question, utilisez la page <contact>Contact</contact>.",
+    "sections": [
+      {
+        "title": "Éditeur",
+        "body": [
+          "Le site et la plateforme CaddyNote sont édités par SDCREATIV, éditeur de logiciels de gestion scolaire.",
+          "Les coordonnées complémentaires de l’éditeur (forme juridique, siège, immatriculation) sont communiquées sur demande à contact@caddynote.com."
+        ]
+      },
+      {
+        "title": "Directeur de la publication",
+        "body": [
+          "Le directeur de la publication est le représentant légal de SDCREATIV."
+        ]
+      },
+      {
+        "title": "Hébergement",
+        "body": [
+          "La plateforme CaddyNote est hébergée sur une infrastructure cloud opérée pour le compte de SDCREATIV.",
+          "Pour toute question relative à l’hébergement, écrivez à contact@caddynote.com."
+        ]
+      },
+      {
+        "title": "Contact",
+        "body": [
+          "E-mail : contact@caddynote.com. Vous pouvez aussi utiliser le formulaire de contact du site."
+        ]
+      },
+      {
+        "title": "Propriété intellectuelle",
+        "body": [
+          "L’ensemble des contenus du site (textes, marques, logos, maquettes, interfaces) est protégé. Toute reproduction non autorisée est interdite, hors usage strictement privé et non commercial.",
+          "CaddyNote est une marque utilisée par SDCREATIV. Les marques de tiers (établissements, prestataires de paiement) restent la propriété de leurs titulaires."
+        ]
+      },
+      {
+        "title": "Responsabilité",
+        "body": [
+          "Les informations du site public sont fournies à titre informatif. SDCREATIV s’efforce de les tenir à jour, sans garantir l’absence d’erreur ou d’interruption.",
+          "L’usage de la plateforme par un établissement fait l’objet d’un contrat distinct. Les contenus saisis par un établissement (notes, absences, documents, messages) restent sous sa responsabilité."
+        ]
+      },
+      {
+        "title": "Droit applicable",
+        "body": [
+          "Les présentes mentions sont régies par le droit ivoirien. À défaut d’accord amiable, les tribunaux compétents d’Abidjan sont saisis."
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "eyebrow": "Protection des données",
+    "title": "Politique de confidentialité",
+    "intro": "Cette politique explique quelles données CaddyNote traite, pour quoi, et quels droits vous pouvez exercer. Elle s’applique au site public et à la plateforme.",
+    "seeOther": "L’identité de l’éditeur figure dans les <notice>mentions légales</notice>. Pour exercer un droit ou poser une question : <contact>Contact</contact> ou contact@caddynote.com.",
+    "sections": [
+      {
+        "title": "Qui est responsable ?",
+        "body": [
+          "Deux cas se distinguent.",
+          "Site public (formulaire de contact, pages marketing) : SDCREATIV est responsable du traitement.",
+          "Espace établissement (élèves, familles, notes, absences, finances, documents) : l’établissement est responsable du traitement. SDCREATIV agit alors comme sous-traitant, pour le compte de l’école, selon le contrat qui les lie."
+        ]
+      },
+      {
+        "title": "Données collectées",
+        "body": [
+          "Selon votre usage, CaddyNote peut traiter :"
+        ],
+        "items": [
+          "Coordonnées de contact (nom, e-mail, message, éventuellement téléphone ou WhatsApp)",
+          "Comptes utilisateurs créés par l’établissement (identité, rôle, identifiants)",
+          "Données scolaires (présences, notes, devoirs, documents, communications)",
+          "Dossiers de préinscription déposés via le site",
+          "Données de paiement (références, montants, statut) via les prestataires configurés, sans stocker le numéro complet d’une carte",
+          "Journaux techniques (connexion, sécurité, audit) nécessaires au fonctionnement du service"
+        ]
+      },
+      {
+        "title": "Finalités",
+        "body": [
+          "Les données servent à :"
+        ],
+        "items": [
+          "Répondre aux demandes commerciales ou de support",
+          "Fournir la gestion scolaire à l’établissement (présences, notes, familles, finances, documents)",
+          "Créer et sécuriser les comptes, y compris l’authentification renforcée",
+          "Envoyer les alertes choisies par l’établissement (e-mail, SMS, notification), selon les canaux activés",
+          "Traiter les paiements de scolarité ou de frais de dossier lorsque le module est configuré",
+          "Assurer la sécurité, prévenir les abus et respecter les obligations légales"
+        ]
+      },
+      {
+        "title": "Bases légales",
+        "body": [
+          "Selon le cas : exécution du contrat avec l’établissement, intérêt légitime (sécurité, amélioration du service), obligation légale, ou consentement (formulaire de contact, certains canaux d’alerte)."
+        ]
+      },
+      {
+        "title": "Destinataires",
+        "body": [
+          "Les données d’un établissement ne sont pas partagées avec un autre établissement. L’accès interne est limité par rôle (direction, enseignants, familles, etc.).",
+          "Des prestataires techniques peuvent être utilisés : hébergement, envoi d’e-mails ou de SMS, stockage de fichiers, paiement (Mobile Money, carte). Ils n’agissent que pour les finalités prévues et dans le cadre de leurs contrats."
+        ]
+      },
+      {
+        "title": "Durée de conservation",
+        "body": [
+          "Les messages du formulaire de contact sont conservés le temps nécessaire au suivi de la demande, puis archivés ou supprimés.",
+          "Les données d’un établissement suivent le contrat et la politique de rétention de l’école. Certaines traces de sécurité et d’audit sont conservées plus longtemps lorsque la loi ou la sécurité l’exigent."
+        ]
+      },
+      {
+        "title": "Vos droits",
+        "body": [
+          "Vous pouvez demander l’accès, la rectification, l’effacement, la limitation ou la portabilité de vos données, et vous opposer à certains traitements, dans les limites prévues par la loi n° 2013-450 relative à la protection des données à caractère personnel (Côte d’Ivoire) et, le cas échéant, le RGPD.",
+          "Si vos données sont gérées par une école (espace élève, parent ou personnel), adressez-vous d’abord à cet établissement. Vous pouvez aussi écrire à contact@caddynote.com. Une réclamation peut être formée auprès de l’ARTCI."
+        ]
+      },
+      {
+        "title": "Mineurs et familles",
+        "body": [
+          "CaddyNote est destiné aux établissements. Les comptes élèves et parents sont créés par l’école, pas par une inscription libre. Les responsables légaux exercent les droits des mineurs auprès de l’établissement, puis auprès de SDCREATIV si besoin."
+        ]
+      },
+      {
+        "title": "Cookies et traceurs",
+        "body": [
+          "Le site utilise des cookies ou stockages techniques nécessaires à la session, à la sécurité et au bon fonctionnement de l’interface. Aucun bandeau publicitaire tiers n’est déposé à ce jour.",
+          "Vous pouvez limiter les cookies via les réglages de votre navigateur ; certaines fonctions (connexion) peuvent alors être indisponibles."
+        ]
+      },
+      {
+        "title": "Sécurité",
+        "body": [
+          "CaddyNote applique un contrôle d’accès par rôle, une isolation entre établissements, des sessions protégées et un journal d’audit des actions sensibles. Aucune mesure ne peut garantir un risque zéro ; signalez tout incident à contact@caddynote.com."
+        ]
+      },
+      {
+        "title": "Modifications",
+        "body": [
+          "Cette politique peut être mise à jour. La date en tête de page fait foi. En cas de changement important, une information sera publiée sur le site ou transmise aux établissements."
+        ]
+      }
+    ]
+  }
+}

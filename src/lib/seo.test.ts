@@ -33,7 +33,7 @@ describe('SEO public (recette §6)', () => {
   });
 
   it('indexe les pages marketing clés', () => {
-    for (const path of ['/', '/about', '/contact', '/aide', '/signup', '/admissions']) {
+    for (const path of ['/', '/about', '/contact', '/aide', '/signup', '/admissions', '/mentions-legales', '/confidentialite']) {
       const page = PUBLIC_SEO_PAGES.find((p) => p.path === path);
       expect(page, path).toBeTruthy();
       expect(page!.noIndex).toBeFalsy();

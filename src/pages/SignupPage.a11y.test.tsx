@@ -19,6 +19,14 @@ describe('SignupPage — obtenir un compte (Pronote)', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /connecter/i }).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Adresse e-mail')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Mentions légales' })[0]).toHaveAttribute(
+      'href',
+      '/mentions-legales'
+    );
+    expect(screen.getAllByRole('link', { name: 'Confidentialité' })[0]).toHaveAttribute(
+      'href',
+      '/confidentialite'
+    );
 
     expect(await checkA11y(container)).toHaveNoViolations();
   });

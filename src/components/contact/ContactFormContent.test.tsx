@@ -53,6 +53,11 @@ describe('ContactFormContent (smoke)', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Envoyer le message/i }));
 
+    expect(screen.getByRole('link', { name: 'politique de confidentialité' })).toHaveAttribute(
+      'href',
+      '/confidentialite'
+    );
+
     await waitFor(() => {
       expect(post).toHaveBeenCalledWith(
         '/contact',
