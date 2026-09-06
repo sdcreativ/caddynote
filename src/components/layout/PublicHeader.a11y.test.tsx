@@ -66,5 +66,6 @@ describe('PublicFooter (UX-004)', () => {
     );
     expect(getAllByRole('link', { name: 'Mentions légales' })[0]).toHaveAttribute('href', '/mentions-legales');
     expect(getAllByRole('link', { name: 'Confidentialité' })[0]).toHaveAttribute('href', '/confidentialite');
+    expect(getAllByRole('link', { name: 'Obtenir un compte' })[0]).toHaveAttribute('href', '/signup');
   });
 });

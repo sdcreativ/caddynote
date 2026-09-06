@@ -35,6 +35,17 @@ describe('RouteSeo (OG / robots)', () => {
     expect(ogImage?.getAttribute('content') ?? '').toMatch(/og-caddynote/);
   });
 
+  it('présente /signup comme accès école, sans essai public', async () => {
+    renderAt('/signup');
+    await waitFor(() => {
+      expect(document.title).toMatch(/Obtenir un compte/);
+    });
+    expect(document.title).not.toMatch(/essai/i);
+    const desc = document.querySelector('meta[name="description"]')?.getAttribute('content') ?? '';
+    expect(desc).not.toMatch(/essai gratuit/i);
+    expect(desc).toMatch(/établissement/i);
+  });
+
   it('noindex les zones applicatives', async () => {
     renderAt('/dashboard');
     await waitFor(() => {

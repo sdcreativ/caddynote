@@ -125,7 +125,7 @@
     "unsupported": "Votre navigateur ne prend pas en charge la lecture vidéo.",
     "meta": "Durée ≈ 17 s · Sans son",
     "seeDirections": "Voir l'expérience Directions",
-    "trial": "Essai gratuit"
+    "trial": "Obtenir un compte"
   },
   "testimonials": {
     "aria": "Témoignages clients",
@@ -140,14 +140,14 @@
   "featurePage": {
     "back": "Toutes les fonctionnalités",
     "demo": "Demander une démonstration",
-    "signup": "Créer un compte",
+    "signup": "Obtenir un compte",
     "more": "Continuer la découverte"
   },
   "experiencePage": {
     "back": "Une expérience pour chacun",
     "eyebrow": "Expérience {{label}}",
     "demo": "Demander une démonstration",
-    "signup": "Créer un compte",
+    "signup": "Obtenir un compte",
     "gains": "Ce que vous gagnez",
     "designedFor": "Une expérience conçue pour {{label}}",
     "others": "Autres expériences",

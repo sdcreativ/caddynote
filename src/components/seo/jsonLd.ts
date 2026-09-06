@@ -26,9 +26,9 @@ export function buildHomeJsonLd() {
         'Gestion scolaire : présences, notes, paiements Mobile Money, documents et communication familles.',
       offers: {
         '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'EUR',
-        description: 'Démonstration et devis sur demande',
+        priceCurrency: 'XOF',
+        description: 'Tarification sur devis pour les établissements scolaires',
+        url: absoluteUrl('/contact'),
       },
       inLanguage: 'fr',
     },
@@ -55,38 +55,22 @@ export function buildBreadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
-/** JSON-LD page inscription / essai gratuit. */
+/** JSON-LD page « obtenir un compte » (pas d’inscription libre). */
 export function buildSignupJsonLd() {
   const url = absoluteUrl('/signup');
   return [
     buildBreadcrumbJsonLd([
       { name: 'Accueil', path: '/' },
-      { name: 'Créer un compte', path: '/signup' },
+      { name: 'Obtenir un compte', path: '/signup' },
     ]),
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: 'Essai gratuit 30 jours : Créer un compte CaddyNote',
+      name: 'Obtenir un compte CaddyNote',
       description:
-        'Créez votre compte CaddyNote et profitez de 30 jours d’essai gratuit sans carte bancaire.',
+        'Les comptes CaddyNote sont créés par l’établissement : espaces élève et parent séparés, identifiants remis par la direction.',
       url,
       inLanguage: 'fr',
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'CaddyNote',
-      applicationCategory: 'EducationalApplication',
-      operatingSystem: 'Web',
-      url: getSiteUrl(),
-      offers: {
-        '@type': 'Offer',
-        name: 'Essai gratuit 30 jours',
-        price: '0',
-        priceCurrency: 'XOF',
-        description: 'Accès complet pendant 30 jours, sans engagement ni carte bancaire.',
-        url,
-      },
     },
   ];
 }

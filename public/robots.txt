@@ -39,12 +39,4 @@ Disallow: /sign
 Disallow: /forgot-password
 Disallow: /reset-password
 
-User-agent: Googlebot
-Allow: /
-Disallow: /dashboard
-Disallow: /sign
-Disallow: /settings
-Disallow: /profile
-Disallow: /super-admin
-
 Sitemap: https://caddynote.com/sitemap.xml

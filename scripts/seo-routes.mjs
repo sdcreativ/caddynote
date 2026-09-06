@@ -1,7 +1,20 @@
 /**
  * Routes marketing indexables : partagé entre seo-build et prerender.
  */
-export const SITE = (process.env.VITE_SITE_URL || 'https://caddynote.com').replace(/\/$/, '');
+function normalizePublicOrigin(raw) {
+  const trimmed = String(raw).trim().replace(/\/$/, '');
+  try {
+    const withProtocol = /^[a-zA-Z][a-zA-Z+\-.]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = new URL(withProtocol);
+    const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+    if (host === 'caddynote.com') return 'https://caddynote.com';
+    return `${url.protocol}//${url.host}`.replace(/\/$/, '');
+  } catch {
+    return trimmed;
+  }
+}
+
+export const SITE = normalizePublicOrigin(process.env.VITE_SITE_URL || 'https://caddynote.com');
 export const OG_IMAGE = `${SITE}/og-caddynote.jpg`;
 
 const FEATURE_SLUGS = ['presences', 'vie-scolaire', 'notes', 'paiements', 'familles', 'pilotage'];
@@ -38,9 +51,15 @@ export const SEO_PAGES = [
   },
   {
     path: '/signup',
-    title: 'Essai gratuit 30 jours : Créer un compte CaddyNote',
+    title: 'Obtenir un compte CaddyNote',
     description:
-      'Créez votre compte CaddyNote et profitez de 30 jours d’essai gratuit : gestion scolaire, présences, notes et familles. Sans carte bancaire, sans engagement.',
+      'Les comptes CaddyNote sont créés par l’établissement : espaces élève et parent séparés, identifiants remis par la direction. Pas d’inscription libre en ligne.',
+  },
+  {
+    path: '/espace-parent',
+    title: 'Espace parent : CaddyNote',
+    description:
+      'Suivez notes, absences et documents de vos enfants dans un espace parent CaddyNote, avec un compte fourni par l’école.',
   },
   {
     path: '/aide',
@@ -106,9 +125,9 @@ export const SEO_PAGES = [
   }),
   ...EXPERIENCE_SLUGS.map((slug) => {
     const titles = {
-      directions: 'Directions : vision complète : CaddyNote',
-      enseignants: 'Enseignants : appel et suivi : CaddyNote',
-      parents: 'Parents : tout savoir au bon moment : CaddyNote',
+      directions: 'Directions · Décidez avec une vision complète · CaddyNote',
+      enseignants: 'Enseignants · L’appel et le suivi, sans friction · CaddyNote',
+      parents: 'Parents · Tout savoir, au bon moment · CaddyNote',
     };
     const descriptions = {
       directions:

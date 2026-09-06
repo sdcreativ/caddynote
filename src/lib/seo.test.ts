@@ -1,12 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   absoluteUrl,
   DEFAULT_SEO,
   PUBLIC_SEO_PAGES,
   getSiteUrl,
+  normalizePublicOrigin,
 } from '@/lib/seo';
 import { FEATURES } from '@/data/features';
 import { EXPERIENCES } from '@/data/experiences';
+import { buildHomeJsonLd, buildSignupJsonLd } from '@/components/seo/jsonLd';
 
 /**
  * §6 P2 — recette SEO / OG des pages clés (contrat RouteSeo + sitemap).
@@ -33,7 +37,17 @@ describe('SEO public (recette §6)', () => {
   });
 
   it('indexe les pages marketing clés', () => {
-    for (const path of ['/', '/about', '/contact', '/aide', '/signup', '/admissions', '/mentions-legales', '/confidentialite']) {
+    for (const path of [
+      '/',
+      '/about',
+      '/contact',
+      '/aide',
+      '/signup',
+      '/espace-parent',
+      '/admissions',
+      '/mentions-legales',
+      '/confidentialite',
+    ]) {
       const page = PUBLIC_SEO_PAGES.find((p) => p.path === path);
       expect(page, path).toBeTruthy();
       expect(page!.noIndex).toBeFalsy();
@@ -53,5 +67,41 @@ describe('SEO public (recette §6)', () => {
     expect(getSiteUrl()).toMatch(/^https?:\/\//);
     expect(absoluteUrl('/about')).toMatch(/\/about$/);
     expect(absoluteUrl('/')).not.toMatch(/\/$/); // base sans slash final répété
+  });
+
+  it('force HTTPS et l’apex pour caddynote.com, sans toucher localhost / IP', () => {
+    expect(normalizePublicOrigin('http://caddynote.com')).toBe('https://caddynote.com');
+    expect(normalizePublicOrigin('https://www.caddynote.com/')).toBe('https://caddynote.com');
+    expect(normalizePublicOrigin('caddynote.com')).toBe('https://caddynote.com');
+    expect(normalizePublicOrigin('http://88.96.41.213:8080')).toBe('http://88.96.41.213:8080');
+    expect(normalizePublicOrigin('http://localhost:8080')).toBe('http://localhost:8080');
+  });
+
+  it('décrit /signup comme accès école, sans essai public', () => {
+    const page = PUBLIC_SEO_PAGES.find((p) => p.path === '/signup');
+    expect(page?.title).toMatch(/Obtenir un compte/);
+    expect(page?.title).not.toMatch(/essai/i);
+    expect(page?.description).toMatch(/établissement/i);
+    expect(page?.description).not.toMatch(/essai gratuit/i);
+    const ld = JSON.stringify(buildSignupJsonLd());
+    expect(ld).not.toMatch(/essai gratuit/i);
+    expect(ld).toMatch(/Obtenir un compte/);
+  });
+
+  it('n’annonce pas un prix 0 EUR sur la home', () => {
+    const offer = buildHomeJsonLd().find((item) => item['@type'] === 'SoftwareApplication')?.offers as {
+      price?: string;
+      priceCurrency?: string;
+    };
+    expect(offer?.price).toBeUndefined();
+    expect(offer?.priceCurrency).toBe('XOF');
+  });
+
+  it('applique les Disallow applicatifs à tous les robots, sans override Googlebot', () => {
+    const robots = readFileSync(resolve(process.cwd(), 'public/robots.txt'), 'utf8');
+    expect(robots).not.toMatch(/User-agent:\s*Googlebot/i);
+    expect(robots).toMatch(/Disallow: \/students/);
+    expect(robots).toMatch(/Disallow: \/finance/);
+    expect(robots).toMatch(/Sitemap: https:\/\/caddynote\.com\/sitemap\.xml/);
   });
 });
