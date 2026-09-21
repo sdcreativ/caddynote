@@ -15,6 +15,7 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(overlay).not.toMatch(/^\s+ports:/m);
     expect(overlay).toMatch(/WEB_PORT=127\.0\.0\.1:18080/);
     expect(overlay).toMatch(/CADDYNOTE_DEPLOYMENT: \$\{CADDYNOTE_DEPLOYMENT:-production\}/);
+    expect(overlay).toMatch(/CLAMAV_HOST: \$\{CLAMAV_HOST:-clamav\}/);
     expect(overlay).toMatch(/name: sdcreativ_sdcreativ/);
     expect(overlay).toMatch(/caddynote-net/);
   });
