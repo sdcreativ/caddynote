@@ -69,10 +69,9 @@ services:
       # Origine du frontend (navigateur). Surchargeable via `.env` racine
       # (staging Oracle : http://IP:8080). Sinon défaut localhost.
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
-      # Antivirus optionnel : profil `antivirus` (pas d’image ARM64 officielle).
-      # Sans profil : laisser vide / server/.env — scan désactivé (DOC-005).
-      CLAMAV_HOST: ${CLAMAV_HOST:-}
-      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      # Antivirus : le profil `antivirus` démarre le service `clamav`.
+      # L’hôte se lit dans `server/.env` (env_file). Ne pas interpoler
+      # `CLAMAV_HOST: ${CLAMAV_HOST:-}` ici : une valeur vide écrase env_file.
       # `all` par défaut : un process (HTTP + jobs). Pour séparer :
       # CADDYNOTE_PROCESS_ROLE=api et `docker compose --profile split up`.
       CADDYNOTE_PROCESS_ROLE: ${CADDYNOTE_PROCESS_ROLE:-all}
@@ -115,8 +114,6 @@ services:
       - ./server/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-caddynote}:${POSTGRES_PASSWORD:-caddynote}@caddynote-db:5432/${POSTGRES_DB:-caddynote}
-      CLAMAV_HOST: ${CLAMAV_HOST:-}
-      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       CADDYNOTE_PROCESS_ROLE: worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -140,7 +137,8 @@ services:
   # --- ClamAV (DOC-005), optionnel ---
   # Pas d’image linux/arm64 officielle → inactif par défaut (Oracle A1, Apple Silicon
   # sans emulation). Activation x86_64 :
-  #   CLAMAV_HOST=clamav docker compose --profile antivirus up -d
+  #   docker compose --profile antivirus up -d
+  #   et CLAMAV_HOST=clamav dans server/.env
   clamav:
     profiles: ["antivirus"]
     image: clamav/clamav:1.4

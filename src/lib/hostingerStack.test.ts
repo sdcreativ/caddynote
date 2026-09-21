@@ -38,7 +38,33 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(edgeAcme).toMatch(/server_name caddynote\.sdcreativ\.com/);
     expect(edgeAcme).toMatch(/root \/var\/www\/certbot/);
     expect(edgeTls).toMatch(/proxy_pass http:\/\/\$upstream_caddynote:80/);
+    expect(edgeTls).toMatch(/Strict-Transport-Security/);
+    expect(edgeTls).toMatch(/max-age=15552000/);
     expect(edgeTls).not.toMatch(/max-age=31536000/);
+    expect(edgeTls).not.toMatch(/Strict-Transport-Security[^\n]*preload/);
+    expect(edgeTls).not.toMatch(/Strict-Transport-Security[^\n]*includeSubDomains/);
+    expect(edgeTls).toMatch(/Content-Security-Policy/);
+    expect(edgeTls).toMatch(/fonts\.googleapis\.com/);
+    const webNginx = readFileSync(resolve(process.cwd(), 'nginx/nginx.conf'), 'utf8');
+    expect(webNginx).toMatch(/add_header Content-Security-Policy/);
+    expect(webNginx).not.toMatch(/# add_header Content-Security-Policy/);
+    expect(webNginx).toMatch(/fonts\.googleapis\.com/);
+    expect(webNginx).not.toMatch(/Strict-Transport-Security/);
+  });
+
+  it('déploie Hostinger depuis CI, pas Oracle A1', () => {
+    const ci = readFileSync(resolve(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    expect(ci).toMatch(/deploy_hostinger_self_hosted/);
+    expect(ci).toMatch(/runs-on: \[self-hosted, linux, X64, hostinger\]/);
+    expect(ci).toMatch(/deploy-hostinger-rebuild\.sh/);
+    expect(ci).not.toMatch(/deploy_staging_self_hosted/);
+    expect(ci).not.toMatch(/ARM64, staging/);
+    const script = readFileSync(resolve(process.cwd(), 'scripts/deploy-hostinger-rebuild.sh'), 'utf8');
+    expect(script).toMatch(/docker-compose\.hostinger\.yml/);
+    expect(script).toMatch(/--profile antivirus/);
+    expect(script).toMatch(/127\.0\.0\.1:14000\/health/);
+    expect(script).toMatch(/\/var\/www\/caddynote/);
+    expect(script).not.toMatch(/docker-compose\.staging\.yml/);
   });
 
   it('documente dump/restore et TLS sans secrets', () => {
