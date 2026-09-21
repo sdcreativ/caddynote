@@ -47,7 +47,7 @@ describe('sanitizeContact', () => {
   it('accepte e-mail, téléphone et WhatsApp', () => {
     expect(
       sanitizeContact({
-        email: 'contact@caddynote.com',
+        email: 'contact@caddynote.sdcreativ.com',
         phone: '+225 01 02 03 04 05',
         whatsapp: '+2250102030405',
       }).ok

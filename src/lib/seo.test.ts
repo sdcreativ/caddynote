@@ -69,12 +69,12 @@ describe('SEO public (recette §6)', () => {
     expect(absoluteUrl('/')).not.toMatch(/\/$/); // base sans slash final répété
   });
 
-  it('force HTTPS et l’apex pour caddynote.com, sans toucher localhost / IP', () => {
-    expect(normalizePublicOrigin('http://caddynote.com')).toBe('https://caddynote.com');
-    expect(normalizePublicOrigin('https://www.caddynote.com/')).toBe('https://caddynote.com');
-    expect(normalizePublicOrigin('caddynote.com')).toBe('https://caddynote.com');
+  it('force HTTPS et caddynote.sdcreativ.com, sans toucher localhost / IP', () => {
     expect(normalizePublicOrigin('http://caddynote.sdcreativ.com')).toBe('https://caddynote.sdcreativ.com');
     expect(normalizePublicOrigin('https://caddynote.sdcreativ.com/')).toBe('https://caddynote.sdcreativ.com');
+    expect(normalizePublicOrigin('caddynote.sdcreativ.com')).toBe('https://caddynote.sdcreativ.com');
+    expect(normalizePublicOrigin('http://caddynote.com')).toBe('https://caddynote.sdcreativ.com');
+    expect(normalizePublicOrigin('https://www.caddynote.com/')).toBe('https://caddynote.sdcreativ.com');
     expect(normalizePublicOrigin('http://88.96.41.213:8080')).toBe('http://88.96.41.213:8080');
     expect(normalizePublicOrigin('http://localhost:8080')).toBe('http://localhost:8080');
   });
@@ -108,6 +108,6 @@ describe('SEO public (recette §6)', () => {
     const sitemap = readFileSync(resolve(process.cwd(), 'public/sitemap.xml'), 'utf8');
     expect(sitemap).toMatch(/https:\/\/caddynote\.sdcreativ\.com\//);
     expect(sitemap).toMatch(/\/espace-parent/);
-    expect(sitemap).not.toMatch(/http:\/\/caddynote\.com/);
+    expect(sitemap).not.toMatch(/https?:\/\/caddynote\.com/);
   });
 });

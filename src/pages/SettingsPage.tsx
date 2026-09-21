@@ -41,7 +41,7 @@ const SettingsPage = () => {
   // États pour les paramètres
   const [systemSettings, setSystemSettings] = useState({
     appName: 'CaddyNote',
-    supportEmail: 'support@caddynote.com',
+    supportEmail: 'support@caddynote.sdcreativ.com',
     maintenanceMode: false,
     maxInstitutions: 100,
     maxUsersPerInstitution: 10000

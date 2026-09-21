@@ -8,7 +8,7 @@ vi.mock('@/lib/apiClient', () => ({
     post: vi.fn(),
     get: vi.fn().mockResolvedValue({
       testimonials: [],
-      contact: { email: 'contact@caddynote.com', phone: '', whatsapp: '' },
+      contact: { email: 'contact@caddynote.sdcreativ.com', phone: '', whatsapp: '' },
       stats: { schools: null, students: null },
       faq: [],
     }),

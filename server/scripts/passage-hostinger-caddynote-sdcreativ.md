@@ -9,7 +9,7 @@
 Guides liés :
 
 - Staging Oracle : [`staging-deploy-checklist.md`](./staging-deploy-checklist.md)
-- Prod `caddynote.com` (plus tard) : [`passage-prod-caddynote-com.md`](./passage-prod-caddynote-com.md)
+- Prod `caddynote.sdcreativ.com` : [`passage-prod-caddynote-com.md`](./passage-prod-caddynote-com.md)
 - Overlay Compose : [`../../docker-compose.hostinger.yml`](../../docker-compose.hostinger.yml)
 - Vhost Nginx hôte : [`../../nginx/hostinger-caddynote.sdcreativ.com.conf`](../../nginx/hostinger-caddynote.sdcreativ.com.conf)
 - Block Caddy hôte : [`../../nginx/Caddyfile.hostinger`](../../nginx/Caddyfile.hostinger)
@@ -170,7 +170,27 @@ docker compose -f docker-compose.yml -f docker-compose.hostinger.yml exec -T cad
 
 ## 5. TLS — un vhost seulement
 
-### Nginx (hôte)
+Sur ce VPS, **80/443** = conteneur `sdcreativ-nginx-1` (pas Nginx hôte).
+Ajouter des fichiers dans `docker/nginx/conf.d/`, ne **pas** modifier `sdcreativ.conf` ni `kodiva-*.conf`.
+
+```bash
+# HTTP ACME d’abord (certificat pas encore là)
+sudo cp /var/www/caddynote/nginx/sdcreativ-edge-caddynote-acme.conf \
+  /var/www/sdcreativ/docker/nginx/conf.d/caddynote-acme.conf
+docker exec sdcreativ-nginx-1 nginx -t && docker exec sdcreativ-nginx-1 nginx -s reload
+
+cd /var/www/sdcreativ
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod \
+  run --rm --entrypoint certbot certbot certonly \
+  --webroot -w /var/www/certbot -d caddynote.sdcreativ.com \
+  --non-interactive --agree-tos
+
+sudo cp /var/www/caddynote/nginx/sdcreativ-edge-caddynote.conf \
+  /var/www/sdcreativ/docker/nginx/conf.d/caddynote.conf
+docker exec sdcreativ-nginx-1 nginx -t && docker exec sdcreativ-nginx-1 nginx -s reload
+```
+
+### Nginx (hôte) — seulement si 80/443 n’est pas déjà Docker
 
 ```bash
 sudo cp /var/www/caddynote/nginx/hostinger-caddynote.sdcreativ.com.conf \
@@ -214,4 +234,3 @@ Ajouter le block de [`nginx/Caddyfile.hostinger`](../../nginx/Caddyfile.hostinge
 
 - GitHub Actions `deploy-staging` : toujours Oracle
 - Extinction Oracle
-- Bascule `caddynote.com`

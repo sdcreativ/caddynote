@@ -121,7 +121,7 @@ export class StrkSettingsService {
     const settings = await this.getSettingsByCategory('system', user_id);
     return {
       appName: settings.appName ?? 'CaddyNote',
-      supportEmail: settings.supportEmail ?? 'support@caddynote.com',
+      supportEmail: settings.supportEmail ?? 'support@caddynote.sdcreativ.com',
       maintenanceMode: settings.maintenanceMode ?? false,
       maxInstitutions: settings.maxInstitutions ?? 100,
       maxUsersPerInstitution: settings.maxUsersPerInstitution ?? 10000

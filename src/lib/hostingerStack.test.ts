@@ -15,6 +15,8 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(overlay).not.toMatch(/^\s+ports:/m);
     expect(overlay).toMatch(/WEB_PORT=127\.0\.0\.1:18080/);
     expect(overlay).toMatch(/CADDYNOTE_DEPLOYMENT: \$\{CADDYNOTE_DEPLOYMENT:-production\}/);
+    expect(overlay).toMatch(/name: sdcreativ_sdcreativ/);
+    expect(overlay).toMatch(/caddynote-net/);
   });
 
   it('fournit un vhost hôte Nginx et un block Caddy pour le sous-domaine', () => {
@@ -28,6 +30,15 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(nginx).toMatch(/proxy_pass http:\/\/127\.0\.0\.1:18080/);
     expect(caddy).toMatch(/caddynote\.sdcreativ\.com/);
     expect(caddy).toMatch(/reverse_proxy 127\.0\.0\.1:18080/);
+    const edgeAcme = readFileSync(
+      resolve(process.cwd(), 'nginx/sdcreativ-edge-caddynote-acme.conf'),
+      'utf8'
+    );
+    const edgeTls = readFileSync(resolve(process.cwd(), 'nginx/sdcreativ-edge-caddynote.conf'), 'utf8');
+    expect(edgeAcme).toMatch(/server_name caddynote\.sdcreativ\.com/);
+    expect(edgeAcme).toMatch(/root \/var\/www\/certbot/);
+    expect(edgeTls).toMatch(/proxy_pass http:\/\/\$upstream_caddynote:80/);
+    expect(edgeTls).not.toMatch(/max-age=31536000/);
   });
 
   it('documente dump/restore et TLS sans secrets', () => {

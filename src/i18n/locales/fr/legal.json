@@ -8,14 +8,14 @@
   "notice": {
     "eyebrow": "Informations légales",
     "title": "Mentions légales",
-    "intro": "Ces mentions identifient l’éditeur de CaddyNote et les conditions d’utilisation du site public https://caddynote.com.",
+    "intro": "Ces mentions identifient l’éditeur de CaddyNote et les conditions d’utilisation du site public https://caddynote.sdcreativ.com.",
     "seeOther": "Le traitement des données personnelles est décrit dans la <privacy>politique de confidentialité</privacy>. Pour une question, utilisez la page <contact>Contact</contact>.",
     "sections": [
       {
         "title": "Éditeur",
         "body": [
           "Le site et la plateforme CaddyNote sont édités par SDCREATIV, éditeur de logiciels de gestion scolaire.",
-          "Les coordonnées complémentaires de l’éditeur (forme juridique, siège, immatriculation) sont communiquées sur demande à contact@caddynote.com."
+          "Les coordonnées complémentaires de l’éditeur (forme juridique, siège, immatriculation) sont communiquées sur demande à contact@caddynote.sdcreativ.com."
         ]
       },
       {
@@ -28,13 +28,13 @@
         "title": "Hébergement",
         "body": [
           "La plateforme CaddyNote est hébergée sur une infrastructure cloud opérée pour le compte de SDCREATIV.",
-          "Pour toute question relative à l’hébergement, écrivez à contact@caddynote.com."
+          "Pour toute question relative à l’hébergement, écrivez à contact@caddynote.sdcreativ.com."
         ]
       },
       {
         "title": "Contact",
         "body": [
-          "E-mail : contact@caddynote.com. Vous pouvez aussi utiliser le formulaire de contact du site."
+          "E-mail : contact@caddynote.sdcreativ.com. Vous pouvez aussi utiliser le formulaire de contact du site."
         ]
       },
       {
@@ -63,7 +63,7 @@
     "eyebrow": "Protection des données",
     "title": "Politique de confidentialité",
     "intro": "Cette politique explique quelles données CaddyNote traite, pour quoi, et quels droits vous pouvez exercer. Elle s’applique au site public et à la plateforme.",
-    "seeOther": "L’identité de l’éditeur figure dans les <notice>mentions légales</notice>. Pour exercer un droit ou poser une question : <contact>Contact</contact> ou contact@caddynote.com.",
+    "seeOther": "L’identité de l’éditeur figure dans les <notice>mentions légales</notice>. Pour exercer un droit ou poser une question : <contact>Contact</contact> ou contact@caddynote.sdcreativ.com.",
     "sections": [
       {
         "title": "Qui est responsable ?",
@@ -125,7 +125,7 @@
         "title": "Vos droits",
         "body": [
           "Vous pouvez demander l’accès, la rectification, l’effacement, la limitation ou la portabilité de vos données, et vous opposer à certains traitements, dans les limites prévues par la loi n° 2013-450 relative à la protection des données à caractère personnel (Côte d’Ivoire) et, le cas échéant, le RGPD.",
-          "Si vos données sont gérées par une école (espace élève, parent ou personnel), adressez-vous d’abord à cet établissement. Vous pouvez aussi écrire à contact@caddynote.com. Une réclamation peut être formée auprès de l’ARTCI."
+          "Si vos données sont gérées par une école (espace élève, parent ou personnel), adressez-vous d’abord à cet établissement. Vous pouvez aussi écrire à contact@caddynote.sdcreativ.com. Une réclamation peut être formée auprès de l’ARTCI."
         ]
       },
       {
@@ -144,7 +144,7 @@
       {
         "title": "Sécurité",
         "body": [
-          "CaddyNote applique un contrôle d’accès par rôle, une isolation entre établissements, des sessions protégées et un journal d’audit des actions sensibles. Aucune mesure ne peut garantir un risque zéro ; signalez tout incident à contact@caddynote.com."
+          "CaddyNote applique un contrôle d’accès par rôle, une isolation entre établissements, des sessions protégées et un journal d’audit des actions sensibles. Aucune mesure ne peut garantir un risque zéro ; signalez tout incident à contact@caddynote.sdcreativ.com."
         ]
       },
       {
