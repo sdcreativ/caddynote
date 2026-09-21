@@ -181,13 +181,10 @@ curl -sS "http://IP_PUBLIQUE:4000/health"
 
 ---
 
-## 8b. Suivant — HTTPS / domaine (hors scope code actuel)
+## 8b. Suivant — HTTPS / domaine
 
-Chantier ops séparé après durcissement chiffrement / antivirus / JWT :
-
-- [ ] Domaine + Caddy (ou équivalent) + Let’s Encrypt
-- [ ] `APP_URL` / `API_URL` / `CORS_ORIGIN` / `VITE_*` en `https://…`
-- [ ] Security List + iptables `80`/`443` ; retirer l’exposition HTTP nu `8080`/`4000` si possible
+Plan détaillé (cases ouvertes) : [`passage-prod-caddynote-com.md`](./passage-prod-caddynote-com.md)  
+(`caddynote.com` déjà réservé). Copie locale possible sous `docs/PASSAGE_PROD_CADDYNOTE_COM.md`.
 
 ---
 
