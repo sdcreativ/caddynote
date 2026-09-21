@@ -13,6 +13,9 @@
  *   RECETTE_WEB_URL   (défaut http://127.0.0.1:8080) — smoke UI optionnel
  *   RECETTE_SKIP_LOTS=lot3,lot6  — sauter des lots
  *   RECETTE_WRITE_PV=0           — ne pas écrire le PV sur disque
+ *
+ * Recette 1 école sur le domaine public (HSTS / 4 rôles) :
+ *   cd server && npm run recette:https
  */
 import 'dotenv/config';
 import { getRecetteLogin, getRecettePassword, getRecetteEmail } from './recetteCredentials.js';
@@ -58,18 +61,25 @@ const LOTS: { lot: string; script: string; label: string }[] = [
 /** Parcours UI à cocher manuellement sur le pilote (NFR-A + smoke métier). */
 const UI_CHECKS: UiCheck[] = [
   {
+    id: 'UI-HTTPS-1',
+    role: 'tous',
+    path: 'https://caddynote.sdcreativ.com/sign',
+    action: 'Ouvrir la page de connexion en HTTPS (cadenas)',
+    expected: 'HSTS 15552000, pas de mixed content, formulaire /sign utilisable',
+  },
+  {
     id: 'UI-DIR-1',
     role: 'direction',
     path: '/sign → /dashboard',
-    action: 'Connexion direction@… puis tableau de bord',
+    action: 'Connexion direction (RECETTE_SCHOOL_ADMIN_EMAIL) puis tableau de bord',
     expected: 'Shell établissement, KPIs visibles, pas d’erreur console bloquante',
   },
   {
     id: 'UI-DIR-2',
     role: 'direction',
     path: '/students',
-    action: 'Ouvrir la liste élèves, fiche Léa Koné',
-    expected: 'Données réelles seed, onglet Parcours / santé accessibles',
+    action: 'Ouvrir la liste élèves, ouvrir une fiche réelle de l’école',
+    expected: 'Données de l’établissement, onglet Parcours / santé accessibles',
   },
   {
     id: 'UI-DIR-3',
@@ -97,14 +107,14 @@ const UI_CHECKS: UiCheck[] = [
     role: 'élève',
     path: '/my-courses',
     action: 'Voir Mes cours',
-    expected: 'Mathématiques / Français (seed), pas de maquette figée',
+    expected: 'Cours de l’élève, pas de maquette figée',
   },
   {
     id: 'UI-ELV-2',
     role: 'élève',
     path: '/my-grades',
     action: 'Voir Mes notes',
-    expected: 'Note publiée seed visible (pas de mock), empty state si aucune',
+    expected: 'Notes publiées visibles (pas de mock), empty state si aucune',
   },
   {
     id: 'UI-ELV-3',
@@ -118,14 +128,14 @@ const UI_CHECKS: UiCheck[] = [
     role: 'direction',
     path: '/absences',
     action: 'Ouvrir la liste absences établissement',
-    expected: 'Au moins l’absence démo Léa (pas empty state trompeur)',
+    expected: 'Absences réelles de l’école (pas empty state trompeur si données)',
   },
   {
     id: 'UI-PAR-1',
     role: 'parent',
     path: '/my-children',
     action: 'Ouvrir Mes enfants',
-    expected: 'Léa + Noah ; notes Noah masquées si droit absent',
+    expected: 'Enfants liés au compte ; notes masquées si le droit est absent',
   },
   {
     id: 'UI-A11Y-1',

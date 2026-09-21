@@ -29,6 +29,8 @@ import { useConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Settings, Wrench, Ban, Flag, Megaphone, Handshake, Plus, X, Quote, Phone, BarChart3, HelpCircle } from 'lucide-react';
 import { currentSchoolYear } from '@/lib/schoolYear';
 import { Textarea } from '@/components/ui/textarea';
+import { LEGAL_FORMS, PUBLIC_HOSTING } from '@/lib/publicLegal';
+import { EMPTY_PUBLIC_CONTACT } from '@/lib/publicVitrine';
 
 const DEFAULT_PLATFORM_KEYS = [
   'finance',
@@ -580,7 +582,18 @@ const PartnersPanel = () => {
 
 type VitrinePayload = {
   testimonials: { quote: string; name: string; role: string; place: string }[];
-  contact: { email: string; phone: string; whatsapp: string };
+  contact: {
+    email: string;
+    phone: string;
+    whatsapp: string;
+    companyName: string;
+    legalForm: string;
+    shareCapital: string;
+    registeredAddress: string;
+    rccm: string;
+    ncc: string;
+  };
+  hosting?: { name: string; legalName: string; address: string };
   stats: { schools: number | null; students: number | null };
   faq: { q: string; a: string }[];
 };
@@ -699,7 +712,7 @@ const TestimonialsPanel = () => {
 
 const PublicContactPanel = () => {
   const { toast } = useToast();
-  const [contact, setContact] = useState({ email: 'contact@caddynote.sdcreativ.com', phone: '', whatsapp: '' });
+  const [contact, setContact] = useState({ ...EMPTY_PUBLIC_CONTACT });
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -707,7 +720,7 @@ const PublicContactPanel = () => {
     void (async () => {
       try {
         const res = await loadVitrine();
-        setContact(res.contact);
+        setContact({ ...EMPTY_PUBLIC_CONTACT, ...res.contact });
       } catch {
         /* first time */
       }
@@ -719,7 +732,7 @@ const PublicContactPanel = () => {
     setBusy(true);
     try {
       const res = await apiClient.put<VitrinePayload['contact']>('/admin/vitrine/contact', contact);
-      setContact(res);
+      setContact({ ...EMPTY_PUBLIC_CONTACT, ...res });
       toast({ title: 'Coordonnées enregistrées' });
     } catch (e) {
       toast({
@@ -732,6 +745,9 @@ const PublicContactPanel = () => {
     }
   };
 
+  const setField = (key: keyof typeof contact) => (event: { target: { value: string } }) =>
+    setContact((current) => ({ ...current, [key]: event.target.value }));
+
   return (
     <Card>
       <CardHeader>
@@ -739,25 +755,131 @@ const PublicContactPanel = () => {
           <Phone className="h-4 w-4" /> Coordonnées publiques
         </CardTitle>
         <CardDescription>
-          Footer, page Contact et À propos. Téléphone et WhatsApp : laisser vide pour ne rien afficher.
+          Footer, mentions légales, page Contact et À propos. Laisser un champ vide pour ne
+          rien afficher. L’hébergeur est fixé (Hostinger) et s’affiche automatiquement.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Raison sociale</Label>
+            <Input
+              value={contact.companyName}
+              onChange={setField('companyName')}
+              placeholder="SD CREATIV"
+              maxLength={120}
+              disabled={!loaded || busy}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Forme juridique</Label>
+            <Select
+              value={contact.legalForm || 'none'}
+              onValueChange={(value) =>
+                setContact((current) => ({ ...current, legalForm: value === 'none' ? '' : value }))
+              }
+              disabled={!loaded || busy}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Non renseignée</SelectItem>
+                {LEGAL_FORMS.map((form) => (
+                  <SelectItem key={form} value={form}>
+                    {form}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label>Capital social (si exigible)</Label>
+          <Input
+            value={contact.shareCapital}
+            onChange={setField('shareCapital')}
+            placeholder="10 000 000 FCFA"
+            maxLength={80}
+            disabled={!loaded || busy}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Adresse du siège social</Label>
+          <Textarea
+            value={contact.registeredAddress}
+            onChange={setField('registeredAddress')}
+            placeholder="Cité SICOGI 1001 Logements, rue L 129, Angré - Abidjan"
+            maxLength={200}
+            rows={2}
+            disabled={!loaded || busy}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>RCCM</Label>
+            <Input
+              value={contact.rccm}
+              onChange={setField('rccm')}
+              placeholder="CI-ABJ-2024-B-12345"
+              maxLength={48}
+              disabled={!loaded || busy}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>NCC</Label>
+            <Input
+              value={contact.ncc}
+              onChange={setField('ncc')}
+              placeholder="Numéro DGI"
+              maxLength={24}
+              disabled={!loaded || busy}
+            />
+          </div>
+        </div>
         <div className="space-y-1">
           <Label>E-mail</Label>
-          <Input value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} placeholder="contact@caddynote.sdcreativ.com" maxLength={120} disabled={!loaded || busy} />
+          <Input
+            value={contact.email}
+            onChange={setField('email')}
+            placeholder="contact@caddynote.sdcreativ.com"
+            maxLength={120}
+            disabled={!loaded || busy}
+          />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label>Téléphone</Label>
-            <Input value={contact.phone} onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))} placeholder="+225 …" maxLength={24} disabled={!loaded || busy} />
+            <Input
+              value={contact.phone}
+              onChange={setField('phone')}
+              placeholder="+225 …"
+              maxLength={24}
+              disabled={!loaded || busy}
+            />
           </div>
           <div className="space-y-1">
             <Label>WhatsApp</Label>
-            <Input value={contact.whatsapp} onChange={(e) => setContact((c) => ({ ...c, whatsapp: e.target.value }))} placeholder="+225 …" maxLength={24} disabled={!loaded || busy} />
+            <Input
+              value={contact.whatsapp}
+              onChange={setField('whatsapp')}
+              placeholder="+225 …"
+              maxLength={24}
+              disabled={!loaded || busy}
+            />
           </div>
         </div>
-        <Button onClick={() => void save()} disabled={busy || !loaded}>Enregistrer les coordonnées</Button>
+        <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Hébergeur (automatique)</p>
+          <p>
+            {PUBLIC_HOSTING.legalName}
+            <br />
+            {PUBLIC_HOSTING.address}
+          </p>
+        </div>
+        <Button onClick={() => void save()} disabled={busy || !loaded}>
+          Enregistrer les coordonnées
+        </Button>
       </CardContent>
     </Card>
   );

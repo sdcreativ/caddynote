@@ -3,14 +3,16 @@ import { CaddyNoteLogo } from '@/components/brand/CaddyNoteLogo';
 import { LegalInlineLinks } from '@/components/legal/LegalInlineLinks';
 import { handleAnchorClick } from '@/lib/smoothScroll';
 import { useTranslation } from 'react-i18next';
+import { formatLegalFooterLine } from '@/lib/publicLegal';
 import { telHref, usePublicVitrine, waHref } from '@/lib/publicVitrine';
 
 export function PublicFooter() {
   const { t } = useTranslation('publicFooter');
   const year = new Date().getFullYear();
-  const { contact } = usePublicVitrine();
+  const { contact, hosting } = usePublicVitrine();
   const phoneLink = contact.phone ? telHref(contact.phone) : null;
   const whatsappLink = contact.whatsapp ? waHref(contact.whatsapp) : null;
+  const legalLine = formatLegalFooterLine(contact, hosting);
 
   return (
     <footer className="relative z-10 mt-auto w-full bg-[#001A3D] pb-24 text-white lg:pb-0">
@@ -87,6 +89,9 @@ export function PublicFooter() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-white/80 sm:flex-row sm:px-8 lg:px-10">
           <p>{t('copyright', { year })}</p>
           <LegalInlineLinks linkClassName="hover:text-white" />
+        </div>
+        <div className="mx-auto max-w-6xl px-6 pb-5 text-center text-[11px] leading-relaxed text-white/55 sm:px-8 sm:text-left lg:px-10">
+          <p>{legalLine}</p>
         </div>
       </div>
     </footer>

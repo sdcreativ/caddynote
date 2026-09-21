@@ -35,6 +35,7 @@
     "drill:restore": "tsx scripts/drill-restore.ts",
     "drill:pitr": "tsx scripts/drill-pitr-smoke.ts",
     "recette:terrain": "tsx scripts/recette-terrain.ts",
+    "recette:https": "tsx scripts/recette-https-ecole.ts",
     "recette:pilot": "tsx scripts/recette-pilot-happy-path.ts",
     "recette:roles": "tsx scripts/recette-happy-path-roles.ts",
     "recette:admin-ui": "tsx scripts/recette-admin-ui.ts",

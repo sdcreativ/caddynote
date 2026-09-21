@@ -3,7 +3,7 @@ import request from 'supertest';
 import { app } from '../index.js';
 import { prisma } from '../lib/prisma.js';
 import { registerActor, auth } from './fixtures.js';
-import { DEFAULT_PUBLIC_EMAIL } from '../lib/publicVitrine.js';
+import { DEFAULT_PUBLIC_EMAIL, EMPTY_PUBLIC_CONTACT, PUBLIC_HOSTING } from '../lib/publicVitrine.js';
 
 const CATEGORY = 'platform';
 const KEYS = ['testimonials', 'publicContact', 'publicStats', 'faq'];
@@ -40,7 +40,8 @@ describe('Vitrine API', () => {
     expect(res.body.testimonials).toEqual([]);
     expect(res.body.faq).toEqual([]);
     expect(res.body.stats).toEqual({ schools: null, students: null });
-    expect(res.body.contact).toEqual({ email: DEFAULT_PUBLIC_EMAIL, phone: '', whatsapp: '' });
+    expect(res.body.contact).toEqual({ ...EMPTY_PUBLIC_CONTACT, email: DEFAULT_PUBLIC_EMAIL });
+    expect(res.body.hosting).toEqual(PUBLIC_HOSTING);
   });
 
   it('PUT /admin/vitrine/* exige admin', async () => {
@@ -83,6 +84,30 @@ describe('Vitrine API', () => {
     const res = await request(app).get('/public/vitrine');
     expect(res.body.contact.email).toBe('hello@caddynote.sdcreativ.com');
     expect(res.body.contact.whatsapp).toContain('225');
+    expect(res.body.contact.companyName).toBe('');
+    expect(res.body.hosting.legalName).toBe(PUBLIC_HOSTING.legalName);
+  });
+
+  it('enregistre l’identité légale et la sert au public', async () => {
+    const payload = {
+      email: 'hello@caddynote.sdcreativ.com',
+      phone: '',
+      whatsapp: '',
+      companyName: 'SD CREATIV',
+      legalForm: 'SARL',
+      shareCapital: '10 000 000 FCFA',
+      registeredAddress: 'Cité SICOGI 1001 Logements, rue L 129, Angré - Abidjan',
+      rccm: 'CI-ABJ-2024-B-12345',
+      ncc: '0123456789A',
+    };
+    const put = await request(app).put('/admin/vitrine/contact').set(auth(adminToken)).send(payload);
+    expect(put.status).toBe(200);
+    expect(put.body.companyName).toBe('SD CREATIV');
+    expect(put.body.rccm).toBe('CI-ABJ-2024-B-12345');
+
+    const res = await request(app).get('/public/vitrine');
+    expect(res.body.contact.registeredAddress).toContain('Angré');
+    expect(res.body.hosting.address).toContain('Larnaca');
   });
 
   it('refuse un faux numéro de téléphone', async () => {

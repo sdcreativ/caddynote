@@ -65,6 +65,20 @@ export const getRecetteEmail = (role: RecetteRole): string => {
   return email;
 };
 
+/** `null` si la variable manque ; lève si un e-mail démo est fourni. */
+export const tryGetRecetteEmail = (role: RecetteRole): string | null => {
+  const keys = EMAIL_ENV[role];
+  const present = keys.some((key) => Boolean(process.env[key]?.trim()));
+  if (!present) return null;
+  return getRecetteEmail(role);
+};
+
+export const tryGetRecettePassword = (): string | null => {
+  const keys = ['RECETTE_PASSWORD', 'SMOKE_PASSWORD', 'PENTEST_PREP_PASSWORD'];
+  if (!keys.some((key) => Boolean(process.env[key]?.trim()))) return null;
+  return getRecettePassword();
+};
+
 export const getRecetteLogin = (role: RecetteRole): { email: string; password: string } => ({
   email: getRecetteEmail(role),
   password: getRecettePassword(),

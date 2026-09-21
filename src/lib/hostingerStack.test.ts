@@ -51,6 +51,8 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(webNginx).not.toMatch(/# add_header Content-Security-Policy/);
     expect(webNginx).toMatch(/fonts\.googleapis\.com/);
     expect(webNginx).not.toMatch(/Strict-Transport-Security/);
+    const api = readFileSync(resolve(process.cwd(), 'server/src/index.ts'), 'utf8');
+    expect(api).toMatch(/helmet\(\{\s*hsts:\s*false\s*\}\)/);
   });
 
   it('déploie Hostinger depuis CI, pas Oracle A1', () => {
@@ -66,6 +68,21 @@ describe('Stack Hostinger (same-origin)', () => {
     expect(script).toMatch(/127\.0\.0\.1:14000\/health/);
     expect(script).toMatch(/\/var\/www\/caddynote/);
     expect(script).not.toMatch(/docker-compose\.staging\.yml/);
+  });
+
+  it('fournit une recette HTTPS 1 école (direction / enseignant / parent / élève)', () => {
+    const pkg = readFileSync(resolve(process.cwd(), 'server/package.json'), 'utf8');
+    expect(pkg).toMatch(/"recette:https"/);
+    const helper = readFileSync(resolve(process.cwd(), 'server/src/lib/recetteHttpsTarget.ts'), 'utf8');
+    expect(helper).toMatch(/https:\/\/caddynote\.sdcreativ\.com/);
+    const script = readFileSync(resolve(process.cwd(), 'server/scripts/recette-https-ecole.ts'), 'utf8');
+    expect(script).toMatch(/school_admin/);
+    expect(script).toMatch(/teacher/);
+    expect(script).toMatch(/parent/);
+    expect(script).toMatch(/student/);
+    expect(script).toMatch(/RECETTE_HTTPS_CONFIRM/);
+    expect(script).not.toMatch(/[a-z0-9._%+-]+@caddynote\.test/);
+    expect(script).not.toMatch(/Test1234!/);
   });
 
   it('documente dump/restore et TLS sans secrets', () => {
