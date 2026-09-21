@@ -13,6 +13,17 @@ const students = [
   { id: 's2', name: 'Jean Dupont', studentNumber: 'A002' },
 ];
 
+/** Date locale YYYY-MM-DD, alignée sur `filterAttendanceByPeriod` (défaut 30 j). */
+const localIsoDaysAgo = (daysAgo: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+};
+
 describe('AttendanceHistory', () => {
   beforeEach(() => {
     vi.mocked(fetchAttendanceHistoryByClass).mockReset();
@@ -24,7 +35,7 @@ describe('AttendanceHistory', () => {
         id: 'a1',
         student_id: 's1',
         institution_id: 'i1',
-        date: '2026-08-20',
+        date: localIsoDaysAgo(2),
         type: 'absence',
         duration: 60,
         justified: false,
@@ -37,7 +48,7 @@ describe('AttendanceHistory', () => {
         id: 'a2',
         student_id: 's2',
         institution_id: 'i1',
-        date: '2026-08-21',
+        date: localIsoDaysAgo(1),
         type: 'lateness',
         duration: 15,
         justified: true,
