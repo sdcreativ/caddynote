@@ -16,6 +16,7 @@ describe('LegalDocument', () => {
       'href',
       '/confidentialite'
     );
+    expect(screen.getByText(/Hostinger International Ltd/)).toBeInTheDocument();
   });
 
   it('affiche la politique de confidentialité et le lien vers les mentions', () => {

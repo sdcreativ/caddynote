@@ -15,7 +15,7 @@
         "title": "Éditeur",
         "body": [
           "Le site et la plateforme CaddyNote sont édités par SDCREATIV, éditeur de logiciels de gestion scolaire.",
-          "Les coordonnées complémentaires de l’éditeur (forme juridique, siège, immatriculation) sont communiquées sur demande à contact@caddynote.sdcreativ.com."
+          "Les mentions d’immatriculation (forme juridique, siège, RCCM, NCC) s’affichent ici dès qu’elles sont renseignées dans l’espace super-admin."
         ]
       },
       {
@@ -27,8 +27,7 @@
       {
         "title": "Hébergement",
         "body": [
-          "La plateforme CaddyNote est hébergée sur une infrastructure cloud opérée pour le compte de SDCREATIV.",
-          "Pour toute question relative à l’hébergement, écrivez à contact@caddynote.sdcreativ.com."
+          "La plateforme CaddyNote est hébergée par Hostinger International Ltd., 61 Lordou Vironos Street, 6023 Larnaca, Chypre."
         ]
       },
       {

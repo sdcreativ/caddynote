@@ -17,11 +17,48 @@ export type PublicTestimonial = {
   place: string;
 };
 
+export const LEGAL_FORMS = ['SARL', 'SAS', 'SA', 'SUARL', 'EI', 'autre'] as const;
+export type LegalForm = (typeof LEGAL_FORMS)[number];
+
+/** Identité de l’hébergeur — constante, pas une saisie admin ni un fetch externe. */
+export const PUBLIC_HOSTING = {
+  name: 'Hostinger',
+  legalName: 'Hostinger International Ltd.',
+  address: '61 Lordou Vironos Street, 6023 Larnaca, Chypre',
+} as const;
+
+export type PublicHosting = {
+  name: string;
+  legalName: string;
+  address: string;
+};
+
 export type PublicContact = {
   email: string;
   phone: string;
   whatsapp: string;
+  companyName: string;
+  legalForm: string;
+  shareCapital: string;
+  registeredAddress: string;
+  rccm: string;
+  ncc: string;
 };
+
+export const EMPTY_PUBLIC_CONTACT: PublicContact = {
+  email: '',
+  phone: '',
+  whatsapp: '',
+  companyName: '',
+  legalForm: '',
+  shareCapital: '',
+  registeredAddress: '',
+  rccm: '',
+  ncc: '',
+};
+
+const RCCM_RE = /^[A-Z]{2}-[A-Z]{3}-[A-Z0-9][A-Z0-9/-]{2,36}$/i;
+const NCC_RE = /^[A-Z0-9][A-Z0-9.\s-]{4,22}[A-Z0-9]$/i;
 
 export type PublicStats = {
   schools: number | null;
@@ -101,6 +138,17 @@ const sanitizeOptionalPhone = (raw: unknown): SanitizeResult<string> => {
   return { ok: true, value };
 };
 
+const sanitizeOptionalLegalText = (
+  raw: unknown,
+  max: number,
+  error: string
+): SanitizeResult<string> => {
+  const value = trim(raw);
+  if (!value) return { ok: true, value: '' };
+  if (!isSafePublicText(value, 1, max)) return { ok: false, error };
+  return { ok: true, value };
+};
+
 export const sanitizeContact = (input: unknown): SanitizeResult<PublicContact> => {
   if (!input || typeof input !== 'object') return { ok: false, error: 'Coordonnées invalides' };
   const row = input as Record<string, unknown>;
@@ -112,17 +160,73 @@ export const sanitizeContact = (input: unknown): SanitizeResult<PublicContact> =
   if (!phone.ok) return phone;
   const whatsapp = sanitizeOptionalPhone(row.whatsapp);
   if (!whatsapp.ok) return { ok: false, error: 'WhatsApp invalide' };
-  return { ok: true, value: { email, phone: phone.value, whatsapp: whatsapp.value } };
+
+  const companyName = sanitizeOptionalLegalText(row.companyName, 120, 'Raison sociale invalide');
+  if (!companyName.ok) return companyName;
+  const legalForm = trim(row.legalForm);
+  if (legalForm && !LEGAL_FORMS.includes(legalForm as LegalForm)) {
+    return { ok: false, error: 'Forme juridique invalide' };
+  }
+  const shareCapital = sanitizeOptionalLegalText(row.shareCapital, 80, 'Capital social invalide');
+  if (!shareCapital.ok) return shareCapital;
+  const registeredAddress = sanitizeOptionalLegalText(row.registeredAddress, 200, 'Adresse du siège invalide');
+  if (!registeredAddress.ok) return registeredAddress;
+
+  const rccm = trim(row.rccm).toUpperCase();
+  if (rccm && !RCCM_RE.test(rccm)) return { ok: false, error: 'RCCM invalide (ex. CI-ABJ-2024-B-12345)' };
+  const ncc = trim(row.ncc).toUpperCase();
+  if (ncc && (!NCC_RE.test(ncc) || FORBIDDEN_SCHEME_RE.test(ncc))) {
+    return { ok: false, error: 'NCC invalide' };
+  }
+
+  return {
+    ok: true,
+    value: {
+      email,
+      phone: phone.value,
+      whatsapp: whatsapp.value,
+      companyName: companyName.value,
+      legalForm,
+      shareCapital: shareCapital.value,
+      registeredAddress: registeredAddress.value,
+      rccm,
+      ncc,
+    },
+  };
 };
 
 export const parseStoredContact = (value: unknown, fallbackEmail = false): PublicContact => {
   const parsed = sanitizeContact(value);
   if (parsed.ok) return parsed.value;
   return {
+    ...EMPTY_PUBLIC_CONTACT,
     email: fallbackEmail ? DEFAULT_PUBLIC_EMAIL : '',
-    phone: '',
-    whatsapp: '',
   };
+};
+
+export const formatPublisherIdentity = (contact: PublicContact): string[] => {
+  const lines: string[] = [];
+  const title = [contact.companyName, contact.legalForm].filter(Boolean).join(', ');
+  if (title) {
+    lines.push(contact.shareCapital ? `${title}, capital ${contact.shareCapital}` : title);
+  } else if (contact.shareCapital) {
+    lines.push(`Capital ${contact.shareCapital}`);
+  }
+  if (contact.registeredAddress) lines.push(`Siège social : ${contact.registeredAddress}`);
+  if (contact.rccm) lines.push(`RCCM : ${contact.rccm}`);
+  if (contact.ncc) lines.push(`NCC : ${contact.ncc}`);
+  return lines;
+};
+
+export const formatHostingLine = (hosting: PublicHosting = PUBLIC_HOSTING): string =>
+  `Hébergeur : ${hosting.legalName}, ${hosting.address}`;
+
+export const formatLegalFooterLine = (
+  contact: PublicContact,
+  hosting: PublicHosting = PUBLIC_HOSTING
+): string => {
+  const parts = [...formatPublisherIdentity(contact), formatHostingLine(hosting)];
+  return parts.join(' · ');
 };
 
 const parseOptionalCount = (raw: unknown): number | null => {

@@ -85,7 +85,9 @@ import { assertCorsOriginReady, resolveCorsOrigin } from './lib/corsOrigin.js';
 const app = express();
 const port = Number(process.env.PORT) || 4000;
 
-app.use(helmet());
+// HSTS est posé à l’edge (nginx, 15552000, sans preload / includeSubDomains).
+// Helmet par défaut enverrait 31536000 + includeSubDomains derrière le proxy.
+app.use(helmet({ hsts: false }));
 app.use(cors({ origin: resolveCorsOrigin(), credentials: true }));
 
 // NFR-002/003 : mesure chaque requête (durée, méthode, route, statut) avant

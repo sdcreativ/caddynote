@@ -4,6 +4,8 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
   DEFAULT_PUBLIC_EMAIL,
+  EMPTY_PUBLIC_CONTACT,
+  PUBLIC_HOSTING,
   parseStoredContact,
   parseStoredFaq,
   parseStoredStats,
@@ -44,7 +46,7 @@ type SettingRow = { value: unknown; isPublic: boolean | null };
 
 const publicContactFromRow = (row: SettingRow | null): PublicContact => {
   if (!row || !row.isPublic) {
-    return { email: DEFAULT_PUBLIC_EMAIL, phone: '', whatsapp: '' };
+    return { ...EMPTY_PUBLIC_CONTACT, email: DEFAULT_PUBLIC_EMAIL };
   }
   return parseStoredContact(row.value, true);
 };
@@ -72,6 +74,7 @@ vitrinePublicRouter.get('/vitrine', async (_req, res) => {
   return res.json({
     testimonials: publicList(testimonials, parseStoredTestimonials),
     contact: publicContactFromRow(contact),
+    hosting: PUBLIC_HOSTING,
     stats: publicStatsFromRow(stats),
     faq: publicList(faq, parseStoredFaq),
   });
@@ -89,7 +92,8 @@ const loadAdminPayload = async () => {
   ]);
   return {
     testimonials: parseStoredTestimonials(testimonials?.value),
-    contact: contact ? parseStoredContact(contact.value) : { email: DEFAULT_PUBLIC_EMAIL, phone: '', whatsapp: '' },
+    contact: contact ? parseStoredContact(contact.value) : { ...EMPTY_PUBLIC_CONTACT, email: DEFAULT_PUBLIC_EMAIL },
+    hosting: PUBLIC_HOSTING,
     stats: parseStoredStats(stats?.value),
     faq: parseStoredFaq(faq?.value),
   };
@@ -104,6 +108,12 @@ const contactSchema = z.object({
   email: z.string(),
   phone: z.string(),
   whatsapp: z.string(),
+  companyName: z.string().optional(),
+  legalForm: z.string().optional(),
+  shareCapital: z.string().optional(),
+  registeredAddress: z.string().optional(),
+  rccm: z.string().optional(),
+  ncc: z.string().optional(),
 });
 const statsSchema = z.object({
   schools: z.union([z.number(), z.null()]),
@@ -129,7 +139,11 @@ vitrineAdminRouter.put('/vitrine/contact', requireAuth, requireRole('admin'), as
   }
   const sanitized = sanitizeContact(parsed.data);
   if (!sanitized.ok) return res.status(400).json({ error: sanitized.error });
-  await upsertSetting(KEYS.contact, sanitized.value, 'Coordonnées publiques (e-mail, téléphone, WhatsApp)');
+  await upsertSetting(
+    KEYS.contact,
+    sanitized.value,
+    'Coordonnées publiques (identité légale, e-mail, téléphone, WhatsApp)'
+  );
   return res.json(sanitized.value);
 });
 

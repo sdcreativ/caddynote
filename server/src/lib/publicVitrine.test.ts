@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PUBLIC_EMAIL,
+  EMPTY_PUBLIC_CONTACT,
+  formatLegalFooterLine,
   parseStoredContact,
   parseStoredFaq,
   parseStoredStats,
@@ -57,17 +59,54 @@ describe('sanitizeContact', () => {
   it('accepte des champs vides', () => {
     expect(sanitizeContact({ email: '', phone: '', whatsapp: '' })).toEqual({
       ok: true,
-      value: { email: '', phone: '', whatsapp: '' },
+      value: { ...EMPTY_PUBLIC_CONTACT },
     });
   });
 
-  it('refuse un e-mail ou un téléphone invalide', () => {
+  it('accepte l’identité légale OHADA et ignore un ancien JSON sans ces champs', () => {
+    const parsed = sanitizeContact({
+      email: 'contact@caddynote.sdcreativ.com',
+      phone: '',
+      whatsapp: '',
+      companyName: 'SD CREATIV',
+      legalForm: 'SARL',
+      shareCapital: '10 000 000 FCFA',
+      registeredAddress: 'Cité SICOGI 1001 Logements, rue L 129, Angré - Abidjan',
+      rccm: 'CI-ABJ-2024-B-12345',
+      ncc: '0123456789A',
+    });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.companyName).toBe('SD CREATIV');
+      expect(parsed.value.rccm).toBe('CI-ABJ-2024-B-12345');
+    }
+    expect(sanitizeContact({ email: 'a@b.co', phone: '', whatsapp: '' }).ok).toBe(true);
+  });
+
+  it('refuse un e-mail, un téléphone, un RCCM ou une forme invalides', () => {
     expect(sanitizeContact({ email: 'pas-un-email', phone: '', whatsapp: '' }).ok).toBe(false);
     expect(sanitizeContact({ email: '', phone: 'javascript:alert(1)', whatsapp: '' }).ok).toBe(false);
+    expect(sanitizeContact({ email: '', phone: '', whatsapp: '', rccm: 'pas-un-rccm' }).ok).toBe(false);
+    expect(sanitizeContact({ email: '', phone: '', whatsapp: '', legalForm: 'LLC' }).ok).toBe(false);
   });
 
   it('retombe sur l’e-mail officiel si le setting est illisible', () => {
     expect(parseStoredContact('oops', true).email).toBe(DEFAULT_PUBLIC_EMAIL);
+    expect(parseStoredContact('oops', true).companyName).toBe('');
+  });
+
+  it('compose la ligne footer avec l’hébergeur Hostinger', () => {
+    const line = formatLegalFooterLine({
+      ...EMPTY_PUBLIC_CONTACT,
+      companyName: 'SD CREATIV',
+      legalForm: 'SARL',
+      registeredAddress: 'Abidjan',
+      rccm: 'CI-ABJ-2024-B-12345',
+    });
+    expect(line).toContain('SD CREATIV, SARL');
+    expect(line).toContain('RCCM : CI-ABJ-2024-B-12345');
+    expect(line).toContain('Hostinger International Ltd.');
+    expect(line).toContain('Larnaca');
   });
 });
 
