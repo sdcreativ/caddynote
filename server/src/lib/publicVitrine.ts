@@ -1,6 +1,6 @@
 /** Contenu éditable de la vitrine (témoignages, coordonnées, chiffres, FAQ). */
 
-export const DEFAULT_PUBLIC_EMAIL = 'contact@caddynote.com';
+export const DEFAULT_PUBLIC_EMAIL = 'contact@caddynote.sdcreativ.com';
 
 export const MAX_TESTIMONIALS = 8;
 export const MAX_FAQ_ITEMS = 20;

@@ -262,7 +262,7 @@ export function AdminLoginForm() {
           <Input
             id="admin-email"
             type="email"
-            placeholder="admin@caddynote.com"
+            placeholder="admin@caddynote.sdcreativ.com"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -9,8 +9,16 @@
 #   API_PORT=127.0.0.1:14000
 #   POSTGRES_PORT=127.0.0.1:5433
 #
-# Ne pas servir le SPA via `root /var/www/caddynote` : /api passe par le conteneur web.
+# 80/443 = conteneur sdcreativ-nginx-1. Joindre son réseau pour
+# proxy_pass http://caddynote-web:80 (le bind 127.0.0.1:18080 est injoignable
+# depuis ce conteneur).
+# Ne pas servir le SPA via `root /var/www/caddynote`.
 # Guide : server/scripts/passage-hostinger-caddynote-sdcreativ.md
+
+networks:
+  edge:
+    name: sdcreativ_sdcreativ
+    external: true
 
 services:
   caddynote-web:
@@ -19,6 +27,9 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-}
+    networks:
+      - caddynote-net
+      - edge
 
   caddynote-api:
     environment:

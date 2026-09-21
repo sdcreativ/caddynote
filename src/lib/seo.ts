@@ -1,8 +1,7 @@
 import { FEATURES } from '@/data/features';
 import { EXPERIENCES } from '@/data/experiences';
 
-export const CANONICAL_PROD_ORIGIN = 'https://caddynote.com';
-export const CANONICAL_HOSTINGER_ORIGIN = 'https://caddynote.sdcreativ.com';
+export const CANONICAL_PROD_ORIGIN = 'https://caddynote.sdcreativ.com';
 
 /** Normalise l’origine publique : HTTPS + hôte connu. */
 export function normalizePublicOrigin(raw: string): string {
@@ -11,8 +10,7 @@ export function normalizePublicOrigin(raw: string): string {
     const withProtocol = /^[a-zA-Z][a-zA-Z+\-.]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
     const url = new URL(withProtocol);
     const host = url.hostname.replace(/^www\./i, '').toLowerCase();
-    if (host === 'caddynote.com') return CANONICAL_PROD_ORIGIN;
-    if (host === 'caddynote.sdcreativ.com') return CANONICAL_HOSTINGER_ORIGIN;
+    if (host === 'caddynote.sdcreativ.com' || host === 'caddynote.com') return CANONICAL_PROD_ORIGIN;
     return `${url.protocol}//${url.host}`.replace(/\/$/, '');
   } catch {
     return trimmed;

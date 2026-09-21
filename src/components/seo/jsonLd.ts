@@ -1,3 +1,4 @@
+import { DEFAULT_PUBLIC_EMAIL } from '@/lib/publicVitrine';
 import { absoluteUrl, getSiteUrl } from '@/lib/seo';
 
 /** Schema.org Organization + SoftwareApplication pour la home. */
@@ -10,7 +11,7 @@ export function buildHomeJsonLd() {
       name: 'CaddyNote',
       url,
       logo: absoluteUrl('/logo-cn-light.png'),
-      email: 'contact@caddynote.com',
+      email: DEFAULT_PUBLIC_EMAIL,
       description:
         'Plateforme de gestion scolaire pour les établissements scolaires.',
       sameAs: [],

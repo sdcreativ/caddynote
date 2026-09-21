@@ -184,7 +184,7 @@ curl -sS "http://IP_PUBLIQUE:4000/health"
 ## 8b. Suivant — HTTPS / domaine
 
 Plan détaillé (cases ouvertes) : [`passage-prod-caddynote-com.md`](./passage-prod-caddynote-com.md)  
-(`caddynote.com` déjà réservé). Copie locale possible sous `docs/PASSAGE_PROD_CADDYNOTE_COM.md`.
+(hôte public : `caddynote.sdcreativ.com`). Copie locale possible sous `docs/PASSAGE_PROD_CADDYNOTE_COM.md`.
 
 ---
 

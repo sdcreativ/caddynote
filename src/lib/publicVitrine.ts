@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/apiClient';
 
-export const DEFAULT_PUBLIC_EMAIL = 'contact@caddynote.com';
+export const DEFAULT_PUBLIC_EMAIL = 'contact@caddynote.sdcreativ.com';
 
 export type PublicTestimonial = {
   quote: string;

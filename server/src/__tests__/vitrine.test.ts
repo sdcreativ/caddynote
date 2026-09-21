@@ -75,13 +75,13 @@ describe('Vitrine API', () => {
     const put = await request(app)
       .put('/admin/vitrine/contact')
       .set(auth(adminToken))
-      .send({ email: 'hello@caddynote.com', phone: '', whatsapp: '+225 07 00 00 00 00' });
+      .send({ email: 'hello@caddynote.sdcreativ.com', phone: '', whatsapp: '+225 07 00 00 00 00' });
     expect(put.status).toBe(200);
-    expect(put.body.email).toBe('hello@caddynote.com');
+    expect(put.body.email).toBe('hello@caddynote.sdcreativ.com');
     expect(put.body.phone).toBe('');
 
     const res = await request(app).get('/public/vitrine');
-    expect(res.body.contact.email).toBe('hello@caddynote.com');
+    expect(res.body.contact.email).toBe('hello@caddynote.sdcreativ.com');
     expect(res.body.contact.whatsapp).toContain('225');
   });
 
@@ -89,7 +89,7 @@ describe('Vitrine API', () => {
     const res = await request(app)
       .put('/admin/vitrine/contact')
       .set(auth(adminToken))
-      .send({ email: 'hello@caddynote.com', phone: 'javascript:alert(1)', whatsapp: '' });
+      .send({ email: 'hello@caddynote.sdcreativ.com', phone: 'javascript:alert(1)', whatsapp: '' });
     expect(res.status).toBe(400);
   });
 

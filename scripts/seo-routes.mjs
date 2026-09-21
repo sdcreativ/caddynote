@@ -7,15 +7,16 @@ function normalizePublicOrigin(raw) {
     const withProtocol = /^[a-zA-Z][a-zA-Z+\-.]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
     const url = new URL(withProtocol);
     const host = url.hostname.replace(/^www\./i, '').toLowerCase();
-    if (host === 'caddynote.com') return 'https://caddynote.com';
-    if (host === 'caddynote.sdcreativ.com') return 'https://caddynote.sdcreativ.com';
+    if (host === 'caddynote.sdcreativ.com' || host === 'caddynote.com') {
+      return 'https://caddynote.sdcreativ.com';
+    }
     return `${url.protocol}//${url.host}`.replace(/\/$/, '');
   } catch {
     return trimmed;
   }
 }
 
-export const SITE = normalizePublicOrigin(process.env.VITE_SITE_URL || 'https://caddynote.com');
+export const SITE = normalizePublicOrigin(process.env.VITE_SITE_URL || 'https://caddynote.sdcreativ.com');
 export const OG_IMAGE = `${SITE}/og-caddynote.jpg`;
 
 const FEATURE_SLUGS = ['presences', 'vie-scolaire', 'notes', 'paiements', 'familles', 'pilotage'];

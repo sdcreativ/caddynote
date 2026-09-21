@@ -699,7 +699,7 @@ const TestimonialsPanel = () => {
 
 const PublicContactPanel = () => {
   const { toast } = useToast();
-  const [contact, setContact] = useState({ email: 'contact@caddynote.com', phone: '', whatsapp: '' });
+  const [contact, setContact] = useState({ email: 'contact@caddynote.sdcreativ.com', phone: '', whatsapp: '' });
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -745,7 +745,7 @@ const PublicContactPanel = () => {
       <CardContent className="space-y-3">
         <div className="space-y-1">
           <Label>E-mail</Label>
-          <Input value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} placeholder="contact@caddynote.com" maxLength={120} disabled={!loaded || busy} />
+          <Input value={contact.email} onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))} placeholder="contact@caddynote.sdcreativ.com" maxLength={120} disabled={!loaded || busy} />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
