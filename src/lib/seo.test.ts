@@ -73,6 +73,8 @@ describe('SEO public (recette §6)', () => {
     expect(normalizePublicOrigin('http://caddynote.com')).toBe('https://caddynote.com');
     expect(normalizePublicOrigin('https://www.caddynote.com/')).toBe('https://caddynote.com');
     expect(normalizePublicOrigin('caddynote.com')).toBe('https://caddynote.com');
+    expect(normalizePublicOrigin('http://caddynote.sdcreativ.com')).toBe('https://caddynote.sdcreativ.com');
+    expect(normalizePublicOrigin('https://caddynote.sdcreativ.com/')).toBe('https://caddynote.sdcreativ.com');
     expect(normalizePublicOrigin('http://88.96.41.213:8080')).toBe('http://88.96.41.213:8080');
     expect(normalizePublicOrigin('http://localhost:8080')).toBe('http://localhost:8080');
   });
@@ -102,6 +104,10 @@ describe('SEO public (recette §6)', () => {
     expect(robots).not.toMatch(/User-agent:\s*Googlebot/i);
     expect(robots).toMatch(/Disallow: \/students/);
     expect(robots).toMatch(/Disallow: \/finance/);
-    expect(robots).toMatch(/Sitemap: https:\/\/caddynote\.com\/sitemap\.xml/);
+    expect(robots).toMatch(/Sitemap: https:\/\/caddynote\.sdcreativ\.com\/sitemap\.xml/);
+    const sitemap = readFileSync(resolve(process.cwd(), 'public/sitemap.xml'), 'utf8');
+    expect(sitemap).toMatch(/https:\/\/caddynote\.sdcreativ\.com\//);
+    expect(sitemap).toMatch(/\/espace-parent/);
+    expect(sitemap).not.toMatch(/http:\/\/caddynote\.com/);
   });
 });

@@ -1,0 +1,28 @@
+# Overlay Hostinger — same-origin HTTPS derrière le proxy déjà en place.
+#
+# Usage (depuis /var/www/caddynote, à côté de kodiva et sdcreativ) :
+#   docker compose -f docker-compose.yml -f docker-compose.hostinger.yml up -d --build
+#
+# Ports : interpolés par docker-compose.yml. Dans `.env` Hostinger, bind
+# loopback (sinon 8080/4000/5433 restent publics) :
+#   WEB_PORT=127.0.0.1:18080
+#   API_PORT=127.0.0.1:14000
+#   POSTGRES_PORT=127.0.0.1:5433
+#
+# Ne pas servir le SPA via `root /var/www/caddynote` : /api passe par le conteneur web.
+# Guide : server/scripts/passage-hostinger-caddynote-sdcreativ.md
+
+services:
+  caddynote-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+
+  caddynote-api:
+    environment:
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://caddynote.sdcreativ.com}
+      CADDYNOTE_DEPLOYMENT: ${CADDYNOTE_DEPLOYMENT:-production}
+      CADDYNOTE_TEST_MODE: "false"
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}

@@ -39,4 +39,4 @@ Disallow: /sign
 Disallow: /forgot-password
 Disallow: /reset-password
 
-Sitemap: https://caddynote.com/sitemap.xml
+Sitemap: https://caddynote.sdcreativ.com/sitemap.xml

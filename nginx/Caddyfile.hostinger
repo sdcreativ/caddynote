@@ -1,0 +1,7 @@
+# Block Caddy hôte — AJOUTER au Caddyfile existant, ne pas remplacer kodiva / sdcreativ.
+# Dépôt : /var/www/caddynote. Public : reverse_proxy vers 127.0.0.1:18080.
+
+caddynote.sdcreativ.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:18080
+}

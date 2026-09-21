@@ -59,8 +59,9 @@ Thumbs.db
 *.swo
 *~
 
-# DOCS (guides ops staging/Oracle versionnés)
+# DOCS (guides ops staging/Oracle/Hostinger versionnés)
 *.md
 !scripts/oracle-cloud-always-free.md
 !scripts/staging-deploy-checklist.md
 !scripts/setup-self-hosted-runner.md
+!scripts/passage-hostinger-caddynote-sdcreativ.md

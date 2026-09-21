@@ -8,6 +8,7 @@ function normalizePublicOrigin(raw) {
     const url = new URL(withProtocol);
     const host = url.hostname.replace(/^www\./i, '').toLowerCase();
     if (host === 'caddynote.com') return 'https://caddynote.com';
+    if (host === 'caddynote.sdcreativ.com') return 'https://caddynote.sdcreativ.com';
     return `${url.protocol}//${url.host}`.replace(/\/$/, '');
   } catch {
     return trimmed;

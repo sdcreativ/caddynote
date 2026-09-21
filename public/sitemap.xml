@@ -1,134 +1,140 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://caddynote.com/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/about</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/about</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/contact</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/contact</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/mentions-legales</loc>
-    <lastmod>2026-09-06</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://caddynote.com/confidentialite</loc>
-    <lastmod>2026-09-06</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://caddynote.com/signup</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/mentions-legales</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/confidentialite</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide/guide-enseignants</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/signup</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide/guide-etudiants</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/espace-parent</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide/guide-ecoles</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/aide</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide/guide-admin</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/aide/guide-enseignants</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/aide/guide-parents</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/aide/guide-etudiants</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/admissions</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/aide/guide-ecoles</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/presences</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/aide/guide-admin</loc>
+    <lastmod>2026-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://caddynote.sdcreativ.com/aide/guide-parents</loc>
+    <lastmod>2026-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://caddynote.sdcreativ.com/admissions</loc>
+    <lastmod>2026-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/presences</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/vie-scolaire</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/vie-scolaire</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/notes</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/notes</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/paiements</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/paiements</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/familles</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/familles</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/fonctionnalites/pilotage</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/fonctionnalites/pilotage</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/experiences/directions</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/experiences/directions</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/experiences/enseignants</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/experiences/enseignants</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://caddynote.com/experiences/parents</loc>
-    <lastmod>2026-08-26</lastmod>
+    <loc>https://caddynote.sdcreativ.com/experiences/parents</loc>
+    <lastmod>2026-09-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
