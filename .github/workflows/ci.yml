@@ -128,30 +128,29 @@ jobs:
             ${{ env.DOCKER_USERNAME }}/caddynote-api:${{ github.sha }}
             ${{ env.DOCKER_USERNAME }}/caddynote-api:staging
 
-  # Déploiement staging Oracle A1 (ARM) via runner self-hosted.
-  # Prérequis VM : labels self-hosted,linux,ARM64,staging + APP_DIR git + .env
-  # (voir server/scripts/oracle-cloud-always-free.md §8).
+  # Prod Hostinger (x86) via runner self-hosted.
+  # Prérequis VM : labels self-hosted,linux,X64,hostinger + /var/www/caddynote
+  # (overlay docker-compose.hostinger.yml + profil antivirus).
   # Les .env gitignorés sont conservés (git reset --hard ne les touche pas).
-  deploy_staging_self_hosted:
-    name: Staging — self-hosted rebuild
+  # Staging Oracle A1 : workflow Deploy staging (SSH), plus de push auto.
+  deploy_hostinger_self_hosted:
+    name: Hostinger — self-hosted rebuild
     needs: [build_and_test, server_tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, ARM64, staging]
+    runs-on: [self-hosted, linux, X64, hostinger]
     timeout-minutes: 60
     steps:
       - name: Pull + compose build + migrate + health
         env:
-          # Surcharge possible : variable Actions STAGING_APP_DIR
-          STAGING_APP_DIR: ${{ vars.STAGING_APP_DIR }}
+          HOSTINGER_APP_DIR: ${{ vars.HOSTINGER_APP_DIR }}
         run: |
           set -euo pipefail
-          APP_DIR="${STAGING_APP_DIR:-/home/ubuntu/caddynote}"
+          APP_DIR="${HOSTINGER_APP_DIR:-/var/www/caddynote}"
           cd "$APP_DIR"
           echo "Deploying in $APP_DIR @ $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
           git fetch origin main
           git reset --hard origin/main
           echo "Now at $(git rev-parse --short HEAD)"
-          # Build d’abord, bascule ensuite. Ne pas rm les conteneurs Up.
-          export STAGING_APP_DIR="$APP_DIR"
+          export HOSTINGER_APP_DIR="$APP_DIR"
           export DEPLOY_GIT_RESET=0
-          bash "$APP_DIR/scripts/deploy-staging-rebuild.sh"
+          bash "$APP_DIR/scripts/deploy-hostinger-rebuild.sh"
