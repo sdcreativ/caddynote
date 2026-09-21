@@ -37,3 +37,6 @@ services:
       CADDYNOTE_DEPLOYMENT: ${CADDYNOTE_DEPLOYMENT:-production}
       CADDYNOTE_TEST_MODE: "false"
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      # Fail-closed prod : ne pas laisser env_file vide écraser le hostname compose.
+      CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
